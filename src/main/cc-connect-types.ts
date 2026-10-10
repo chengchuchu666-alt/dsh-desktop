@@ -18,3 +18,52 @@ export interface ConnectSettingsInput extends ConnectSettingsSource {
 export type ConnectSaveResult =
   | { ok: true; state: ConnectState }
   | { ok: false; reason: 'invalid-input' | 'invalid-workspace' | 'storage'; state: ConnectState }
+
+/** Local records only; neither the record nor its public state contains a Secret. */
+export interface ConnectApplication extends Omit<ConnectSettings, 'enabled'> {
+  id: string
+  name: string
+}
+
+export interface ConnectIntent {
+  enabled: boolean
+  autoConnect: boolean
+}
+
+/** Many saved applications, exactly one selected Sidecar configuration. */
+export interface ConnectManagerSettings extends ConnectIntent {
+  version: 2
+  applications: ConnectApplication[]
+  activeApplicationId: string | null
+}
+
+export interface ConnectApplicationState extends ConnectApplication {
+  secretConfigured: boolean
+  credentialProtection: CredentialProtection
+}
+
+export type ConnectErrorCode = 'credentials' | 'permissions' | 'network' | 'workspace'
+  | 'model-key-missing' | 'acp' | 'storage' | 'sidecar' | 'stop-failed'
+
+/** Process readiness is NOT proof of a live Feishu channel or a usable model. */
+export interface ConnectHealth {
+  channel: 'unknown' | 'connecting' | 'online' | 'offline'
+  dsh: 'unknown' | 'available' | 'unavailable'
+  errorCode?: ConnectErrorCode
+  /** Only an explicit, successful message round trip may set this timestamp. */
+  verifiedAt?: string
+}
+
+export interface ConnectManagerState extends ConnectIntent {
+  applications: ConnectApplicationState[]
+  activeApplicationId: string | null
+  connection: ConnectState
+  health: ConnectHealth
+}
+
+/** Secret is write-only; an omitted/empty value keeps the existing credential. */
+export interface ConnectApplicationInput extends Omit<ConnectSettingsSource, 'enabled'> {
+  id?: string
+  name: string
+  appSecret?: string
+}
