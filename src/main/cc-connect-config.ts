@@ -50,6 +50,15 @@ export function connectSettingsPath(userData: string): string {
   return join(connectDirectory(userData), 'settings.json')
 }
 
+export function connectApplicationsPath(userData: string): string {
+  return join(connectDirectory(userData), 'applications.json')
+}
+
+/** IDs are generated locally, never derived from user names, App IDs or paths. */
+export function isConnectRecordId(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value)
+}
+
 export function connectConfigPath(userData: string): string {
   return join(connectDirectory(userData), 'config.toml')
 }

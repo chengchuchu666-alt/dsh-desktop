@@ -3,7 +3,7 @@ import * as electron from 'electron'
 import { readFile, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { atomicWriteFile } from './config-file.ts'
-import { connectDirectory } from './cc-connect-config.ts'
+import { connectDirectory, isConnectRecordId } from './cc-connect-config.ts'
 
 export type CredentialProtection = 'none' | 'safeStorage' | 'file'
 
@@ -30,8 +30,10 @@ const electronStorage: SafeStorageAdapter = {
   decryptString: value => electron.safeStorage.decryptString(value),
 }
 
-export function credentialsPath(userData: string): string {
-  return join(connectDirectory(userData), 'credentials.json')
+export function credentialsPath(userData: string, credentialId?: string): string {
+  if (credentialId === undefined) return join(connectDirectory(userData), 'credentials.json')
+  if (!isConnectRecordId(credentialId)) throw new Error('invalid credential identity')
+  return join(connectDirectory(userData), 'credentials', `${credentialId}.json`)
 }
 
 function redactError(error: unknown, secret = ''): Error {
@@ -78,8 +80,9 @@ export class ConnectCredentials {
       const parsed = JSON.parse(raw) as unknown
       if (!isCredentialDocument(parsed)) throw new Error('credential document is malformed')
       return parsed
-    } catch (error) {
-      throw redactError(error)
+    } catch {
+      // JSON parse errors can quote the document, including a fallback Secret.
+      throw redactError(new Error('credential document is malformed'))
     }
   }
 
@@ -96,9 +99,18 @@ export class ConnectCredentials {
     if (!this.encryptionAvailable()) throw redactError(new Error('safeStorage is unavailable'))
     try {
       return this.storage.decryptString(Buffer.from(document.value, 'base64'))
-    } catch (error) {
-      throw redactError(error)
+    } catch {
+      throw redactError(new Error('credential decryption is unavailable'))
     }
+  }
+
+  /** Copy an already protected document without decrypting or downgrading it.
+   * Used only by main-process migration; the original is retained until commit. */
+  async copyTo(path: string): Promise<boolean> {
+    const document = await this.readDocument()
+    if (document === undefined) return false
+    await atomicWriteFile(path, `${JSON.stringify(document)}\n`, 0o600)
+    return true
   }
 
   async setSecret(secret: string): Promise<CredentialProtection> {

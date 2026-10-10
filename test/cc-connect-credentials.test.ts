@@ -5,6 +5,7 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ConnectCredentials, credentialsPath } from '../src/main/cc-connect-credentials.ts'
+import { atomicWriteFile } from '../src/main/config-file.ts'
 
 async function tempDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'cc-connect-credentials-test-'))
@@ -64,4 +65,26 @@ test('credential errors redact the supplied Secret', async () => {
   } finally {
     await rm(userData, { recursive: true, force: true })
   }
+})
+
+test('malformed documents and decrypt-provider errors cannot echo fallback Secrets', async () => {
+  const userData = await tempDir()
+  const secret = 'fake-malformed-secret'
+  try {
+    const path = credentialsPath(userData)
+    await atomicWriteFile(path, `{"value":"${secret}"`)
+    const credentials = new ConnectCredentials(path, fakeSafeStorage(true))
+    await assert.rejects(credentials.state(), error => {
+      assert.doesNotMatch(String(error), new RegExp(secret))
+      assert.match(String(error), /malformed/)
+      return true
+    })
+    await credentials.setSecret(secret)
+    const broken = new ConnectCredentials(path, { ...fakeSafeStorage(true), decryptString: () => { throw new Error(secret) } })
+    await assert.rejects(broken.readSecret(), error => {
+      assert.doesNotMatch(String(error), new RegExp(secret))
+      assert.match(String(error), /decryption is unavailable/)
+      return true
+    })
+  } finally { await rm(userData, { recursive: true, force: true }) }
 })
