@@ -9,6 +9,7 @@ import { promisify } from 'node:util'
 import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
 import type { ConnectSaveResult, ConnectSettingsInput, ConnectState } from '../src/main/cc-connect-types.ts'
+import { launchTrashHarness } from './trash-harness.ts'
 
 // Packaged mode runs the real bundled Harness (the dev web-URL override is
 // dev-only, src/main/index.ts boot()), so stub-only page assertions are
@@ -1000,6 +1001,78 @@ shellTest.describe('cc-connect desktop sidecar', () => {
       return value.stopConnect()
     })
   })
+})
+
+test('real Desktop display controls save, reopen, preserve edits and show both locales @smoke', async ({}, testInfo) => {
+  testInfo.setTimeout(150_000)
+  const harness = await launchTrashHarness(PACKAGED)
+  const { page } = harness
+  type Bridge = { saveConnectSettings(input: ConnectSettingsInput): Promise<ConnectSaveResult | null>; getConnectState(): Promise<ConnectState | null> }
+  const save = (input: ConnectSettingsInput) => page.evaluate(input => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings(input), input)
+  async function openSettings() {
+    await page.getByRole('button', { name: /账号菜单|Account menu/ }).click()
+    await page.getByText(/^(设置|Settings)$/, { exact: true }).first().click()
+    const dialog = page.getByRole('dialog', { name: /^(设置|Settings)$/ })
+    await dialog.getByText(/^(桌面设置|Desktop settings)$/, { exact: true }).click()
+    await expect(page.locator('[data-dsh-desktop-connect]')).toBeVisible()
+  }
+  try {
+    const base = { enabled: false, appId: 'cli_ui_fake', workspace: harness.workspace }
+    expect(await save({ ...base, appSecret: 'fake-ui-secret' })).toMatchObject({ ok: true })
+    await openSettings()
+    const connect = page.locator('[data-dsh-desktop-connect]')
+    await expect(connect.getByLabel('App ID', { exact: true })).toHaveValue(base.appId)
+    await expect(connect.locator('select')).toHaveCount(4)
+    const detail = connect.getByRole('combobox', { name: '消息详细度', exact: true })
+    const interval = connect.getByRole('combobox', { name: '刷新间隔', exact: true })
+    const preview = connect.getByRole('checkbox', { name: '流式预览', exact: true })
+    await expect(detail).toHaveValue('compact')
+    await expect(interval).toHaveValue('3000')
+    await expect(preview).toBeChecked()
+    await expect(connect.getByRole('combobox', { name: '卡片样式', exact: true })).toHaveValue('legacy')
+    await expect(connect.getByRole('combobox', { name: '进度展示', exact: true })).toHaveValue('legacy')
+    await expect(connect.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await detail.selectOption('quiet')
+    await interval.selectOption('5000')
+    await preview.uncheck()
+    await expect(interval).toBeDisabled()
+    await expect(interval).toHaveValue('5000')
+    await connect.getByRole('combobox', { name: '卡片样式', exact: true }).selectOption('rich')
+    await connect.getByRole('combobox', { name: '进度展示', exact: true }).selectOption('card')
+    // Runtime status changes prove the poll ran; unsaved fields must stay put.
+    expect(await save({ ...base, enabled: true, detail: 'full', streamPreviewIntervalMs: 8000 })).toMatchObject({ ok: true, state: { phase: 'stopped' } })
+    await expect(connect.locator('[data-dsh-connect-status]')).toHaveAttribute('data-state', 'stopped')
+    await expect(detail).toHaveValue('quiet')
+    await expect(interval).toHaveValue('5000')
+    await expect(preview).not.toBeChecked()
+    await connect.getByRole('button', { name: '保存连接', exact: true }).click()
+    await expect(connect.getByRole('status')).toHaveText('连接设置已保存。')
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState())).toMatchObject({ enabled: false, detail: 'quiet', showStreamPreview: false, streamPreviewIntervalMs: 5000, cardMode: 'rich', progressStyle: 'card', secretConfigured: true })
+    await page.keyboard.press('Escape')
+    await openSettings()
+    await expect(detail).toHaveValue('quiet')
+    await expect(interval).toHaveValue('5000')
+    await expect(preview).not.toBeChecked()
+    await expect(connect.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    expect(await save({ ...base, streamPreviewIntervalMs: 8000, showStreamPreview: true })).toMatchObject({ ok: true })
+    await page.keyboard.press('Escape')
+    await openSettings()
+    await expect(interval).toHaveValue('8000')
+    await expect(interval.locator('option:checked')).toHaveText('当前：8s')
+    await expect(interval).toBeEnabled()
+    await page.evaluate(() => { document.documentElement.lang = 'en' })
+    await expect(connect.getByRole('combobox', { name: 'Message detail', exact: true })).toHaveValue('quiet')
+    await expect(connect.getByRole('combobox', { name: 'Refresh interval', exact: true }).locator('option:checked')).toHaveText('Current: 8s')
+    await expect(connect.getByRole('combobox', { name: 'Card style', exact: true })).toHaveValue('rich')
+    await expect(connect.getByRole('combobox', { name: 'Progress display', exact: true })).toHaveValue('card')
+    await expect(connect).toContainText('Quiet still sends the final answer')
+    await connect.getByRole('button', { name: 'Save connection', exact: true }).click()
+    await expect(connect.getByRole('status')).toHaveText('Connection settings saved.')
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState())).toMatchObject({ streamPreviewIntervalMs: 8000, secretConfigured: true, phase: 'disabled' })
+    await connect.screenshot({ path: testInfo.outputPath('message-preferences-en.png') })
+    expect(harness.requests).toBe(0)
+    expect(await connect.innerText()).not.toContain('fake-ui-secret')
+  } finally { await harness.close() }
 })
 
 shellTest.describe('Feishu extension setup', () => {

@@ -13,11 +13,12 @@
 | TR-03 | 完成 | 会话身份冲突拒绝、事务回滚、跨进程锁、子会话保护与重启持久化 |
 | MSG-01 | 完成 | 规范化默认、显示 TOML、真实 Go loader 19 组配置 |
 | MSG-02 | 完成 | 实际保存/读取 IPC、偏好合并、非法输入无写入、Sidecar/Safe Mode 回归 |
-| MSG-03～MSG-04 | 未完成 | UI、文档与全门禁 |
+| MSG-03 | 完成 | 设置页四组选项、中英文、编辑保护、保存/重开与非预设回显 |
+| MSG-04 | 未完成 | 使用指南、默认行为 ADR 与全门禁 |
 | FS-01～FS-04 | 未完成 | 管理契约、应用记录、生命周期、统一管理窗口 |
 | QA-01 / shell 发布 | 未完成 | 安装包、受控真实验收、发布与镜像 |
 
-下一任务：**MSG-03**。
+下一任务：**MSG-04**。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -134,3 +135,24 @@ Go 1.25（与现有 go.mod 相同）环境，未升级依赖或修改子模块�
 | `pnpm run typecheck`、`git diff --check` | 通过 | 0 |
 
 未覆盖项：设置页四组选项、双语/禁用/轮询编辑/非预设值回显交 MSG-03；实际飞书展示交 QA-01。
+
+## MSG-03 — 设置页降噪控件
+
+允许范围：手维护 client.js、桌面控件测试、真实 Electron/Harness UI 回归。沿用现有 CSS
+变量/字号/布局，用 frontend-design 校核可读文案、焦点、禁用及截图；没有新增依赖或通道。
+任务提交 SHA：提交后记录。
+
+工作区后追加详细度、预览/间隔、卡片样式、进度展示，静默说明保留最终答复。加载前禁用
+字段防止默认值误写；轮询只更新运行状态、不覆盖编辑，成功保存回填规范化值并清空一次性
+Secret。提交期间的新编辑也保留。非预设合法间隔增加当前值选项，不提供自由文本输入。
+
+| 命令 | 结果 | 退出码 |
+|---|---|---:|
+| `node --check plugins/dsh-desktop-controls/lib/client.js` | 通过 | 0 |
+| `node --test test/desktop-controls.test.ts` | 5 passed；双语键、焦点/禁用、受控预设及原插件边界 | 0 |
+| `pnpm exec playwright test e2e/electron-shell.spec.ts -g 'real Desktop display controls\|display settings IPC' --repeat-each=2` | 4 passed；真实设置 UI/IPC、中英文、预览禁用/保留、保存重开、轮询编辑保护、8 秒回显 | 0 |
+| `pnpm run verify` | 367 单测 + 1 ACP 全绿；覆盖率 89.10/80.86/85.06% | 0 |
+| `pnpm run typecheck`、`git diff --check` | 通过 | 0 |
+
+已检查英文真实设置截图；没有真实 Secret，UI/状态只呈现已配置标记。测试无模型/飞书请求。
+未覆盖项：实际飞书卡片、消息数量及安装包验收交 QA-01；飞书管理闭环尚未实施。

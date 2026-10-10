@@ -534,8 +534,12 @@ window.__ModuleLoader__.load({
         margin-top: 3px;
       }
       [data-dsh-desktop-settings] [data-dsh-connect-fields] {
+        border: 0;
         display: grid;
         gap: 8px;
+        margin: 0;
+        min-width: 0;
+        padding: 0;
       }
       [data-dsh-desktop-settings] [data-dsh-connect-field] {
         align-items: center;
@@ -547,7 +551,8 @@ window.__ModuleLoader__.load({
         color: var(--dsh-controls-muted);
         font-size: 11px;
       }
-      [data-dsh-desktop-settings] [data-dsh-connect-field] input {
+      [data-dsh-desktop-settings] [data-dsh-connect-field] input,
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select {
         background: var(--dsh-controls-panel);
         border: 1px solid var(--dsh-controls-border);
         border-radius: 7px;
@@ -555,6 +560,12 @@ window.__ModuleLoader__.load({
         min-width: 0;
         padding: 6px 8px;
       }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select { font: inherit; width: 100%; }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select:focus-visible {
+        outline: 2px solid var(--dsh-controls-accent);
+        outline-offset: 2px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select:disabled { cursor: not-allowed; opacity: .5; }
       [data-dsh-desktop-settings] [data-dsh-connect-workspace] {
         align-items: center;
         display: flex;
@@ -909,6 +920,10 @@ window.__ModuleLoader__.load({
         groupHabits: "桌面习惯", groupServices: "账户与插件", groupRecovery: "恢复", groupPlugins: "插件", groupOptional: "维护与迁移",
         connectTitle: "飞书消息连接", connectCopy: "从飞书发起 DSH 任务；Secret 只保存在本机主进程。", connectEnabled: "启用连接", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "留空以保留已保存的 Secret", connectWorkspace: "默认工作区", connectChoose: "选择", connectSave: "保存连接", connectStart: "启动", connectStop: "停止", connectRestart: "重连", connectStatus: "状态", connectDisabled: "未启用", connectStopped: "已停止", connectStarting: "启动中", connectReady: "已连接", connectDegraded: "连接不稳定", connectCrashed: "连接已崩溃", connectSecretStored: "Secret 已保存", connectSecretMissing: "尚未保存 Secret", connectProtected: "系统安全存储", connectFileFallback: "本机受限存储", connectSaved: "连接设置已保存。", connectInvalidWorkspace: "请选择存在的绝对工作区目录。", connectInvalid: "请填写 App ID 并选择工作区。", connectStorage: "设置或凭证保存失败，请重试。", connectUnavailable: "连接桥不可用；请使用系统托盘或重新打开桌面设置。", connectLastError: "最近错误",
         lanSettings: "连接移动设备", lanSettingsDetail: "手机与电脑连接同一局域网，扫码即可进入 Harness Web 界面。",
+        connectDetailTitle: "消息详细度", connectDetailFull: "完整", connectDetailCompact: "精简", connectDetailQuiet: "静默", connectQuietHint: "静默仍会回复最终结果，并保留必要错误与权限交互。",
+        connectStreamPreview: "流式预览", connectStreamPreviewInterval: "刷新间隔", connectPreviewCurrent: "当前：{seconds}s",
+        connectCardModeTitle: "卡片样式", connectCardModeLegacy: "经典", connectCardModeRich: "富卡片（Card 2.0）",
+        connectProgressStyleTitle: "进度展示", connectProgressStyleLegacy: "逐条", connectProgressStyleCompact: "单消息更新", connectProgressStyleCard: "结构化卡片",
         lanStart: "开始配对", lanShowQr: "显示二维码", lanStop: "停止共享", lanPanelDetail: "同一局域网 · 扫码进入 Harness", lanActiveDetail: "局域网入口已开启", lanStopDetail: "关闭当前局域网入口",
         shortcut: "唤起快捷键", record: "重新设置", recording: "请按下快捷键…",
         shortcutHelp: "至少包含一个修饰键，例如 Ctrl + Alt + K。",
@@ -964,6 +979,10 @@ window.__ModuleLoader__.load({
         groupHabits: "Desktop habits", groupServices: "Account & plugins", groupRecovery: "Recovery", groupPlugins: "Plugins", groupOptional: "Maintenance & migration",
         connectTitle: "Feishu message connection", connectCopy: "Start DSH tasks from Feishu. The Secret stays in the local main process.", connectEnabled: "Enable connection", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "Leave blank to keep the saved Secret", connectWorkspace: "Default workspace", connectChoose: "Choose", connectSave: "Save connection", connectStart: "Start", connectStop: "Stop", connectRestart: "Reconnect", connectStatus: "Status", connectDisabled: "Disabled", connectStopped: "Stopped", connectStarting: "Starting", connectReady: "Connected", connectDegraded: "Unstable", connectCrashed: "Crashed", connectSecretStored: "Secret saved", connectSecretMissing: "Secret not saved", connectProtected: "System secure storage", connectFileFallback: "Protected local file", connectSaved: "Connection settings saved.", connectInvalidWorkspace: "Choose an existing absolute workspace directory.", connectInvalid: "Enter an App ID and choose a workspace.", connectStorage: "Settings or credential storage failed; retry.", connectUnavailable: "The connection bridge is unavailable; use the system tray or reopen Desktop settings.", connectLastError: "Last error",
         lanSettings: "Connect a mobile device", lanSettingsDetail: "Same LAN as the computer; scan the QR code to enter the Harness Web UI.",
+        connectDetailTitle: "Message detail", connectDetailFull: "Full", connectDetailCompact: "Compact", connectDetailQuiet: "Quiet", connectQuietHint: "Quiet still sends the final answer and essential errors and permission prompts.",
+        connectStreamPreview: "Stream preview", connectStreamPreviewInterval: "Refresh interval", connectPreviewCurrent: "Current: {seconds}s",
+        connectCardModeTitle: "Card style", connectCardModeLegacy: "Classic", connectCardModeRich: "Rich card (Card 2.0)",
+        connectProgressStyleTitle: "Progress display", connectProgressStyleLegacy: "Separate messages", connectProgressStyleCompact: "Single message updates", connectProgressStyleCard: "Structured card",
         lanStart: "Start pairing", lanShowQr: "Show QR code", lanStop: "Stop sharing", lanPanelDetail: "Same LAN · scan to enter Harness", lanActiveDetail: "LAN access is active", lanStopDetail: "Close the current LAN entry point",
         shortcut: "Summon shortcut", record: "Change", recording: "Press a shortcut…",
         shortcutHelp: "Include at least one modifier, such as Ctrl + Alt + K.",
@@ -1259,7 +1278,12 @@ window.__ModuleLoader__.load({
       const [healthBusy, setHealthBusy] = react.useState(false);
       const [healthNetwork, setHealthNetwork] = react.useState(false);
       const [connectState, setConnectState] = react.useState(null);
-      const [connectForm, setConnectForm] = react.useState({ enabled: false, appId: "", appSecret: "", workspace: "" });
+      const [connectForm, setConnectForm] = react.useState({ enabled: false, appId: "", appSecret: "", workspace: "", detail: "compact", showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: "legacy", progressStyle: "legacy" });
+      const connectRevision = react.useRef(0);
+      const editConnect = (patch) => {
+        connectRevision.current++;
+        setConnectForm((current) => ({ ...current, ...patch }));
+      };
       const [connectBusy, setConnectBusy] = react.useState("");
       const [connectMessage, setConnectMessage] = react.useState("");
 
@@ -1279,17 +1303,20 @@ window.__ModuleLoader__.load({
         if (typeof bridge?.getConnectState !== "function") return undefined;
         let mounted = true;
         let initialized = false;
+        let refreshVersion = 0;
         const refresh = async () => {
+          const version = ++refreshVersion;
           const value = await bridge.getConnectState();
-          if (!mounted || value === null) return;
+          if (!mounted || version !== refreshVersion || value === null) return;
           setConnectState(value);
           if (!initialized) {
             initialized = true;
-            setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "" });
+            if (connectRevision.current === 0) setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
           }
         };
-        void refresh();
-        const timer = setInterval(() => { void refresh(); }, 1000);
+        const poll = () => void refresh().catch(() => { if (mounted) setConnectMessage(copy.connectUnavailable); });
+        poll();
+        const timer = setInterval(poll, 1000);
         return () => { mounted = false; clearInterval(timer); };
       }, [bridge]);
 
@@ -1300,12 +1327,19 @@ window.__ModuleLoader__.load({
         }
         setConnectBusy("save");
         setConnectMessage("");
+        const revision = connectRevision.current;
+        const submittedSecret = connectForm.appSecret;
         try {
           const result = await bridge.saveConnectSettings(connectForm);
           if (result === null) return;
           setConnectState(result.state);
           if (result.ok) {
-            setConnectForm((current) => ({ ...current, appSecret: "" }));
+            const value = result.state;
+            if (revision === connectRevision.current) {
+              setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
+            } else {
+              setConnectForm((current) => ({ ...current, appSecret: current.appSecret === submittedSecret ? "" : current.appSecret }));
+            }
             setConnectMessage(copy.connectSaved);
           } else {
             setConnectMessage(result.reason === "invalid-workspace" ? copy.connectInvalidWorkspace
@@ -1327,7 +1361,7 @@ window.__ModuleLoader__.load({
         setConnectBusy("workspace");
         try {
           const workspace = await bridge.pickConnectWorkspace();
-          if (workspace !== null) setConnectForm((current) => ({ ...current, workspace }));
+          if (workspace !== null) editConnect({ workspace });
         } catch {
           setConnectMessage(copy.connectStorage);
         } finally {
@@ -1789,18 +1823,18 @@ window.__ModuleLoader__.load({
                 ] }),
                 react_jsx_runtime.jsx("span", { "data-dsh-connect-status": true, "data-state": connectPhase, children: connectPhaseLabel }),
               ] }),
-              react_jsx_runtime.jsxs("div", { "data-dsh-connect-fields": true, children: [
+              react_jsx_runtime.jsxs("fieldset", { "data-dsh-connect-fields": true, disabled: connectState === null, children: [
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectEnabled }),
-                  react_jsx_runtime.jsx("input", { "data-dsh-desktop-checkbox": true, type: "checkbox", checked: connectForm.enabled === true, onChange: (event) => setConnectForm((current) => ({ ...current, enabled: event.target.checked })) }),
+                  react_jsx_runtime.jsx("input", { "data-dsh-desktop-checkbox": true, type: "checkbox", checked: connectForm.enabled === true, onChange: (event) => editConnect({ enabled: event.target.checked }) }),
                 ] }),
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectAppId }),
-                  react_jsx_runtime.jsx("input", { type: "text", value: connectForm.appId, autoComplete: "off", onChange: (event) => setConnectForm((current) => ({ ...current, appId: event.target.value })) }),
+                  react_jsx_runtime.jsx("input", { type: "text", value: connectForm.appId, autoComplete: "off", onChange: (event) => editConnect({ appId: event.target.value }) }),
                 ] }),
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectAppSecret }),
-                  react_jsx_runtime.jsx("input", { type: "password", value: connectForm.appSecret, autoComplete: "new-password", placeholder: copy.connectAppSecretPlaceholder, onChange: (event) => setConnectForm((current) => ({ ...current, appSecret: event.target.value })) }),
+                  react_jsx_runtime.jsx("input", { type: "password", value: connectForm.appSecret, autoComplete: "new-password", placeholder: copy.connectAppSecretPlaceholder, onChange: (event) => editConnect({ appSecret: event.target.value }) }),
                 ] }),
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectWorkspace }),
@@ -1809,9 +1843,44 @@ window.__ModuleLoader__.load({
                     react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: connectBusy !== "", onClick: () => void chooseConnectWorkspace(), children: copy.connectChoose }),
                   ] }),
                 ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectDetailTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.detail, onChange: (event) => editConnect({ detail: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "full", children: copy.connectDetailFull }),
+                    react_jsx_runtime.jsx("option", { value: "compact", children: copy.connectDetailCompact }),
+                    react_jsx_runtime.jsx("option", { value: "quiet", children: copy.connectDetailQuiet }),
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectStreamPreview }),
+                  react_jsx_runtime.jsx("input", { "data-dsh-desktop-checkbox": true, type: "checkbox", checked: connectForm.showStreamPreview, onChange: (event) => editConnect({ showStreamPreview: event.target.checked }) }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectStreamPreviewInterval }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.streamPreviewIntervalMs, disabled: !connectForm.showStreamPreview, onChange: (event) => editConnect({ streamPreviewIntervalMs: Number(event.target.value) }), children: [
+                    ...[1500, 3000, 5000].map((value) => react_jsx_runtime.jsx("option", { value, children: `${value / 1000}s` }, value)),
+                    ![1500, 3000, 5000].includes(connectForm.streamPreviewIntervalMs) ? react_jsx_runtime.jsx("option", { value: connectForm.streamPreviewIntervalMs, children: copy.connectPreviewCurrent.replace("{seconds}", String(connectForm.streamPreviewIntervalMs / 1000)) }) : null,
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectCardModeTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.cardMode, onChange: (event) => editConnect({ cardMode: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "legacy", children: copy.connectCardModeLegacy }),
+                    react_jsx_runtime.jsx("option", { value: "rich", children: copy.connectCardModeRich }),
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectProgressStyleTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.progressStyle, onChange: (event) => editConnect({ progressStyle: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "legacy", children: copy.connectProgressStyleLegacy }),
+                    react_jsx_runtime.jsx("option", { value: "compact", children: copy.connectProgressStyleCompact }),
+                    react_jsx_runtime.jsx("option", { value: "card", children: copy.connectProgressStyleCard }),
+                  ] }),
+                ] }),
               ] }),
+              react_jsx_runtime.jsx("small", { "data-dsh-connect-copy": true, children: copy.connectQuietHint }),
               react_jsx_runtime.jsxs("div", { "data-dsh-connect-actions": true, children: [
-                react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, disabled: connectBusy !== "", onClick: () => void saveConnect(), children: connectBusy === "save" ? "…" : copy.connectSave }),
+                react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, disabled: connectBusy !== "" || connectState === null, onClick: () => void saveConnect(), children: connectBusy === "save" ? "…" : copy.connectSave }),
                 react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.enabled !== true || connectState?.secretConfigured !== true, onClick: () => void connectAction(connectActive ? "stop" : "start"), children: connectActive ? copy.connectStop : copy.connectStart }),
                 react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.enabled !== true || connectState?.secretConfigured !== true, onClick: () => void connectAction("restart"), children: connectBusy === "restart" ? "…" : copy.connectRestart }),
               ] }),

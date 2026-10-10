@@ -70,6 +70,14 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   assert.match(client, /restartConnect/)
   assert.match(client, /connectAppSecret/)
   assert.match(client, /connectProtected/)
+  for (const key of ['connectDetailTitle', 'connectDetailFull', 'connectDetailCompact', 'connectDetailQuiet', 'connectStreamPreview', 'connectStreamPreviewInterval', 'connectCardModeTitle', 'connectCardModeLegacy', 'connectCardModeRich', 'connectProgressStyleTitle', 'connectProgressStyleLegacy', 'connectProgressStyleCompact', 'connectProgressStyleCard', 'connectQuietHint']) {
+    assert.equal((client.match(new RegExp(key + ':', 'g')) ?? []).length, 2, `${key} has Chinese and English translations`)
+  }
+  assert.match(client, /select:focus-visible/)
+  assert.match(client, /select:disabled/)
+  assert.match(client, /disabled: !connectForm\.showStreamPreview/)
+  assert.match(client, /\[1500, 3000, 5000\]/)
+  assert.match(client, /connectRevision\.current/)
   assert.match(client, /setConnectForm\(\{[\s\S]*appSecret: ""/)
   // A successful check with no newer kernel must still answer the user.
   assert.match(client, /kernelUpToDate/)
