@@ -1,14 +1,14 @@
-# 飞书消息降噪 / 卡片样式：待实施任务卡
+# 飞书消息降噪 / 卡片样式：任务卡与验收记录
 
-补充日期：2026-10-11。状态：已并入[人工审查迭代计划](README.md)，尚未实施。
-本次只记录需求，不修改产品配置或已发布使用指南，不声称新增测试已通过。
+补充日期：2026-10-11。状态：MSG-01～MSG-04 源码/文档/自动门禁已完成。
+逐项提交与结果见 [progress.md](progress.md)；真实飞书和新 shell 安装包验收仍由 QA-01 完成。
 
 执行约定：按用户 2026-10-11 的最新要求，跳过 TDD，采用“先实现 → 验证 → 修复 → 再验证”的持续迭代流程。
 此约定替代补充需求最初的“先写失败测试”，不取消任何测试覆盖或验收标准。
 
 ## 背景与边界
 
-当前 [renderConnectToml()](../../../src/main/cc-connect-config.ts) 未生成 `[projects.display]`
+需求基线时 [renderConnectToml()](../../../src/main/cc-connect-config.ts) 未生成 `[projects.display]`
 或 `[stream_preview]`。固定子模块基线的 [配置类型](../../../third_party/cc-connect/config/config.go#L187)
 已支持 full/compact/quiet、legacy/rich 和预览配置；[预览默认值](../../../third_party/cc-connect/core/streaming.go#L20)
 是开启、1500ms、30 字符增量。壳默认应更安静，而非要求用户手改 TOML。
@@ -160,4 +160,4 @@ UI/生命周期自动测试用临时 userData/DSH_HOME、假 Sidecar 和模拟 A
 - 用户显式选择 full、quiet、富卡片或其他进度样式可保存并生效；关闭预览不破坏最终消息与权限交互。
 - Secret、Safe Mode、启停和崩溃重启预算不回归；后续应用配置迁移和管理窗口保留全部设置。
 
-本次补充仅完成任务编排与契约核对；MSG-01～MSG-04 仍为待实施，不记为功能完成。
+源码配置/IPC/真实设置页已交付，文档记录旧默认值变更；不以自动回归代替真实飞书展示或安装包验收。

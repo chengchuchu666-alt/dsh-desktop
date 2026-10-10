@@ -57,6 +57,32 @@
 Secret 输入框是一次性写入框：保存成功后会自动清空；之后保存时留空表示保留已经保存的
 Secret，不会把它清掉。界面只显示“Secret 已保存”及存储保护类型，不会读回 Secret。
 
+#### 消息降噪 / 卡片样式
+
+以下选项已在本轮源码实现，随下一 shell 版本交付；旧安装包尚无这些控件。
+工作区之后可以选择：
+
+| 选项 | 可选值 | 默认 |
+|---|---|---|
+| 消息详细度 | 完整（full）/ 精简（compact）/ 静默（quiet） | 精简 |
+| 流式预览 | 开启或关闭 | 开启 |
+| 刷新间隔 | 1.5s / 3s / 5s；已有合法非预设值会原样回显 | 3s（3000ms） |
+| 卡片样式 | 经典（legacy）/ 富卡片（rich，Card 2.0） | 经典 |
+| 进度展示 | 逐条（legacy）/ 单消息更新（compact）/ 结构化卡片（card） | 逐条 |
+
+精简和静默不逐条发送思考/工具消息；静默将文本追加到同一卡片，仍保留最终答复、必要错误
+与权限交互。进度展示和卡片样式是独立偏好，不承诺所有状态行或卡片按钮都会消失。
+关闭流式预览不会关闭最终答复；间隔控件此时禁用，但保留已选值。
+
+没有新字段的旧 `settings.json` 无需手改：读取时自动采用 compact、开启预览、3000ms、
+legacy 卡片与 legacy 进度。合法整数间隔钳制到 500–30000ms；不接受自由文本 TOML。
+配置生成一次全局 `[stream_preview]`、项目的 `[projects.display]`，固定预览增量为 80 字符。
+显式保存过的偏好在旧调用/二维码参数省略这些字段时仍保留。
+
+点击「保存连接」后，已运行的启用连接会重新生成 TOML 并重启；未运行、已禁用或 Safe Mode
+下保存不会隐式启动。轮询只更新状态，不覆盖未保存编辑；重开设置页会回显已保存值。
+行为取舍见 [ADR 0036](decisions/0036-bounded-message-preferences.zh.md)。
+
 通过二维码或设置页保存连接后，「停止」只停止当前 Sidecar，不会关闭“启用连接”开关；应用下次启动且配置仍启用时，
 Harness 就绪后会再次启动它。「重连」会重新生成当前配置并重启 Sidecar。未配置完整、
 Harness 尚未就绪或应用处于 Safe Mode 时，Sidecar 不会启动。
@@ -77,7 +103,7 @@ Safe Mode 不会删除 Secret、工作区或会话数据。
 
 连接相关文件位于 `<userData>/cc-connect/`：
 
-- `settings.json`：启用开关、App ID 和工作区，不含 Secret。
+- `settings.json`：启用开关、App ID、工作区与受控消息显示偏好，不含 Secret。
 - `config.toml`：Sidecar 使用的固定配置，不含 Secret，只包含
   `${DSH_CC_CONNECT_FEISHU_SECRET}` 占位符。
 - `credentials.json`：Secret 的应用私有存储。优先使用 Electron `safeStorage`；不可用
@@ -110,7 +136,7 @@ App ID 和会话标识，不要粘贴任何 Secret。
 ## 已知限制
 
 - 首版只生成一个固定的 `dsh-desktop` 项目和一个 Feishu/Lark 平台，使用一个默认工作区；
-  不提供按聊天切换工作区或交互式模型选择。
+  支持受控的消息降噪 / 卡片样式选项，不提供多项目/多平台、按聊天切换工作区或交互式模型选择。
 - 首版只使用飞书长连接，不启用 cc-connect 的 bridge、management API 或 webhook 监听。
 - 卡片按钮依赖飞书回调订阅和已发布权限；权限审批、可用范围和版本发布由飞书后台控制。
 - 自动化测试使用假 Sidecar、临时目录和本地 ACP/HTTP mock，不代表真实飞书账号验收。首次

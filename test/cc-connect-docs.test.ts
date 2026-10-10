@@ -26,6 +26,19 @@ test('cc-connect user documentation covers setup, lifecycle, storage, and remova
     'DSH_CC_CONNECT_FEISHU_SECRET',
     '配置飞书机器人',
     '二维码',
+    '消息详细度',
+    '流式预览',
+    '刷新间隔',
+    '卡片样式',
+    '进度展示',
+    'compact',
+    'quiet',
+    '3000ms',
+    '[stream_preview]',
+    '[projects.display]',
+    '最终答复',
+    '未保存编辑',
+    '多项目/多平台',
   ]) {
     assert.match(guide, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
@@ -38,4 +51,8 @@ test('cc-connect user documentation covers setup, lifecycle, storage, and remova
   assert.match(siteHomeEn, /Set up Feishu bot/)
   assert.match(siteInstall, /pnpm run feishu:setup/)
   assert.match(siteInstallEn, /pnpm run feishu:setup/)
+  const decision = await readFile('docs/decisions/0036-bounded-message-preferences.zh.md', 'utf8')
+  assert.match(decision, /缺省字段.*compact/)
+  assert.match(decision, /显式偏好/)
+  assert.match(decision, /静默不是不回复/)
 })
