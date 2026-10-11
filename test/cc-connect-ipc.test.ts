@@ -6,8 +6,10 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
-import { readConnectSettings, writeConnectSettings, connectSettingsPath, CONNECT_DISPLAY_DEFAULTS } from '../src/main/cc-connect-config.ts'
-import { ConnectCredentials, credentialsPath } from '../src/main/cc-connect-credentials.ts'
+import { normalizeConnectSettings, connectApplicationsPath, CONNECT_DISPLAY_DEFAULTS } from '../src/main/cc-connect-config.ts'
+import { credentialsPath } from '../src/main/cc-connect-credentials.ts'
+import { ConnectApplicationStore } from '../src/main/cc-connect-applications.ts'
+import { ConnectController, ConnectOperationError } from '../src/main/cc-connect-controller.ts'
 import type { ConnectSaveResult, ConnectSettingsInput } from '../src/main/cc-connect-types.ts'
 
 const preload = readFileSync('src/preload/index.ts', 'utf8')
@@ -49,24 +51,35 @@ async function settingsIPC(active = false) {
   const home = await mkdtemp(join(tmpdir(), 'dsh-connect-ipc-'))
   let restarts = 0
   let stops = 0
-  class Credentials extends ConnectCredentials {
-    constructor(path: string) { super(path, { isEncryptionAvailable: () => false, encryptString: () => { throw new Error('unused') }, decryptString: () => { throw new Error('unused') } }) }
+  const store = new ConnectApplicationStore(home, { storage: { isEncryptionAvailable: () => false,
+    encryptString: () => { throw new Error('unused') }, decryptString: () => { throw new Error('unused') } } })
+  const controller = new ConnectController({ store, environment: () => ({ safeMode: false, harnessReady: true }),
+    validWorkspace: async workspace => isAbsolute(workspace) && (await stat(workspace)).isDirectory(),
+    createProcess: async (_app, _secret, events) => ({
+      start: async () => { restarts++; events.onState({ phase: 'ready', restartAttempts: 0 }); return true },
+      stop: async () => { stops++ },
+    }) })
+  if (active) {
+    const application = await store.save({ name: 'Feishu', appId: 'cli_fake', workspace: home, appSecret: 'fake-initial' })
+    await controller.start('manual', application.id)
+    restarts = 0; stops = 0
   }
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>()
-  const functions = main.slice(main.indexOf('function connectStateFromRuntime('), main.indexOf('async function createConnectSupervisor('))
+  const functions = main.slice(main.indexOf('async function readConnectState('), main.indexOf('function getConnectController('))
   const registrations = main.slice(main.indexOf("ipcMain.handle('desktop:connect:get-state'"), main.indexOf("ipcMain.handle('desktop:connect:pick-workspace'"))
   assert.ok(functions && registrations)
   runInNewContext(transformSync(functions + registrations, { loader: 'ts', format: 'cjs' }).code, {
-    app: { getPath: () => home }, readConnectSettings, writeConnectSettings, credentialsPath,
-    ConnectCredentials: Credentials, isAbsolute, stat, console,
-    connectSupervisor: active ? {} : undefined, lastConnectRuntimeState: active ? { phase: 'ready' } : undefined,
-    stopConnectSupervisor: async () => { stops++ }, restartConnectForCurrentKernel: async () => { restarts++; return true },
+    getConnectController: () => controller, normalizeConnectSettings, ConnectOperationError, isAbsolute, stat, console,
     windowContext: { mainWindow: {}, allowedOrigin: 'test-harness' },
     isMainWindowHarnessSender: (_window: unknown, sender: unknown) => sender === 'authorized',
     ipcMain: { handle: (channel: string, handler: (...args: unknown[]) => Promise<unknown>) => handlers.set(channel, handler) },
   })
   return {
-    home, get restarts() { return restarts }, get stops() { return stops },
+    home, store, controller, get restarts() { return restarts }, get stops() { return stops },
+    credentialDocument: async () => {
+      const manifest = JSON.parse(await readFile(connectApplicationsPath(home), 'utf8'))
+      return readFile(credentialsPath(home, manifest.credentials[manifest.activeApplicationId]), 'utf8')
+    },
     save: (input: unknown, authorized = true) => handlers.get('desktop:connect:save-settings')!({ sender: authorized ? 'authorized' : 'untrusted' }, input) as Promise<ConnectSaveResult | null>,
     state: () => handlers.get('desktop:connect:get-state')!({ sender: 'authorized' }),
     close: () => rm(home, { recursive: true, force: true }),
@@ -85,14 +98,19 @@ test('save-settings accepts display preferences, returns resolved state and pres
     assert.equal(result!.state.progressStyle, 'card')
     assert.equal(result!.state.showStreamPreview, false)
     assert.equal(ipc.restarts, 1)
-    assert.equal(await new ConnectCredentials(credentialsPath(ipc.home), { isEncryptionAvailable: () => false, encryptString: () => Buffer.alloc(0), decryptString: () => '' }).readSecret(), 'fake-ipc-secret')
+    assert.equal(await ipc.store.readSecret(result!.state.applicationId!), 'fake-ipc-secret')
     const oldCall = await ipc.save({ enabled: true, appId: 'cli_fake', workspace: ipc.home, appSecret: '' })
     assert.equal(oldCall?.ok, true)
     assert.equal(oldCall!.state.detail, 'quiet')
     assert.equal(oldCall!.state.streamPreviewIntervalMs, 30000)
     assert.equal(oldCall!.state.secretConfigured, true)
     assert.doesNotMatch(JSON.stringify(await ipc.state()), /fake-ipc-secret|appSecret/)
-    assert.doesNotMatch(await readFile(connectSettingsPath(ipc.home), 'utf8'), /fake-ipc-secret|appSecret/)
+    assert.doesNotMatch(await readFile(connectApplicationsPath(ipc.home), 'utf8'), /fake-ipc-secret|appSecret/)
+    const closed = await ipc.save({ ...input, enabled: false, appSecret: '' })
+    assert.equal(closed?.ok, true)
+    assert.equal(closed!.state.enabled, false)
+    assert.equal(closed!.state.phase, 'disabled')
+    assert.equal(ipc.stops, 3, 'each live save stops its previous owner, including explicit disable')
   } finally { await ipc.close() }
 })
 
@@ -101,8 +119,8 @@ test('save-settings rejects each invalid field before changing settings or crede
   try {
     const base = { enabled: true, appId: 'cli_fake', workspace: ipc.home, appSecret: 'fake-before' }
     assert.equal((await ipc.save(base))?.ok, true)
-    const settings = await readFile(connectSettingsPath(ipc.home), 'utf8')
-    const credentials = await readFile(credentialsPath(ipc.home), 'utf8')
+    const settings = await readFile(connectApplicationsPath(ipc.home), 'utf8')
+    const credentials = await ipc.credentialDocument()
     for (const fields of [
       { detail: 'loud' }, { detail: null }, { cardMode: 'unknown' }, { cardMode: false },
       { progressStyle: 'unknown' }, { progressStyle: 1 }, { showStreamPreview: 'false' },
@@ -112,11 +130,11 @@ test('save-settings rejects each invalid field before changing settings or crede
       const result = await ipc.save({ ...base, appSecret: 'fake-after', ...fields })
       assert.equal(result?.ok, false)
       assert.equal(result && 'reason' in result ? result.reason : '', 'invalid-input')
-      assert.equal(await readFile(connectSettingsPath(ipc.home), 'utf8'), settings)
-      assert.equal(await readFile(credentialsPath(ipc.home), 'utf8'), credentials)
+      assert.equal(await readFile(connectApplicationsPath(ipc.home), 'utf8'), settings)
+      assert.equal(await ipc.credentialDocument(), credentials)
     }
     assert.equal(await ipc.save(base, false), null)
-    assert.equal(await readFile(connectSettingsPath(ipc.home), 'utf8'), settings)
+    assert.equal(await readFile(connectApplicationsPath(ipc.home), 'utf8'), settings)
     assert.equal(ipc.restarts, 0)
   } finally { await ipc.close() }
 })
@@ -132,6 +150,6 @@ test('display saves without a running supervisor do not implicitly start, and di
     assert.equal(result!.state.phase, 'stopped')
     assert.equal(result!.state.streamPreviewIntervalMs, 500)
     assert.equal(ipc.restarts, 0)
-    assert.equal(ipc.stops, 1)
+    assert.equal(ipc.stops, 0, 'no process exists to stop; live disable is covered above')
   } finally { await ipc.close() }
 })

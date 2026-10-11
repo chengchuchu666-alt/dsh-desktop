@@ -10,6 +10,8 @@ import type { ConnectApplication, ConnectApplicationInput, ConnectApplicationSta
 
 interface ApplicationDocument extends ConnectManagerSettings {
   credentials: Record<string, string>
+  /** Keep the migrated robot's existing sessions; new robots use isolated data. */
+  legacyDataApplicationId: string | null
   /** Durable cleanup queue: retry on next operation if removal/write fails. */
   credentialCleanup: string[]
 }
@@ -43,6 +45,8 @@ function parseDocument(raw: unknown): ApplicationDocument {
     applications.push(normalizeApplication(application))
   }
   if (value.activeApplicationId !== null && !applications.some(item => item.id === value.activeApplicationId)) throw new ConnectApplicationError('storage')
+  if (value.legacyDataApplicationId !== undefined && value.legacyDataApplicationId !== null
+    && !applications.some(item => item.id === value.legacyDataApplicationId)) throw new ConnectApplicationError('storage')
   const credentials: Record<string, string> = {}
   for (const [id, credentialId] of Object.entries(value.credentials)) {
     if (!applications.some(item => item.id === id) || !isConnectRecordId(credentialId)
@@ -55,7 +59,8 @@ function parseDocument(raw: unknown): ApplicationDocument {
     if (!credentialCleanup.includes(id)) credentialCleanup.push(id)
   }
   return { version: 2, enabled: value.enabled, autoConnect: value.autoConnect, applications,
-    activeApplicationId: value.activeApplicationId as string | null, credentials, credentialCleanup }
+    activeApplicationId: value.activeApplicationId as string | null, credentials, credentialCleanup,
+    legacyDataApplicationId: value.legacyDataApplicationId as string | null ?? null }
 }
 
 /** Bounded input, no user-selected paths for credential files or arbitrary TOML. */
@@ -142,12 +147,13 @@ export class ConnectApplicationStore {
       || (legacy.workspace !== undefined && typeof legacy.workspace !== 'string')) throw new ConnectApplicationError('storage')
     const settings = normalizeConnectSettings(raw)
     const document: ApplicationDocument = { version: 2, enabled: settings.enabled, autoConnect: settings.enabled,
-      activeApplicationId: null, applications: [], credentials: {}, credentialCleanup: [] }
+      activeApplicationId: null, applications: [], credentials: {}, credentialCleanup: [], legacyDataApplicationId: null }
     let staged: string | undefined
     if (settings.appId.trim() !== '') {
       const id = randomUUID()
       document.applications.push(normalizeApplication({ ...settings, appId: settings.appId.trim(), id, name: 'Feishu' }))
       document.activeApplicationId = id
+      document.legacyDataApplicationId = id
       staged = randomUUID()
       if (await this.credential().copyTo(credentialsPath(this.userData, staged))) {
         document.credentials[id] = staged
@@ -174,19 +180,36 @@ export class ConnectApplicationStore {
 
   async read(): Promise<ConnectManagerSettings> {
     return this.locked(async document => {
-      const { credentials: _credentials, credentialCleanup: _cleanup, ...settings } = document
+      const { credentials: _credentials, credentialCleanup: _cleanup, legacyDataApplicationId: _legacy, ...settings } = document
       return settings
     })
   }
 
   async applications(): Promise<ConnectApplicationState[]> {
-    return this.locked(async document => Promise.all(document.applications.map(async application => {
-      const credentialId = document.credentials[application.id]
-      const state = credentialId === undefined
-        ? { secretConfigured: false, credentialProtection: 'none' as const }
-        : await this.credential(credentialId).state()
-      return { ...application, ...state }
-    })))
+    return (await this.snapshot()).applications
+  }
+
+  /** Selection and credential flags are read under one lock, never mixed revisions. */
+  async snapshot(): Promise<Omit<ConnectManagerSettings, 'applications'> & { applications: ConnectApplicationState[] }> {
+    return this.locked(async document => {
+      const { credentials: _credentials, credentialCleanup: _cleanup, legacyDataApplicationId: _legacy, ...settings } = document
+      const applications = await Promise.all(document.applications.map(async application => {
+        const credentialId = document.credentials[application.id]
+        const state = credentialId === undefined
+          ? { secretConfigured: false, credentialProtection: 'none' as const }
+          : await this.credential(credentialId).state()
+        return { ...application, ...state }
+      }))
+      return { ...settings, applications }
+    })
+  }
+
+  async dataDirectory(id: string): Promise<string> {
+    return this.locked(async document => {
+      if (!document.applications.some(item => item.id === id)) throw new ConnectApplicationError('not-found')
+      return document.legacyDataApplicationId === id ? join(this.userData, 'cc-connect', 'data')
+        : join(this.userData, 'cc-connect', 'applications', id, 'data')
+    })
   }
 
   async readSecret(id: string): Promise<string | undefined> {
@@ -251,6 +274,7 @@ export class ConnectApplicationStore {
       const next = structuredClone(document)
       next.applications = next.applications.filter(item => item.id !== id)
       if (next.activeApplicationId === id) next.activeApplicationId = null
+      if (next.legacyDataApplicationId === id) next.legacyDataApplicationId = null
       const credentialId = next.credentials[id]
       if (credentialId !== undefined) next.credentialCleanup.push(credentialId)
       delete next.credentials[id]

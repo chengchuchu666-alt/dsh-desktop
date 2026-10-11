@@ -78,9 +78,11 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       await writeFile(connectModePath, 'ready\n')
       await writeFile(connectBinPath, [
         '#!/usr/bin/env node',
-        "import { readFileSync } from 'node:fs'",
+        "import { readFileSync, appendFileSync } from 'node:fs'",
         "const mode = readFileSync(process.env.DSH_CC_CONNECT_TEST_MODE, 'utf8').trim()",
+        "appendFileSync(process.env.DSH_CC_CONNECT_TEST_MODE + '.starts', String(process.pid) + '\\n')",
         "console.error('fake cc-connect ready projects=1')",
+        "if (mode === 'health') setTimeout(() => { for (const event of [{version:1,component:'channel',state:'online'},{version:1,component:'agent',state:'unavailable',errorCode:'model-key-missing'}]) console.error('level=INFO msg=\"cc-connect health\" event=' + JSON.stringify(JSON.stringify(event))) }, 30)",
         "if (mode === 'crash') setTimeout(() => { console.error('fake sidecar crash'); process.exit(23) }, 40)",
         'setInterval(() => {}, 1000)',
         '',
@@ -282,7 +284,7 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
     await use(async () => {
       const handle = activeLaunch
       if (handle === undefined) throw new Error('relaunch: no active launch handle')
-      await electronApp.close().catch(() => {})
+      await handle.current()?.close().catch(() => {})
       const next = await handle.launch()
       // The fixture tracks the latest app so teardown closes it as well.
       return next
@@ -862,6 +864,61 @@ test.describe('environment edge paths', () => {
 shellTest.describe('cc-connect desktop sidecar', () => {
   shellTest.use({ connectSidecar: true })
 
+  shellTest('close persists across Desktop restart and Safe Mode; autoConnect is startup-only and health is layered @critical', async ({ window, dshHome, userData, connectModePath, relaunch }) => {
+    type Bridge = { getConnectState(): Promise<ConnectState | null>; saveConnectSettings(input: ConnectSettingsInput): Promise<ConnectSaveResult | null>;
+      startConnect(): Promise<boolean>; stopConnect(): Promise<boolean>; restartConnect(): Promise<boolean>; desktopAction(action: string): Promise<boolean> }
+    let page = window
+    const state = () => page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState()).catch(error => {
+      if (String(error).includes('Execution context was destroyed')) return null
+      throw error
+    })
+    const action = (name: 'startConnect' | 'stopConnect' | 'restartConnect') => page.evaluate(name => (window as unknown as { dshDesktop: Bridge }).dshDesktop[name](), name)
+    const starts = async () => (await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n').length
+    const reopen = async () => { const next = await relaunch(); page = await next.firstWindow(); await packagedOrStubHeadline(page) }
+    await writeFile(connectModePath!, 'health\n')
+    expect(await page.evaluate(workspace => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings({ enabled: true, appId: 'cli_persistence_fake', workspace, appSecret: 'fake-persistence-secret' }), dshHome)).toMatchObject({ ok: true })
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready', health: { channel: 'online', dsh: 'unavailable', errorCode: 'model-key-missing' } })
+    expect((await state())?.health?.verifiedAt).toBeUndefined()
+    expect((await state())?.secretConfigured).toBe(true)
+    const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
+    const initial = (await state())!
+    expect(config).toContain(`data_dir = ${JSON.stringify(join(userData, 'cc-connect', 'applications', initial.applicationId!, 'data'))}`)
+    expect(await starts()).toBe(1)
+    expect(await action('stopConnect')).toBe(true)
+    await reopen()
+    await expect.poll(state).toMatchObject({ phase: 'disabled', enabled: false })
+    expect(await action('restartConnect')).toBe(false)
+    for (const mode of ['enterSafeMode', 'exitSafeMode']) {
+      await page.evaluate(mode => (window as unknown as { dshDesktop: Bridge }).dshDesktop.desktopAction(mode), mode).catch(error => {
+        if (!String(error).includes('Execution context was destroyed')) throw error
+      })
+      await expect.poll(state).toMatchObject({ enabled: false, phase: 'disabled' })
+    }
+    expect(await starts(), 'close cannot resurrect on restart, reconnect or Safe Mode exit').toBe(1)
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ enabled: true, phase: 'ready' })
+    const manifestPath = join(userData, 'cc-connect', 'applications.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    expect(manifest.autoConnect).toBe(true)
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, autoConnect: false })) // isolated preference fixture; manager UI is FS-04
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: false, phase: 'stopped' })
+    expect(await starts()).toBe(2)
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready' })
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: false, phase: 'stopped' })
+    expect(await starts()).toBe(3)
+    const saved = JSON.parse(await readFile(manifestPath, 'utf8'))
+    await writeFile(manifestPath, JSON.stringify({ ...saved, autoConnect: true }))
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: true, phase: 'ready', health: { channel: 'online', dsh: 'unavailable' } })
+    expect(await starts()).toBe(4)
+    expect(JSON.stringify(await state())).not.toContain('fake-persistence-secret')
+    expect(await action('stopConnect')).toBe(true)
+  })
+
   shellTest('display settings IPC validates, persists and rerenders without breaking Safe Mode @smoke', async ({ window, dshHome, userData }) => {
     type Bridge = {
       saveConnectSettings(input: unknown): Promise<ConnectSaveResult | null>
@@ -888,13 +945,15 @@ shellTest.describe('cc-connect desktop sidecar', () => {
     expect(config).toContain('interval_ms = 30000')
     expect(config).toContain('progress_style = "card"')
     expect(config).not.toContain('fake-display-secret')
-    const settingsPath = join(userData, 'cc-connect', 'settings.json')
+    const settingsPath = join(userData, 'cc-connect', 'applications.json')
     const before = await readFile(settingsPath, 'utf8')
-    const secretBefore = await readFile(join(userData, 'cc-connect', 'credentials.json'), 'utf8')
+    const manifest = JSON.parse(before)
+    const secretPath = join(userData, 'cc-connect', 'credentials', `${manifest.credentials[manifest.activeApplicationId]}.json`)
+    const secretBefore = await readFile(secretPath, 'utf8')
     for (const fields of [{ detail: 'invalid' }, { cardMode: 'invalid' }, { progressStyle: 'invalid' }, { showStreamPreview: 'true' }, { streamPreviewIntervalMs: 1.5 }, { streamPreviewIntervalMs: '3000' }]) {
       expect(await save({ ...base, ...fields })).toMatchObject({ ok: false, reason: 'invalid-input' })
       expect(await readFile(settingsPath, 'utf8')).toBe(before)
-      expect(await readFile(join(userData, 'cc-connect', 'credentials.json'), 'utf8')).toBe(secretBefore)
+      expect(await readFile(secretPath, 'utf8')).toBe(secretBefore)
     }
     expect(await save({ enabled: true, appId: base.appId, workspace: base.workspace, appSecret: '' })).toMatchObject({ ok: true, state: { detail: 'quiet', cardMode: 'rich', progressStyle: 'card', streamPreviewIntervalMs: 30000 } })
     const safe = await window.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.desktopAction('enterSafeMode')).catch(error => {
@@ -966,7 +1025,7 @@ shellTest.describe('cc-connect desktop sidecar', () => {
       if (value === undefined) throw new Error('desktop bridge missing')
       return value.stopConnect()
     })).toBe(true)
-    await expect.poll(state).toMatchObject({ enabled: true, phase: 'stopped' })
+    await expect.poll(state).toMatchObject({ enabled: false, phase: 'disabled' })
 
     await writeFile(connectModePath!, 'ready\n')
     expect(await window.evaluate(() => {
@@ -1087,10 +1146,10 @@ shellTest.describe('Feishu extension setup', () => {
     const setupWindow = await setupWindowPromise
     await setupWindow.waitForLoadState('domcontentloaded')
     await expect(setupWindow.locator('img.qr')).toBeVisible()
-    await expect(setupWindow.getByText('Connected. You can close this window.')).toBeVisible({ timeout: 10_000 })
+    await expect(setupWindow.getByText('Application saved. Check connection status in Desktop settings.')).toBeVisible({ timeout: 10_000 })
 
-    const settings = JSON.parse(await readFile(join(userData, 'cc-connect', 'settings.json'), 'utf8')) as Record<string, unknown>
-    expect(settings).toMatchObject({ enabled: true, appId: 'cli_fake_id', workspace: dshHome })
+    const settings = JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8'))
+    expect(settings).toMatchObject({ enabled: true, applications: [{ appId: 'cli_fake_id', workspace: dshHome }] })
     await expect.poll(() => window.evaluate(async () => {
       const bridge = (window as unknown as { dshDesktop?: { getConnectState(): Promise<{ phase: string } | null> } }).dshDesktop
       return bridge?.getConnectState().then(state => state?.phase)

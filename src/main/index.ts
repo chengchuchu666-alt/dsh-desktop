@@ -66,10 +66,12 @@ import { createShellPreferences } from './shell-preferences.ts'
 import { conversationSucceeded, focusWindowOnNotificationClick, normalizePublicStatusSnapshot, notificationsForPublicStatus, type PublicStatusSnapshot } from './desktop-notifications.ts'
 import { completeMarketInstall, type MarketInstallCommandResult, type MarketInstallProgress, type MarketInstallResult } from './market-install.ts'
 import { runDesktopHealthCheck } from './health-check.ts'
-import { readConnectSettings, writeConnectSettings, writeConnectToml } from './cc-connect-config.ts'
-import { ConnectCredentials, credentialsPath } from './cc-connect-credentials.ts'
-import { ConnectSupervisor, type ConnectState as ConnectRuntimeState } from './cc-connect-supervisor.ts'
-import type { ConnectSaveResult, ConnectSettingsInput, ConnectState } from './cc-connect-types.ts'
+import { normalizeConnectSettings, writeConnectToml } from './cc-connect-config.ts'
+import { ConnectApplicationStore } from './cc-connect-applications.ts'
+import { ConnectController, ConnectOperationError } from './cc-connect-controller.ts'
+import type { ConnectStartReason } from './cc-connect-policy.ts'
+import { ConnectSupervisor, type ConnectSupervisorEvents } from './cc-connect-supervisor.ts'
+import type { ConnectApplication, ConnectSaveResult, ConnectSettingsInput, ConnectState } from './cc-connect-types.ts'
 import { FeishuSetupRun } from './feishu-setup.ts'
 import { closeFeishuSetupWindow, showFeishuSetupWindow, type FeishuSetupWindowController } from './feishu-window.ts'
 
@@ -83,8 +85,7 @@ let desktopPreferencesController: DesktopPreferencesController | undefined
 let lastPublicStatus: PublicStatusSnapshot | undefined
 let lastHarnessPhase: HarnessState['phase'] | undefined
 const sessionTrashClient = new SessionTrashClient()
-let connectSupervisor: ConnectSupervisor | undefined
-let lastConnectRuntimeState: ConnectRuntimeState | undefined
+let connectController: ConnectController | undefined
 let feishuSetupRun: FeishuSetupRun | undefined
 let feishuSetupWindow: FeishuSetupWindowController | undefined
 /** Decision 0026: one healthy boot is guaranteed for the overlay selected at
@@ -154,7 +155,7 @@ async function applySafeMode(enabled: boolean): Promise<boolean> {
   if (!result.ok) return false
   refreshNativeSurfaces()
   const restarted = await shellApp.runHarnessRestart()
-  if (restarted && !enabled) await startConnectAfterHarness()
+  if (restarted && !enabled) await startConnectAfterHarness('resume')
   return restarted
 }
 
@@ -330,41 +331,12 @@ async function installChildEnv(): Promise<NodeJS.ProcessEnv> {
   return env
 }
 
-function connectStateFromRuntime(
-  settings: Awaited<ReturnType<typeof readConnectSettings>>,
-  credentials: { secretConfigured: boolean; credentialProtection: 'none' | 'safeStorage' | 'file' },
-  runtime: ConnectRuntimeState | undefined,
-  credentialError = false,
-): ConnectState {
-  const state: ConnectState = {
-    enabled: settings.enabled,
-    phase: settings.enabled ? runtime?.phase ?? 'stopped' : 'disabled',
-    appId: settings.appId,
-    secretConfigured: credentials.secretConfigured,
-    workspace: settings.workspace,
-    credentialProtection: credentials.credentialProtection,
-    detail: settings.detail,
-    showStreamPreview: settings.showStreamPreview,
-    streamPreviewIntervalMs: settings.streamPreviewIntervalMs,
-    cardMode: settings.cardMode,
-    progressStyle: settings.progressStyle,
-  }
-  if (credentialError) state.lastError = 'credential storage unavailable'
-  if (runtime !== undefined) {
-    if ('lastError' in runtime && runtime.lastError !== undefined) state.lastError = runtime.lastError.slice(0, 1_000)
-    if ('restartAttempts' in runtime && runtime.restartAttempts !== undefined) state.restartAttempts = runtime.restartAttempts
-  }
-  return state
-}
-
 async function readConnectState(): Promise<ConnectState> {
-  const userData = app.getPath('userData')
-  const settings = await readConnectSettings(userData)
-  const credentials = new ConnectCredentials(credentialsPath(userData))
   try {
-    return connectStateFromRuntime(settings, await credentials.state(), lastConnectRuntimeState)
+    return (await getConnectController().state()).connection
   } catch {
-    return connectStateFromRuntime(settings, { secretConfigured: false, credentialProtection: 'none' }, lastConnectRuntimeState, true)
+    return { ...normalizeConnectSettings(undefined), phase: 'degraded', secretConfigured: false,
+      credentialProtection: 'none', lastError: 'connection storage unavailable', health: { channel: 'unknown', dsh: 'unknown', errorCode: 'storage' } }
   }
 }
 
@@ -416,55 +388,51 @@ async function saveConnectSettings(raw: unknown): Promise<ConnectSaveResult> {
   if (input.workspace !== '' && !(await validConnectWorkspace(input.workspace))) return { ok: false, reason: 'invalid-workspace', state: current }
   if (input.enabled && input.workspace === '') return { ok: false, reason: 'invalid-workspace', state: current }
 
-  const userData = app.getPath('userData')
-  const { appSecret, ...settingsInput } = input
   try {
-    if (appSecret !== undefined && appSecret !== '') {
-      await new ConnectCredentials(credentialsPath(userData)).setSecret(appSecret)
-    }
-    await writeConnectSettings(userData, { ...await readConnectSettings(userData), ...settingsInput })
-    if (!input.enabled) await stopConnectSupervisor()
-    else if (connectSupervisor !== undefined) await restartConnectForCurrentKernel()
+    await getConnectController().saveLegacy(input)
     return { ok: true, state: await readConnectState() }
   } catch (error) {
-    console.warn(`dsh-desktop: cc-connect settings unavailable: ${error instanceof Error ? error.message : String(error)}`)
-    return { ok: false, reason: 'storage', state: await readConnectState() }
+    const reason = error instanceof ConnectOperationError ? error.reason : 'storage'
+    console.warn(`dsh-desktop: cc-connect settings unavailable: ${reason}`)
+    return { ok: false, reason, state: await readConnectState() }
   }
 }
 
-async function createConnectSupervisor(): Promise<ConnectSupervisor | undefined> {
+function getConnectController(): ConnectController {
+  if (connectController === undefined) {
+    connectController = new ConnectController({
+      store: new ConnectApplicationStore(app.getPath('userData')),
+      environment: () => ({ safeMode: SMOKE_TEST || safeModeActive(), harnessReady: shellApp.state?.phase === 'ready' && !windowContext.quitInProgress }),
+      validWorkspace: validConnectWorkspace,
+      createProcess: createConnectSupervisor,
+    })
+  }
+  return connectController
+}
+
+async function createConnectSupervisor(application: ConnectApplication, secret: string, events: ConnectSupervisorEvents): Promise<ConnectSupervisor> {
   const userData = app.getPath('userData')
-  const settings = await readConnectSettings(userData)
-  if (!settings.enabled || settings.appId.trim() === '' || settings.workspace.trim() === '') return undefined
-
-  const secret = await new ConnectCredentials(credentialsPath(userData)).readSecret()
-  if (secret === undefined || secret === '') return undefined
-
   const dshHome = desktopDshHome()
   const configPath = await writeConnectToml(userData, {
-    settings,
+    settings: { ...application, enabled: true },
     paths: {
-      dataDir: join(userData, 'cc-connect', 'data'),
+      dataDir: await new ConnectApplicationStore(userData).dataDirectory(application.id),
       nodeCommand: nodeBin(),
       dshEntry: activeKernelBin(harnessRoot(), kernelDir()),
       dshHome,
-      workspace: settings.workspace,
+      workspace: application.workspace,
     },
   })
-  return new ConnectSupervisor({
-    onState: state => {
-      lastConnectRuntimeState = state
-      if (state.phase === 'crashed') console.warn(`dsh-desktop: cc-connect crashed: ${state.lastError}`)
-    },
-  }, {
+  return new ConnectSupervisor(events, {
     command: !app.isPackaged && process.env.DSH_CC_CONNECT_TEST_BIN !== undefined
       ? process.env.DSH_CC_CONNECT_TEST_BIN
       : ccConnectBin(),
     configPath,
-    cwd: settings.workspace,
+    cwd: application.workspace,
     env: {
       ...harnessChildEnv,
       DSH_HOME: dshHome,
+      DSH_CC_CONNECT_HEALTH: '1',
       DSH_CC_CONNECT_FEISHU_SECRET: secret,
     },
     redactValues: () => [secret],
@@ -472,35 +440,20 @@ async function createConnectSupervisor(): Promise<ConnectSupervisor | undefined>
 }
 
 async function stopConnectSupervisor(): Promise<void> {
-  const supervisor = connectSupervisor
-  if (supervisor === undefined) return
-  connectSupervisor = undefined
-  await supervisor.stop()
+  await connectController?.pause()
 }
 
-async function startConnectAfterHarness(): Promise<boolean> {
-  if (SMOKE_TEST || safeModeActive() || shellApp.state?.phase !== 'ready') {
-    await stopConnectSupervisor()
-    return false
-  }
-  await stopConnectSupervisor()
+async function startConnectAfterHarness(reason: ConnectStartReason = 'manual', id?: string): Promise<boolean> {
   try {
-    const supervisor = await createConnectSupervisor()
-    if (supervisor === undefined) return false
-    connectSupervisor = supervisor
-    const started = await supervisor.start()
-    if (started) return true
-    await stopConnectSupervisor()
-    return false
-  } catch (error) {
-    await stopConnectSupervisor()
-    console.warn(`dsh-desktop: cc-connect unavailable: ${error instanceof Error ? error.message : String(error)}`)
+    return await getConnectController().start(reason, id)
+  } catch {
+    console.warn('dsh-desktop: cc-connect unavailable; inspect connection status')
     return false
   }
 }
 
 async function chooseFeishuWorkspace(): Promise<string | undefined> {
-  const settings = await readConnectSettings(app.getPath('userData'))
+  const settings = await readConnectState()
   const configured = process.env.DSH_CC_CONNECT_SETUP_TEST_WORKSPACE ?? settings.workspace
   if (configured !== '' && await validConnectWorkspace(configured)) return configured
   const result = windowContext.mainWindow === undefined
@@ -539,10 +492,9 @@ async function showFeishuSetup(): Promise<void> {
   feishuSetupRun = run
   try {
     const result = await run.start()
-    const saved = await saveConnectSettings({ enabled: true, appId: result.appId, workspace, appSecret: result.appSecret })
-    if (!saved.ok) throw new Error('could not save the Feishu connection')
+    const saved = await getConnectController().saveApplication({ name: 'Feishu', appId: result.appId, workspace, appSecret: result.appSecret })
     window.update({ stage: 'completed', qrDataUrl })
-    await startConnectAfterHarness()
+    await startConnectAfterHarness('manual', saved.id)
     refreshNativeSurfaces()
   } catch (error) {
     if (!(error instanceof Error && /cancelled/.test(error.message))) {
@@ -555,7 +507,7 @@ async function showFeishuSetup(): Promise<void> {
 }
 
 async function restartConnectForCurrentKernel(): Promise<boolean> {
-  return startConnectAfterHarness()
+  return startConnectAfterHarness('resume')
 }
 
 /**
@@ -732,6 +684,8 @@ const shellApp = new ShellApp({
     refreshTray()
   },
   onRestartBusyChanged: refreshNativeSurfaces,
+  beforeHarnessRestart: stopConnectSupervisor,
+  afterHarnessRestart: restartConnectForCurrentKernel,
   restartLanProxy: () => lanService.restart(),
   confirmRestart: async () => {
     const options: MessageBoxOptions = {
@@ -1126,7 +1080,7 @@ ipcMain.handle('desktop:connect:start', async (event) => {
 ipcMain.handle('desktop:connect:stop', async (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
   try {
-    await stopConnectSupervisor()
+    await getConnectController().close()
     return true
   } catch {
     return false
@@ -1136,8 +1090,7 @@ ipcMain.handle('desktop:connect:stop', async (event) => {
 ipcMain.handle('desktop:connect:restart', async (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
   try {
-    await stopConnectSupervisor()
-    return startConnectAfterHarness()
+    return startConnectAfterHarness('restart')
   } catch {
     return false
   }
@@ -1675,7 +1628,7 @@ app.on('before-quit', (event) => {
   closeFeishuSetupWindow()
   localeController?.dispose()
   destroyTray()
-  if (shellApp.supervisorInstance !== undefined || connectSupervisor !== undefined || lanService.isRunning || runtimeManager?.hasRunningProcesses() === true) {
+  if (shellApp.supervisorInstance !== undefined || connectController?.hasProcess === true || lanService.isRunning || runtimeManager?.hasRunningProcesses() === true) {
     event.preventDefault()
     // Absolute quit guard: each stop() already has a SIGKILL fallback, but if
     // something unexpected leaves a promise pending we still force-quit
@@ -1685,7 +1638,9 @@ app.on('before-quit', (event) => {
     for (const runtimeWindow of runtimeWindows.values()) {
       if (!runtimeWindow.isDestroyed()) runtimeWindow.close()
     }
-    void Promise.all([shellApp.stopHarness(), connectSupervisor?.stop(), lanService.stop()]).then(() => runtimeManager?.stopAll()).finally(() => {
+    void Promise.all([stopConnectSupervisor().then(() => shellApp.stopHarness()), lanService.stop()]).then(() => runtimeManager?.stopAll()).catch(() => {
+      console.warn('dsh-desktop: shutdown incomplete; quitting with process stop errors')
+    }).finally(() => {
       clearTimeout(forceQuitTimer)
       app.quit()
     })
@@ -1779,7 +1734,7 @@ if (!gotLock) {
     try {
       const url = await boot()
       if (!SMOKE_TEST) {
-        await startConnectAfterHarness()
+        await startConnectAfterHarness('startup')
         if (app.isPackaged && process.platform === 'darwin') {
           const timer = setTimeout(() => { void checkMacUpdate(false, currentLocale) }, MAC_UPDATE_CHECK_DELAY_MS)
           timer.unref()

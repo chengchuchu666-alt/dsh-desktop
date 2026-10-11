@@ -46,6 +46,7 @@ test('legacy migration preserves intent, all display preferences and protected c
       const application = manager.applications[0]
       assert.ok(application)
       assert.equal(manager.activeApplicationId, application.id)
+      assert.equal(await store.dataDirectory(application.id), join(home, 'cc-connect', 'data'), 'legacy chat sessions stay in place')
       const { enabled: _enabled, ...expected } = settings
       assert.deepEqual(application, { ...expected, id: application.id, name: 'Feishu' })
       const manifest = JSON.parse(await readFile(connectApplicationsPath(home), 'utf8'))
@@ -73,6 +74,13 @@ test('missing legacy fields get quieter defaults; saved applications are isolate
     assert.ok(first)
     for (const [key, value] of Object.entries(CONNECT_DISPLAY_DEFAULTS)) assert.equal(first[key as keyof typeof first], value)
     const second = await f.store.save({ name: 'Second', appId: 'cli_second', workspace: f.home, appSecret: 'fake-second', detail: 'full' })
+    assert.equal(await f.store.dataDirectory(first.id), join(f.home, 'cc-connect', 'data'))
+    assert.equal(await f.store.dataDirectory(second.id), join(f.home, 'cc-connect', 'applications', second.id, 'data'))
+    await assert.rejects(f.store.dataDirectory('../../escape'), reason('not-found'))
+    const snapshot = await f.store.snapshot()
+    assert.equal(snapshot.activeApplicationId, first.id)
+    assert.equal(snapshot.applications.find(item => item.id === second.id)!.secretConfigured, true)
+    assert.doesNotMatch(JSON.stringify(snapshot), /fake-second|credentials|legacyDataApplicationId/)
     assert.equal((await f.store.read()).activeApplicationId, first.id, 'save does not switch')
     assert.equal(await f.store.readSecret(first.id), undefined)
     assert.equal(await f.store.readSecret(second.id), 'fake-second')

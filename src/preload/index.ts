@@ -159,7 +159,7 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   pickConnectWorkspace: (): Promise<string | null> => ipcRenderer.invoke('desktop:connect:pick-workspace'),
   /** Start the configured cc-connect sidecar after Harness readiness. */
   startConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:start'),
-  /** Stop the sidecar without changing its enabled setting. */
+  /** Explicitly close and persist disabled intent, including across restarts. */
   stopConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:stop'),
   /** Restart the sidecar using the current active kernel. */
   restartConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:restart'),

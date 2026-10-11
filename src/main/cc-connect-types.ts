@@ -9,6 +9,9 @@ export interface ConnectState extends ConnectSettings {
   credentialProtection: CredentialProtection
   lastError?: string
   restartAttempts?: number
+  applicationId?: string | null
+  autoConnect?: boolean
+  health?: ConnectHealth
 }
 
 export interface ConnectSettingsInput extends ConnectSettingsSource {
@@ -17,7 +20,7 @@ export interface ConnectSettingsInput extends ConnectSettingsSource {
 
 export type ConnectSaveResult =
   | { ok: true; state: ConnectState }
-  | { ok: false; reason: 'invalid-input' | 'invalid-workspace' | 'storage'; state: ConnectState }
+  | { ok: false; reason: 'invalid-input' | 'invalid-workspace' | 'storage' | 'stop-failed'; state: ConnectState }
 
 /** Local records only; neither the record nor its public state contains a Secret. */
 export interface ConnectApplication extends Omit<ConnectSettings, 'enabled'> {

@@ -6,6 +6,8 @@ import * as electron from 'electron'
 import { ccConnectBin } from './paths.ts'
 import { RollingLogWriter } from './diagnostics.ts'
 import { InFlight, ManagedChild } from './process-lifecycle.ts'
+import { applyConnectHealthEvent, parseConnectHealthLine } from './cc-connect-health.ts'
+import type { ConnectHealth } from './cc-connect-types.ts'
 
 export const CONNECT_STOP_TIMEOUT_MS = 5_000
 export const CONNECT_READY_TIMEOUT_MS = 30_000
@@ -27,6 +29,7 @@ export type ConnectState =
 
 export interface ConnectSupervisorEvents {
   onState(state: ConnectState): void
+  onHealth?(health: ConnectHealth): void
 }
 
 export interface ConnectSupervisorOptions {
@@ -43,6 +46,7 @@ export interface ConnectSupervisorOptions {
   restartWindowMs?: number
   maxRestarts?: number
   redactValues?: () => readonly string[]
+  spawnImpl?: ConstructorParameters<typeof ManagedChild>[0]
 }
 
 function defaultLogDir(): string {
@@ -73,7 +77,7 @@ function errorText(error: unknown): string {
 
 export class ConnectSupervisor {
   private readonly events: ConnectSupervisorEvents
-  private readonly managed = new ManagedChild()
+  private readonly managed: ManagedChild
   private readonly startSlot = new InFlight<boolean>()
   private readonly stopSlot = new InFlight<void>()
   private readonly logWriter: RollingLogWriter
@@ -98,9 +102,13 @@ export class ConnectSupervisor {
   private stopping = false
   private enabled = true
   private state: ConnectState = { phase: 'stopped' }
+  private health: ConnectHealth = { channel: 'unknown', dsh: 'unknown' }
+  private generation = 0
+  private stopFailed = false
 
   constructor(events: ConnectSupervisorEvents, options: ConnectSupervisorOptions = {}) {
     this.events = events
+    this.managed = new ManagedChild(options.spawnImpl)
     this.command = options.command ?? ccConnectBin()
     this.args = options.args ?? (options.configPath === undefined ? [] : ['--config', options.configPath])
     this.env = { ...(options.env ?? process.env) }
@@ -156,16 +164,21 @@ export class ConnectSupervisor {
   }
 
   private onReady(): void {
-    if (this.resolveReady === undefined) return
+    if (this.stopping) return
     const resolve = this.resolveReady
     this.clearReadyAttempt()
     this.restartDelay = this.restartBaseDelayMs
-    this.exitTimes = []
-    resolve()
-    this.emit({ phase: 'ready', restartAttempts: 0 })
+    resolve?.()
+    this.emit({ phase: 'ready', restartAttempts: this.exitTimes.length })
   }
 
   private spawnOnce(): ChildProcess {
+    const generation = ++this.generation
+    this.health = { channel: 'unknown', dsh: 'unknown' }
+    this.events.onHealth?.(this.health)
+    if (this.readyTimer === undefined) {
+      this.readyTimer = setTimeout(() => this.failStart(new Error(`cc-connect not ready within ${String(this.readyTimeoutMs)} ms`)), this.readyTimeoutMs)
+    }
     const child = this.managed.spawn({
       command: this.command,
       args: this.args,
@@ -177,16 +190,24 @@ export class ConnectSupervisor {
     for (const stream of [child.stdout, child.stderr]) {
       const lines = createInterface({ input: stream! })
       lines.on('line', line => {
+        if (generation !== this.generation || this.stopping) return
         const redacted = this.recordLine(line)
         if (isConnectReadyLine(redacted)) this.onReady()
+        const healthEvent = parseConnectHealthLine(line)
+        if (healthEvent !== undefined) {
+          this.health = applyConnectHealthEvent(this.health, healthEvent)
+          this.events.onHealth?.(this.health)
+        }
       })
     }
     let exitHandled = false
     const unexpectedExit = (message: string): void => {
-      if (exitHandled) return
+      if (exitHandled || generation !== this.generation) return
       exitHandled = true
       this.recordLine(message)
       if (this.stopping) return
+      this.health = { channel: 'offline', dsh: 'unknown', errorCode: 'sidecar' }
+      this.events.onHealth?.(this.health)
       this.scheduleRestart(message)
     }
     child.once('error', error => unexpectedExit(`supervisor: spawn error: ${errorText(error)}`))
@@ -226,13 +247,12 @@ export class ConnectSupervisor {
 
   private failStart(error: unknown): void {
     const reject = this.rejectReady
-    if (reject === undefined) return
     const message = this.redactedError(error)
     this.stopping = true
     this.managed.process?.kill('SIGTERM')
     this.clearReadyAttempt()
     this.emit({ phase: 'crashed', restartAttempts: this.exitTimes.length, lastError: message, logTail: this.logTailSnapshot() })
-    reject(new Error(message))
+    reject?.(new Error(message))
   }
 
   start(): Promise<boolean> {
@@ -247,6 +267,7 @@ export class ConnectSupervisor {
 
   private createStartTask(): Promise<boolean> {
     if (this.managed.process !== undefined && this.state.phase === 'ready') return Promise.resolve(true)
+    if (this.managed.running) return Promise.reject(new Error('cc-connect process is already active'))
     if (this.restartTimer !== undefined) clearTimeout(this.restartTimer)
     this.restartTimer = undefined
     this.stopping = false
@@ -272,11 +293,28 @@ export class ConnectSupervisor {
       this.restartTimer = undefined
       this.stopping = true
       const reject = this.rejectReady
-      if (reject !== undefined) {
-        this.clearReadyAttempt()
-        reject(new Error('cc-connect stopped before ready'))
-      }
-      await this.managed.stop(this.stopTimeoutMs)
+      this.clearReadyAttempt()
+      reject?.(new Error('cc-connect stopped before ready'))
+      let timer: NodeJS.Timeout | undefined
+      try {
+        if (this.stopFailed) this.managed.process?.kill('SIGKILL')
+        await Promise.race([
+          this.managed.stop(this.stopTimeoutMs),
+          new Promise<never>((_resolve, rejectStop) => {
+            timer = setTimeout(() => rejectStop(new Error('cc-connect stop timed out')), this.stopTimeoutMs + 1_000)
+          }),
+        ])
+        this.stopFailed = false
+      } catch {
+        this.stopFailed = true
+        this.health = { ...this.health, errorCode: 'stop-failed' }
+        this.events.onHealth?.(this.health)
+        this.emit({ phase: 'degraded', restartAttempts: this.exitTimes.length, retryDelayMs: 0, lastError: 'cc-connect stop failed' })
+        throw new Error('cc-connect stop failed')
+      } finally { if (timer !== undefined) clearTimeout(timer) }
+      this.generation++
+      this.health = { channel: 'offline', dsh: 'unknown' }
+      this.events.onHealth?.(this.health)
       await this.logWriter.close()
       this.emit({ phase: this.enabled ? 'stopped' : 'disabled' })
     })()
