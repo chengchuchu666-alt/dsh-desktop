@@ -19,10 +19,10 @@
 | FS-02 | 完成 | 无损旧配置迁移、隔离凭证修订、应用 CRUD/去重与失败恢复 |
 | FS-03 | 完成 | 串行单进程、持久关闭、启动偏好与真实分层健康 |
 | FS-04 | 完成 | 统一受限管理窗口、扫码/应用操作、中英文真实界面与权限回归 |
-| QA-01 | 本地完成 | 当前源码 macOS 安装包、受控真实收发/降噪/关闭、指南与 setup skill；三平台门禁随发布 CI 再核对 |
-| shell 发布 | 未完成 | 新版本打包、三平台 CI、GitHub/GitCode 资产与官网 |
+| QA-01 | 完成 | 本地当前包/受控真实飞书、全部三平台 packaged E2E 与安装/升级门禁通过；指南与 setup skill 同步 |
+| shell 发布 | 完成 | shell.1 三平台 CI 全绿；GitHub 8 资产、GitCode 6 资产内容/DEB 全量回读和官网新版已核验 |
 
-下一任务：**shell-only 发布**（`0.2.1-alpha.2.shell.1`）。
+下一任务：无。本计划全部完成，验收限制保留在各任务及最终交付记录中。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -468,3 +468,41 @@ skill：第二客户端固定 800px 窄窗口，强制断言展开按钮可见�
 GitHub/GitCode 同名 Release 均确认 404；GitCode 页内 fetch 较慢时改用本机请求、仅在内存
 借用已登录浏览器授权后恢复，未输出 token/cookie，最终页内请求也返回 404。下一步合并
 新 bot 提交，只重试尚未发布的候选 tag；通过后六资产镜像、官网与 HANDOFF。
+
+### shell.1 最终交付 — 三平台、镜像与官网
+
+发布提交 `da4e4744b1e80ac31121f393d9f1f60e53431df3`，tag
+`v0.2.1-alpha.2.shell.1` 在 GitHub/GitCode 一致；子模块
+`dc8132ef5f6a30056b2b69036458156edbbfb25d` 已先推 origin。内核未变。
+Release run `38114383738` 成功，完整日志
+`/tmp/dsh-connect-shell1-ci-fourth-full.log`；前三轮失败及修复证据保留。
+
+| 命令/门禁 | 结果 | 退出码 |
+|---|---|---:|
+| `gh run watch 38114383738 --exit-status` | verify + Linux/macOS/Windows + publish 全绿；三平台各 15 packaged E2E；升级各保留 6 文件、Windows S1/S2/S3 与静默安装、真 sandbox/闭包/来源证明通过 | 0 |
+| `gh release download v0.2.1-alpha.2.shell.1`、`node scripts/check-release-assets.mjs <临时 assets> v0.2.1-alpha.2.shell.1` | 8 个实际下载文件严格匹配；三安装包 SHA-256 与 Windows 更新元数据通过 | 0 / 0 |
+| `gh attestation verify <deb/dmg/exe> -R citrusli2026/dsh-desktop` | 三安装包来源证明分别复验通过 | 0 / 0 / 0 |
+| 浏览器 v2 helper upload / create / verify | 6 资产上传、POST release id 56569，commit 正确；6 匿名 GET 通过 | 0 |
+| 匿名内容检查、`node scripts/mirror-gitcode-v2.mjs v0.2.1-alpha.2.shell.1 --check-only` | 六份 206 的总尺寸/首字节与本地一致，非 HTML；6/6 可下 | 0 / 0 |
+| DEB 全量稳定链接回读、`cmp`、`shasum -a 256` | 229,986,800 字节与 GitHub 逐字节一致；SHA `f0b6cf5238974bbb6d717759b1cbaec9576029416902fead5db7fda1a6d4e9e2` | 0 / 0 / 0 |
+| `GH_CLI=1 node scripts/gen-site-data.mjs`、`node scripts/gen-site-changelog.mjs`、`pnpm run site:check` | 6 镜像为 true、双语变更页和站点契约通过；站点提交 `938fe40301cb56e593b9d6a5f75a91fea1aeabda` | 0 / 0 / 0 |
+| `gh run watch 38116456051 --exit-status` | 官网重跑成功，attempt 1；bot `e08fc5461459c2df1acf99c85fc6d639079eb5e7` | 0 |
+| 线上 release JSON / downloads API / changelog / 浏览器下载区 | shell.1，6/6 mirror true，API HTTP 200，三平台 GitCode/GitHub 双源按钮可见 | 0 |
+
+首轮自动 Refresh `38115781815` 在 attempt 3 已确认镜像，提交时与本地 JSON 更新
+发生 rebase 冲突，退出 1，不计通过；从最新 main 手动重跑，等待完成再推后续记录。
+两份 skill 已记录在途 bot 的串行顺序、完整匿名内容/全量回读规则、缓存 Actions UI
+不能替代完成日志。内容/日志规则提交 `4d3b90d6f95e970bc0023617d2f468471c04bdb9`，
+后续冲突规则随最终文档提交。没有改 release gate、弱化断言、强推 main 或移动已发布 tag。
+
+TR/MSG/FS/QA 和 shell 发布均完成。未覆盖/风险：本轮未重新人工手机扫码；既有 Linux
+worker teardown 45s warning 保留；macOS ad-hoc/未公证和 Windows 未商业签名；GitHub
+4 项既有 Dependabot 告警未作为无关依赖升级处理，现有双树审计通过且没有新增 ignore。
+真实飞书与模型凭据不存在外部阻塞；原配置/凭据未修改，未替换用户当前安装。
+下一任务：无；最终交付记录验证与提交 SHA 见末尾补记。
+
+最终文档门禁：`pnpm run verify` 397 单测 + 1 ACP、0 failed/skipped，覆盖率
+89.99/82.88/86.41%，退出 0（`/tmp/dsh-connect-shell1-published-final-verify.log`）；
+文档/资产/形状专项 7 passed，退出 0；两份 skill quick_validate、release-notes check、
+23 个本地文档链接目标与 `git diff --check` 全部退出 0。允许改动仅发布/HANDOFF、两份
+skill 和相关计划/架构状态，不改产品、测试或依赖；失败历史保留，未覆盖项不变。

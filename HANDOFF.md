@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-10。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-11。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | ✅ `0.2.1-alpha.2.shell.0`（2026-10-10 已发布；内核 `0.2.1-alpha.2`，见 §74） |
-| 已发布 | ✅ `0.2.1-alpha.2.shell.0`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ `pnpm run verify`（341 项单测；双树安全审计 0 新漏洞）、LAN QR 2/2、market offline 1/1、real 2/2、当前版本 `dist:dir`、两种 packaged smoke 通过 |
-| 核心发布 | ✅ `v0.2.1-alpha.2.shell.0` Release run `38060249915` 全绿：verify + Linux/macOS/Windows 构建 + publish；8 资产与构建来源证明齐全，tag peeled commit `8c84333`（§74） |
-| 官网数据 | ✅ Site Data Refresh run `38062336615` 成功，bot 提交 `3b077a9`；线上 `/data/release.json` 指向 alpha.2 且 6/6 `gitcode_ok=true`（§74） |
-| 国内镜像 | ✅ alpha.2 走 GitCode v2 管道 6/6 匿名可下；tag 对齐 `8c84333`，GitCode 因预发布数量超过 20 限制创建为普通 Release（§74） |
-| 实时下载统计 | ✅ `/api/downloads` HTTP 200；线上统计累计 6409（mac 740 / Windows 5047 / Linux 622，70 个版本） |
+| 最新代码基线 | ✅ `0.2.1-alpha.2.shell.1`（2026-10-11 已发布；内核 `0.2.1-alpha.2` 未变，见 §76） |
+| 已发布 | ✅ `0.2.1-alpha.2.shell.1`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
+| 本地门禁 | ✅ verify 397 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
+| 核心发布 | ✅ Release run `38114383738` 全绿；三平台各 15 packaged E2E、安装/升级/来源证明及 publish 通过，tag commit `da4e474`（§76） |
+| 官网数据 | ✅ 线上 release JSON、实时 API 与下载页为 shell.1，6/6 `gitcode_ok=true`；Refresh `38116456051` 成功，bot `e08fc54`（首轮提交竞争见 §76） |
+| 国内镜像 | ✅ GitCode v2 六资产匿名内容校验和 DEB 全量回读一致；release id `56569`，tag 对齐 `da4e474`，沿用平台限额的普通 Release 标记 |
+| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.1；2026-10-11 05:59 UTC 快照累计 6436（mac 746 / Windows 5065 / Linux 625，71 个版本；GitHub 5626 + GitCode 810） |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -1906,3 +1906,20 @@ GitCode：<https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alph
 5. **本地 sidecar manifest 是构建期产物**：`pnpm run dist:dir` 会按本次带 build-time ldflag 的二进制重写 `resources/cc-connect/manifest.json`，因此工作树可能只出现 SHA 变化；`resources/cc-connect/bin/` 已忽略，打包命令会再次构建并校验。发布提交前检查并清理这种本地 hash-only 变更，避免把一次本机二进制摘要误带入源码提交。
 
 本轮新增回归测试：`test/packaged-resources.test.ts` 覆盖版本 mismatch 判定与 smoke wiring；实现已纳入 `src/main/smoke-protocol.ts`、`src/main/index.ts` 和 `scripts/smoke-packaged.mjs`。
+
+## 76. v0.2.1-alpha.2.shell.1 人工审查修复与完整飞书管理发布（2026-10-11）
+
+1. **交付与版本**：TR-01～03、MSG-01～04、FS-01～04、QA-01 完成。垃圾桶删除/恢复/取消归档实时同步两个客户端；飞书统一受限管理窗口支持扫码、应用保存/编辑/移除、显式开启/持久关闭，默认精简 + 3000ms 预览及受控卡片/进度选项。只增加壳修订，内核仍为 `0.2.1-alpha.2`，未升级无关依赖。用户要求的实现→验证→修复→再验证流程已记录。
+2. **仓库与不可变发布点**：父 tag `v0.2.1-alpha.2.shell.1` → `da4e4744b1e80ac31121f393d9f1f60e53431df3`；GitHub/GitCode 同步。子模块 `dc8132ef5f6a30056b2b69036458156edbbfb25d` 已先提交/推送至 `origin/codex/dsh-agent-integration`，父 gitlink 与实际包一致。后续站点/文档提交不移动已发布 tag，任务 SHA 通过 merge 保留。
+3. **本地完整门禁**：verify 397 + 1 ACP，覆盖率行/分支/函数 89.99/82.88/86.41%；完整 Go test/race/build/vet；开发 E2E 26（9 项按原专项条件不运行）、packaged 15/15 无跳过、新管理/显示五轮 20、LAN 2、market offline 1 + real 2、双树安全审计、shell.1 `dist:dir`、两种 packaged smoke、codesign 深度校验全部退出 0。mac-arm64 包 Sidecar SHA-256 `baa0d24b46aa72c697e000e01afd032dde16ae0db15aebef1e0c47bc6bf6a56d` 与实际 manifest 一致；源码中的本机 hash-only 构建变化未提交。
+4. **真实飞书**：在用户授权的正确机器人会话完成真实 websocket→cc-connect→DSH ACP→飞书回包。compact/quiet 各一条最终答复，rich 一张完成卡片，full 正常回包；真实只读工具调用不逐条刷屏。显式关闭后离线/Sidecar 退出，超过 30 秒探针无回复、两份持久会话摘要不变。临时 0600 凭据副本已清理，三份原配置/凭据 SHA 和权限不变，没有修改真实用户目录。新手机扫码没有重做，二维码生命周期由隔离回归与前次真实扫码覆盖，不把手机授权提示当新验收。
+5. **三平台发布**：Release run `38114383738` 全绿，GitHub 8 资产于 `2026-10-11T05:44:34Z` 发布为 prerelease。CI verify 的 23 项 E2E 和三平台各 15 项 packaged E2E 通过；各平台升级保留 6 份用户文件，Windows 安装器内容/S1 损坏/S2 只读/S3 锁定残留/静默安装，以及 Linux 真 sandbox 安装、macOS 升级、故障恢复/闭包篡改检测和来源证明均通过。下载的 8 文件严格契约、三安装包 SHA-256/Windows SHA-512、三份 `gh attestation verify` 再检均退出 0。
+6. **发布失败与防复发**：前三轮 `38110150474`、`38111052258`、`38112224676` 失败证据保留。最终定位为公开 Documents 默认工作区与测试 cwd 不同、Windows 原生路径动态 import，以及第二客户端响应式折叠；使用临时公开 Documents 配置/realpath、`pathToFileURL`、精确 cwd/原路径断言和全平台 800px 窄窗展开回归修复，未跳过/删除/降低断言。假 Secret 测试不访问真实钥匙串；打包/运行门禁串行，不能运行中修改 fixture 契约或替换 dist。完整复盘见 [执行记录](docs/plans/2026-10-10-manual-review/progress.md)，两份发布 skill 已固化这些步骤。
+7. **GitCode 镜像**：浏览器扩展已恢复连接，明确 navigate 并检查真实 origin/login 后借用登录授权，不输出 token/cookie/签名 URL。确认同 tag 404 后上传 deb/dmg/exe + 3×sha256，通过 POST 创建 release `56569`；预发布平台限额沿用 `release_status=0`，GitHub 仍为 alpha prerelease。六稳定 URL 均匿名 206，Content-Range 总尺寸/首字节与本地一致、非 HTML；helper verify 和 mirror-v2 check-only 6/6。DEB 全量回读 229,986,800 字节，`cmp` 退出 0，SHA-256 `f0b6cf5238974bbb6d717759b1cbaec9576029416902fead5db7fda1a6d4e9e2` 与 GitHub 一致。Windows latest.yml/blockmap 只留 GitHub。
+8. **官网与同步竞争**：`GH_CLI=1` 生成并核验六镜像后，站点提交 `938fe40301cb56e593b9d6a5f75a91fea1aeabda` 已推双远端；线上 release JSON、实时 API、变更页和浏览器三平台双源按钮均为 shell.1。自动 Refresh `38115781815` attempt 3 已确认六镜像，但本地同步抢先改同一 JSON，bot rebase 冲突，退出 1；不计通过。从当前 main 重跑的 `38116456051` 在 attempt 1 确认镜像，提交 `e08fc5461459c2df1acf99c85fc6d639079eb5e7` 并成功；期间没有再推 main。线上生成时间 `2026-10-11T05:57:24.205Z`、6/6 镜像可用。防复发规则加入两份 skill：先等在途 bot，失败才从最新 main 重跑，完成后正常 merge；不强推或重新打 tag。
+9. **保留风险**：verify 的既有 Linux worker teardown 45 秒 warning 未掩盖或调整保护条件；macOS 为 ad-hoc、未签名公证，Windows 未商业签名（ADR 0030/0016）。GitHub 仍提示 4 项既有 Dependabot 告警；现有双树安全审计 gate 通过，未新增豁免。没有外部凭据阻塞，没有替换用户当前安装或真实配置。
+
+发布：[GitHub](https://github.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alpha.2.shell.1) ·
+[Release CI](https://github.com/citrusli2026/dsh-desktop/actions/runs/38114383738) ·
+[GitCode](https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alpha.2.shell.1) ·
+[官网](https://dsh-desktop.com)。

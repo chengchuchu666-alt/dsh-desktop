@@ -114,6 +114,12 @@ If the repository generates website data from release availability:
 4. Update handoff records with the GitHub release run, GitCode tag commit, refresh run, hashes, and final asset policy.
 5. Commit and push only the intended repository changes. Preserve unrelated untracked files.
 
+Do not push locally generated release data while an automatic refresh is still
+re-probing mirrors: its later rebase can conflict on the same JSON. Wait for
+that run. If it has failed, dispatch a fresh refresh from current main once
+mirrors are verified, keep main unchanged until it finishes, then merge its
+bot commit normally. Website follow-ups never justify moving a published tag.
+
 ## Safety rules
 
 - Never print or persist the browser access token, cookies, or signed upload URL outside the script's private temporary directory.
