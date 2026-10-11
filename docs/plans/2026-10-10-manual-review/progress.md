@@ -398,3 +398,31 @@ Release run `38110150474`：审计/verify 通过，Electron 20 passed/3 failed/1
 
 下一步重新同步 bot 站点提交、仅重指向这个尚未发布的 shell.1 候选 tag，重跑三平台全流程；
 历史已发布 tag 与默认分支禁止强推。真实凭据未使用或修改，产物代码版本未变，测试期间未重写 dist。
+
+### shell.1 第二轮 CI — 默认工作区隔离
+
+候选 `599df38b9c619c89d63ecdc229d2a24064798961` 的 Release run `38111052258`
+审计/verify 通过，Electron 19 passed/4 failed/12 原有条件未运行，退出 1；构建/publish
+未运行，GitHub/GitCode 同名 Release 均不存在。直接 profile locale 修复不足以解释失败：
+中文 lang 断言已通过，输入框仍不是任务输入框，不把首轮语言假设当已证实根因。
+
+诊断提交 `c14ae61a63404c4eba7798fef041bb202da44593` 在隔离测试失败时捕获 ARIA。
+非发布 workflow_dispatch run `38111446259` 的现场为“暂无会话 / 选择工作区 / 发送禁用”；
+证据取得后主动取消，conclusion=cancelled，不计通过。核对绑定内核公开代码：默认工作区
+位于系统 Documents/deepseek-harness/default-workspace，不是启动 cwd；Linux headless
+没有 XDG Documents。macOS 先前夹具也没有限制这次系统 Documents 查找，不作真实目录清理。
+
+修复提交 `16976e24eeb999a00f66574440b9f109eff357bb`：只改相关夹具/断言/发布 skill。
+使用公开 `workspace-controller.documentsDirectory` 指向临时目录，seed cwd 与默认工作区
+一致；临时根目录 realpath 消除 macOS /var 别名。真实持久会话和重启后的空草稿均新增精确
+cwd 断言；诊断 logger 已移除。没有修改产品、内核或真实配置，没有降低断言。
+
+- 本地首轮 Documents 回归 4 passed/2 failed，退出 1：运行中改 helper 输出契约而已加载
+  spec 仍期待旧 shape；此轮不计通过。随后停止并发编辑，完整重跑。
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle|Host refuses|external kernel' --repeat-each=2`：6 passed，退出 0（`/tmp/dsh-connect-shell1-trash-documents-dev-final.log`）。
+- `pnpm run test:e2e:packaged`：15 passed、0 skipped，退出 0（`/tmp/dsh-connect-shell1-documents-packaged.log`）。
+- `pnpm run verify`：397 单测 + 1 ACP、类型/边界/覆盖率/站点/构建通过，退出 0（`/tmp/dsh-connect-shell1-documents-verify.log`）。
+- typecheck、helper 语法、release notes check、skill quick_validate、diff check 均退出 0。
+
+下一步：合并站点 bot 提交，确认两平台 Release 仍不存在后仅更新尚未发布的 shell.1 tag，
+重跑三平台发布；成功后六资产镜像、官网与 HANDOFF。历史发布 tag 不变。
