@@ -37,7 +37,7 @@ BUG-01 布局已最小修复并通过源码/隔离 Harness 回归，尚待新正
 ## REAL-01 — 真实安装版验收
 
 CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路径
-`/Applications/dsh-desktop.app`，没有误测旧 dist。当前系统返回：
+`/Applications/dsh-desktop.app`，没有误测旧 dist。初次验收时系统返回：
 “The Mac is locked and automatic unlock could not unlock it.”
 
 用户已解锁；本轮中再次锁屏时停止了界面操作，用户再次解锁后才恢复。真实飞书发送
@@ -125,6 +125,39 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
 - 修复后的 `pnpm run verify`：400 单测 + 1 ACP、0 failed/skipped，退出 0；
   `pnpm exec playwright test -g 'LAN pairing'`：2/2，实际窗口秒数下降及移动浏览器配对均通过，
   退出 0。日志 `/tmp/dsh-shell2-countdown-{verify,lan}.log`。旧包临时共享已经正常 GUI 关闭。
+- 原子提交 `863960fe7148fff539a31274b12ff680e3510498` 已推 origin/GitCode 集成分支，退出 0。
+
+## QA-03 — 子模块测试收尾
+
+- 首次默认临时目录的全量 Go test 退出 1：Codex/workspace-skills 夹具混用 `/var` 和
+  `/private/var`；改用 canonical `TMPDIR=/private/tmp` 后对应四类用例定向通过，完整 test 通过。
+  没有改路径断言或用户全局环境，既有原因见上一轮执行记录。
+- 全量 race 首轮退出 1：未知斜杠请求/多会话附件用例在最终保存前结束，TempDir 清理竞态。
+  仅等待两条回复的首次修复在 100 轮中仍失败，揭示模拟 Agent 两个会话共用一个事件通道，
+  让另一会话误当 unsolicited reply 再次保存；没有把这一失败算通过。
+- 最小修正两个测试：未知请求等待最终回复；多会话独立事件通道、等待两条最终回复并确认
+  两个独立会话各收到请求。保留歧义发送拒绝与不泄露附件断言，不改产品或依赖。
+- targeted race 两项各 100 轮通过（退出 0）；canonical 全量 `go test ./...`、
+  `go test -race ./...`、`go build ./...`、`go vet ./...` 全部退出 0。日志
+  `/tmp/dsh-shell2-go-cleanup-final-repeat.log` 与 `/tmp/dsh-shell2-go-final-*.log`。
+- 子提交 `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb` 已先推子模块 origin 分支，退出 0。
+  下一步：父 gitlink/manifest 精确提交后串行重建；修复前 pin 的产物不能作为最终发布包。
+
+## QA-02 / REL-02 — shell.2 候选与外部人工步骤
+
+- `node scripts/version.mjs bump shell` 仅将壳升至 shell.2；kernel/pins/锁文件均不变。
+- 倒计时修复包（仍为旧子 pin）完成开发 E2E 26、packaged 15、飞书五轮 20、市场 offline 1
+  与 real 2、两项 smoke（均退出 0）；本地包为 ad-hoc，codesign 深度完整性与版本校验通过。
+- 正常退出旧正式进程（确认 0 个），ditto 暂存并验签后覆盖 Applications，旧 shell.1 保留在
+  `/private/tmp/dsh-installed-shell2.0ME74t/previous-shell.1.app`。未删除旧 bundle 或手工改真实配置。
+  当时 Sidecar SHA `936cd7b44196adce5eadf9e22ba39346452526f3089d5b19069be114506ad226`，旧 pin
+  `dc8132ef5f6a30056b2b69036458156edbbfb25d`；与实际包 manifest 一致，不冒充最终新 pin。
+- Applications 候选启动显示等待 Harness 后，DSH 界面读取连续超时，其他飞书界面可读取。
+  主线程 sample 证明停在 `SecItemCopyMatching`/钥匙串，系统 SecurityAgent 运行；
+  已请求用户手动处理系统认证，工具不允许访问该认证应用，未尝试绕过或改用明文 Secret。
+- 当前 LAN 已通过正常“停止共享”关闭，3081 无监听；手机没有回报实际配对结果。
+  新二维码需待系统授权后重新生成。真实新包视觉/录屏与手机部分尚未完成，REL-02 不创建 tag。
+  下一任务：完成新 pin 的本地门禁，等待用户处理钥匙串，然后正式复验并发布；不声称目标已完成。
 
 ## 安装后安全基线门禁
 

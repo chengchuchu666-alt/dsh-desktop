@@ -80,3 +80,12 @@ release skill，最终真实安装验证不能被旧本地包/前三平台 CI �
 - 允许修改：`src/main/lan-page.ts`、`test/lan.test.ts`、`e2e/electron-shell.spec.ts`、本目录两份文档。
 - 最小修复：保留初始静态秒数，脚本单独使用未插值模板；验证中英逐秒减少与绝对到期提示，
   LAN 窗口 E2E 验证实际计时变化。新包重新打包且串行重跑全部门禁，不复用修复前产物。
+
+## QA-03 — 子模块发布测试的异步收尾竞态
+
+- 全量 race 发现两个既有 release-local 用例在最终回包/保存前结束，TempDir 清理报目录非空。
+- 允许修改仅为子模块 `tests/release_local/engine_matrix/engine_matrix_test.go`、
+  `tests/release_local/media_pipeline/media_pipeline_test.go`；父仓库仅本目录文档、gitlink
+  及构建 manifest 的新子提交标识。先在子分支提交/推送，再更新父仓库；不改产品或依赖。
+- 等待未知斜杠请求的最终回包，以及多会话场景的两条最终回复；保留原断言，验证 targeted
+  race 高频循环、全量 test/race/build/vet。macOS 使用 canonical 临时目录，路径别名不改断言。
