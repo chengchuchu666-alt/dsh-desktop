@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-11T08:54:15.555Z",
+  "generated_at": "2026-10-11T18:56:25.179Z",
   "repo": {
     "full_name": "citrusli2026/dsh-desktop",
     "html_url": "https://github.com/citrusli2026/dsh-desktop",
@@ -7,9 +7,9 @@
     "license": "MIT"
   },
   "stats": {
-    "installer_downloads": 5641,
+    "installer_downloads": 5689,
     "mac_downloads": 682,
-    "win_downloads": 4390,
+    "win_downloads": 4438,
     "linux_downloads": 569,
     "releases": 71
   },
@@ -33,7 +33,7 @@
       {
         "name": "dsh-desktop-0.2.1-alpha.2.shell.1-amd64.deb.sha256",
         "size": 110,
-        "downloads": 8,
+        "downloads": 12,
         "url": "https://github.com/citrusli2026/dsh-desktop/releases/download/v0.2.1-alpha.2.shell.1/dsh-desktop-0.2.1-alpha.2.shell.1-amd64.deb.sha256",
         "kind": "checksum",
         "sha256": "f0b6cf5238974bbb6d717759b1cbaec9576029416902fead5db7fda1a6d4e9e2",
@@ -53,7 +53,7 @@
       {
         "name": "dsh-desktop-0.2.1-alpha.2.shell.1-arm64-mac.dmg.sha256",
         "size": 114,
-        "downloads": 8,
+        "downloads": 12,
         "url": "https://github.com/citrusli2026/dsh-desktop/releases/download/v0.2.1-alpha.2.shell.1/dsh-desktop-0.2.1-alpha.2.shell.1-arm64-mac.dmg.sha256",
         "kind": "checksum",
         "sha256": "b98ef241f68a481bfe0b2210a5ba0d78e3618b11668d44c0c74e31c362e3add4",
@@ -63,7 +63,7 @@
       {
         "name": "dsh-desktop-setup-0.2.1-alpha.2.shell.1.exe",
         "size": 261980077,
-        "downloads": 10,
+        "downloads": 48,
         "url": "https://github.com/citrusli2026/dsh-desktop/releases/download/v0.2.1-alpha.2.shell.1/dsh-desktop-setup-0.2.1-alpha.2.shell.1.exe",
         "kind": "installer",
         "sha256": null,
@@ -73,7 +73,7 @@
       {
         "name": "dsh-desktop-setup-0.2.1-alpha.2.shell.1.exe.sha256",
         "size": 110,
-        "downloads": 8,
+        "downloads": 13,
         "url": "https://github.com/citrusli2026/dsh-desktop/releases/download/v0.2.1-alpha.2.shell.1/dsh-desktop-setup-0.2.1-alpha.2.shell.1.exe.sha256",
         "kind": "checksum",
         "sha256": "f2998545d410686d303a8e23abd2ddd5eb34e5f90fbf1a771492725869c5074c",
