@@ -56,6 +56,12 @@ export async function launchTrashHarness(packaged: boolean) {
     const port = (server.address() as { port: number }).port
     await writeFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), [
       '- id: llm-deepseek', '  config:', `    baseURL: http://127.0.0.1:${port}`, '    apiKeyEnv: DSH_TRASH_FAKE_KEY', '',
+      // These tests target trash, not the asynchronous legacy-settings import.
+      // Configure the active profile before boot so English CI hosts use the
+      // same Chinese UI as the development machine.
+      '- id: locale', '  config:', '    preference: zh',
+      '- id: ui-theme', '  config:', '    preference: dark',
+      '- id: ui-settings-general', '  config:', '    welcomeNoticeVersion: "2026-08-13.1"', '',
     ].join('\n'))
     await writeFile(join(home, 'settings.yaml'), 'locale:\n  preference: zh\nui-theme:\n  preference: dark\n' + WELCOME_ACKNOWLEDGED_YAML)
     await writeFile(join(userData, 'shell-preferences.json'), JSON.stringify({ closeToTrayExplained: true, firstRunGuideDismissed: true }))
@@ -73,6 +79,8 @@ export async function launchTrashHarness(packaged: boolean) {
       const page = await app.firstWindow()
       await expect.poll(() => page.locator('[data-dsh-desktop-controls]').count(), { timeout: 90_000 }).toBe(1)
       await dismissOnboardingModals(page)
+      await expect(page.locator('html')).toHaveAttribute('lang', /^zh/)
+      await expect(page.getByRole('textbox', { name: /描述你想要构建/ })).toBeVisible()
       return page
     }
     let page = await launch()

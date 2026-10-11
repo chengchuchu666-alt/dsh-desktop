@@ -256,7 +256,7 @@ realTrashTest('real idle session delete, restore and unarchive refresh sidebar w
   await trash.getByRole('tab', { name: /^资源 / }).click()
   const savedRow = trash.locator('[data-dsh-trash-row]').filter({ hasText: session.sessionId })
   const [saved] = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrash(): Promise<Array<{ id: string; originPath: string }>> } }).dshDesktop.listTrash())
-  expect(saved!.originPath.startsWith(harness.home + '/sessions/')).toBe(true)
+  expect(saved!.originPath).toBe(join(harness.home, 'sessions', session.projectKey, session.sessionId))
   await mkdir(saved!.originPath)
   await writeFile(join(saved!.originPath, 'new-data'), 'do not overwrite')
   await savedRow.getByRole('button', { name: '还原', exact: true }).click()
