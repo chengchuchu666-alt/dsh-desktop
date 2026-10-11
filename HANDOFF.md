@@ -57,21 +57,21 @@ tag push  → Release verify
              → GitHub Release
                 ├─ Site Data Refresh → main/release.json → Vercel
                 ├─ Release Mirrors → R2（可失败、不中断主发布）
-                └─ GitCode 镜像 = 维护者授权：优先本机 mirror-gitcode.mjs
-                   上传 dmg / exe / deb / hashes；backfill 与登录浏览器为备用
+                └─ GitCode 镜像 = 维护者授权：登录浏览器 v2 管道
+                   新 Release 上传→创建；既有 Release 用 mirror-gitcode-v2.mjs
+                   dmg / exe / deb + 3 hashes，匿名下载验证后再刷新官网
 ```
 
-GitCode 自动推送已在 shell.8/9 连续失败（跨境 ~150 KB/s，预签名 URL 过期
-502）；拉取式流水线方案评估后放弃，决策与过程见 docs/decisions/0008 第二
-修订。当前主方案为 **`scripts/mirror-gitcode.mjs`（本机直连，2026-08-22
-落地）**：一条命令完成 探测→下载（GH_SOCKS5 / GH_PROXY_PREFIX）→上传(v5 API)→校验，
-本机到 GitCode 实测 2.2 MB/s（runner 跨境 160 KB/s 的 13 倍）；幂等可重跑、
-`--check-only` 免 token 探测。Release CDN 下载过慢时可从同一 Release run 的
-Actions artifact 取得原始产物，核对公开 SHA-256 后用显式本地文件模式上传。
-fallback 依次为 gitcode-backfill workflow 与
-`.agents/skills/gitcode-release-publisher/` 浏览器会话（复用已登录 GitCode
-浏览器会话完成附件预留、签名存储上传和 Release 创建）；只上传三个面向用户的
-安装包与校验文件。blockmap / latest*.yml 不镜像，auto-updater 始终直连 GitHub。
+GitCode 自动推送曾在 shell.8/9 连续失败（跨境 ~150 KB/s，预签名 URL 过期
+502）；旧 v5 管道又出现“上传成功但匿名下载 NOT_PATH”（2026-09-20，详见发布 skill），
+不再作为当前主方案或可靠 fallback。当前使用
+**`.agents/skills/gitcode-release-publisher/` 登录浏览器 v2 管道**：核对 tag commit，
+下载并核验 GitHub SHA-256，附件预留→签名存储上传→新 Release POST 创建。
+`scripts/mirror-gitcode-v2.mjs` 可补齐既有 Release，`--check-only` 免凭据验证；它的 PUT
+不负责创建缺失 Release。直接借用前核对实际 GitCode origin，授权头仅留临时 0600 文件。
+Release CDN 下载过慢时可从同一 Release run 的 Actions artifact 取得原始产物，
+仍须核对公开 SHA-256。只上传三个面向用户的安装包与三个校验文件。
+blockmap / latest*.yml 不镜像，auto-updater 始终直连 GitHub。
 官网数据生成器逐资产用 range GET 探测 GitCode；中文页面在镜像 URL 真实
 可下载时并列展示镜像与 GitHub 两个下载源，否则只展示 GitHub。不要把带
 时效签名的 CDN URL 写入站点。
@@ -86,7 +86,7 @@ fallback 依次为 gitcode-backfill workflow 与
 | 校验汇总制品 | `node scripts/check-release-assets.mjs <目录> <v-tag>` |
 | 写发布说明 | `node scripts/write-release-notes.mjs v<tag>` → 填完随 bump 提交；CI 缺文件/留占位符即失败 |
 | 手动刷新官网数据 | Actions → Site Data Refresh → Run workflow |
-| 补齐 GitCode 镜像 | 优先用 `mirror-gitcode.mjs` 上传 dmg/exe/deb 与 `.sha256`；backfill / `$gitcode-release-publisher` 为备用 |
+| 补齐 GitCode 镜像 | 新 Release 用 `$gitcode-release-publisher` 上传/创建；既有 Release 用 `mirror-gitcode-v2.mjs`；六资产匿名 Range GET |
 | 回补历史版本 | 同上（需 GitCode token 或维护者已登录会话）；镜像后重新生成站点数据 |
 | 下次壳发版 | `node scripts/version.mjs bump shell` → CI 绿 → 推 tag |
 | **每日内核巡检（ZCode 定时任务）** | 每天 23:00（国内时间）跑 `version.mjs check`；有新版则按 release-dsh-desktop skill 完整发版（门禁不全绿就停下留诊断），无新版安静结束。见「已知事项」 |
@@ -102,9 +102,9 @@ fallback 依次为 gitcode-backfill workflow 与
    3×sha256 + EXE.blockmap + latest.yml），`isDraft=false`。
 2. **Site Data Refresh**：Release 完成会自动触发；确认 run 成功且 `site/data/release.json`
    指向新 tag。若未触发，Actions → Site Data Refresh → Run workflow 手动跑。
-3. **GitCode 镜像**（国内下载源）：优先用 `mirror-gitcode.mjs` 上传 DMG、EXE、DEB
-   与三份 `.sha256`（不镜像 blockmap/latest.yml），再用 range GET 校验六个稳定 URL；
-   backfill 或 `$gitcode-release-publisher` 只作备用。镜像后重新生成网站数据。
+3. **GitCode 镜像**（国内下载源）：使用 v2 / `$gitcode-release-publisher` 上传 DMG、EXE、DEB
+   与三份 `.sha256`（不镜像 blockmap/latest.yml），新 Release 必须 POST 创建；既有对象
+   用 `mirror-gitcode-v2.mjs`。用匿名 range GET 校验六个稳定 URL 后重新生成网站数据。
    **此项最易遗漏**：shell.13/14 均因未及时补齐导致国内镜像滞后。
 4. **官网验证**：访问 <https://dsh-desktop.com>，确认下载区显示新版本双源按钮。
 5. **HANDOFF 回填**：把 CI/Release/Refresh run id、tag peeled commit、镜像状态
@@ -118,9 +118,9 @@ fallback 依次为 gitcode-backfill workflow 与
   两者并存不冲突。巡检的安全策略：门禁不全绿宁停不发、失败 tag 保留审计、
   绝不删除 GitCode tag/release。
 
-- GitCode 资产镜像为维护者授权渠道：发版后优先用
-  `mirror-gitcode.mjs` 上传 dmg/exe/deb 与哈希；只在 API 上传受阻时用
-  `$gitcode-release-publisher` 复用已登录浏览器会话；镜像后重新生成站点数据
+- GitCode 资产镜像为维护者授权渠道：发版后使用 v2 / `$gitcode-release-publisher`
+  复用已登录浏览器会话，上传 dmg/exe/deb 与哈希；既有对象用 `mirror-gitcode-v2.mjs`。
+  旧 v5/backfill 成功提示不是文件已落盘证据；镜像匿名验证后重新生成站点数据
   （根因与方案评估见 0008 第二修订：跨境
   推送 ~150 KB/s 且预签名 URL 过期 502；拉取式流水线复杂度不成比例，放弃）。
   自部署 gh-proxy（`GH_PROXY_PREFIX` 思路）仅作备选；公共代理实例实测
