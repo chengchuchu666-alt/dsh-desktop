@@ -233,11 +233,17 @@ realTrashTest('real idle session delete, restore and unarchive refresh sidebar w
   await expect(row.getByRole('button', { name: '取消置顶', exact: true })).toHaveCount(1)
   const peerOpening = harness.app.waitForEvent('window')
   await harness.app.evaluate(({ BrowserWindow }, url) => {
-    const peer = new BrowserWindow({ width: 1280, height: 900, show: true, webPreferences: { backgroundThrottling: false } })
+    // Exercise responsive sidebar collapse on every platform, not only on
+    // Windows runners whose work area can constrain a nominally wide window.
+    const peer = new BrowserWindow({ width: 800, height: 900, show: true, webPreferences: { backgroundThrottling: false } })
     void peer.loadURL(url)
   }, page.url())
   const peer = await peerOpening
   await peer.waitForLoadState('domcontentloaded')
+  const expandPeerSidebar = peer.getByRole('button', { name: '打开侧边栏', exact: true })
+  await expect(expandPeerSidebar).toBeVisible({ timeout: 30_000 })
+  await expandPeerSidebar.click()
+  await expect(peer.getByRole('tree', { name: '会话', exact: true })).toBeVisible()
   const peerRow = peer.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })
   try { await expect(peerRow).toHaveCount(1, { timeout: 30_000 }) }
   catch (error) {
