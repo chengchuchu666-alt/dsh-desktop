@@ -42,12 +42,36 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.1 <small>（内核 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li><strong>垃圾桶与侧栏同步</strong>：删除、还原和取消归档后无需重启；活动任务、驻留子任务、身份冲突及其他进程持有的会话会被安全拒绝，不强停或覆盖。</li>
+    <li><strong>完整飞书应用管理</strong>：设置和原生菜单打开同一独立窗口；默认扫码创建，支持取消、过期重试、多份本地应用、编辑、开启、持久关闭和确认移除。扫码保存不隐式开启或切换，关闭窗口不关闭连接。</li>
+    <li><strong>消息降噪与卡片</strong>：默认精简 + 3 秒预览；可选完整/精简/静默、流式预览、经典/富卡片和进度样式。修复 ACP 思考被重复映射成正文的问题；旧配置和凭据无损迁移。</li>
+    <li><strong>可靠状态与安全边界</strong>：捆绑 cc-connect 提供真实长连接健康信号，分别显示服务启动、飞书通道在线和 DSH 实际任务成功；缺模型 key 指向 Models。Secret 不回读、不进入 TOML/日志；Safe Mode 暂停和持久关闭保持独立。</li>
+  </ul>
+
+  <h2>v0.2.1-alpha.2.shell.0 <small>（内核 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li><strong>飞书消息连接</strong>：从原生「扩展 / Desktop tools」菜单打开独立二维码配置窗口，完成回调后由受监督的 cc-connect Sidecar 将飞书消息接入 DSH；设置页支持启动、停止、重连和 Safe Mode 生命周期。</li>
+    <li><strong>一键 CLI 与 skills</strong>：新增 <code>pnpm run feishu:setup</code>，调用官方 Lark CLI 完成用户 OAuth，并可安装官方 <code>lark-*</code> skills；用户 CLI 身份与 cc-connect 机器人身份明确分离。</li>
+    <li><strong>运行时与可靠性</strong>：升级内置 DSH 到 <code>0.2.1-alpha.2</code>，同步 32 个 peer pin，并按新内核重建登录自动打开补丁；新增多运行时管理面板及更严格的运行时路径校验。</li>
+    <li><strong>安全边界</strong>：二维码配置使用临时目录，Secret 只进入受保护凭证存储或权限为 <code>0600</code> 的文件，不写入日志、仓库或普通设置文件。</li>
+  </ul>
+
+  <h2>v0.2.1-alpha.1.shell.5 <small>（内核 0.2.1-alpha.1）</small></h2>
+  <ul>
+    <li><strong>飞书一键连接</strong>：原生扩展菜单提供独立的“配置飞书机器人”二维码流程，选择工作区、扫码确认后自动保存受保护凭证并尝试启动 cc-connect。</li>
+    <li><strong>官方 Feishu skills</strong>：新增 <code>pnpm run feishu:setup</code>，通过官方 <code>@larksuite/cli</code> 安装 <code>lark-*</code> skills 并完成用户 OAuth；用户 CLI 身份与 cc-connect 机器人身份保持分离。</li>
+    <li><strong>安全边界</strong>：二维码流程只使用临时配置目录，App Secret 不进入窗口、配置 TOML、状态、日志或仓库；退出、取消和超时都会清理临时数据。</li>
+  </ul>
+
   <h2>v0.2.1-alpha.1.shell.4 <small>（内核 0.2.1-alpha.1）</small></h2>
   <ul>
     <li><strong>局域网配对稳定性</strong>：发布当前主线已实现的多网卡 URL 校验与网卡选择持久化，避免配对二维码锚定回环地址后失败。</li>
     <li><strong>故障恢复</strong>：发布当前主线已实现的 Windows 运行文件、sharp 原生模块和插件内核不匹配诊断；Safe Mode/插件恢复路径保持可用。</li>
     <li><strong>发布链路</strong>：移除会触发已知失效 GitCode v5 回补的自动步骤，改由 GitCode v2 国内镜像流程在发布后逐资产匿名校验。</li>
     <li><strong>供应链安全</strong>：将 sharp 提升到 <code>0.35.5</code>，修复 <code>GHSA-wq5f-xc86-pv6w</code>；<code>sprintf-js</code> 的 <code>CVE-2026-97058</code> 目前无上游修复，审计仅对这一条公告做了显式临时忽略。</li>
+    <li><strong>cc-connect × DSH Desktop</strong>：安装包携带受主进程监管的 cc-connect Sidecar，设置页支持飞书凭证、工作区、启动/停止/重连和 Safe Mode 生命周期；Secret 不写入 TOML，用户文档补充了飞书后台要求、脱敏日志和凭证清理步骤。</li>
     <li><strong>边界说明</strong>：内置官方 Harness 内核版本不变；不新增权限，不改变用户数据目录或垃圾桶保留规则。</li>
   </ul>
 
@@ -84,29 +108,6 @@
     <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
     <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
     <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
-  </ul>
-
-  <h2>v0.2.0-rc.2.shell.0 <small>（内核 0.2.0-rc.2）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：从 0.2.0-rc.1 升级到 0.2.0-rc.2，壳侧同步 34 个 <code>dsh-*</code> peer pin，并按 lockfile 实际解析结果维护 release-age 豁免。Windows x64、macOS arm64 与 Linux 安装包由发布流水线构建。</li>
-    <li><strong>登录授权适配</strong>：登录授权链接在每次新授权尝试时自动于系统浏览器打开，并保留当前主题；补丁按 rc.2 组件重新生成并通过真实打包 E2E。</li>
-    <li><strong>插件兼容性</strong>：随内核继续在安装时校验插件 peer 兼容性；插件不兼容时会明确拒绝并说明原因。社区市场版本需声明支持 0.2.0 内核，等待兼容版本跨过随包 pnpm 的发布年龄门槛后会自动解析到兼容版本。</li>
-    <li><strong>安全边界</strong>：不新增权限，不改变用户数据目录；插件风险豁免仍需用户明确选择。</li>
-  </ul>
-
-  <h2>v0.2.0-rc.1.shell.0 <small>（内核 0.2.0-rc.1）</small></h2>
-  <ul>
-    <li><strong>内核升级 0.1.7-rc.2 → 0.2.0-rc.1</strong>：跟随上游 0.2.0 线的首个候选版。壳侧闭包同步 34 个 <code>dsh-*</code> peer 钉、release-age 豁免清单重钉 229 项；登录授权自动打开补丁按新版本语义原样重建（上游 SignInDialog 仍未内置该能力）。</li>
-    <li><strong>插件安装更安全（内核新行为）</strong>：0.2.0 内核在插件安装时强制校验 peer 兼容性——与内核版本不匹配的旧插件会被明确拒绝并给出解释与风险豁免指引，不再静默装上后在运行时崩溃。社区插件市场（dshmarket）需 1.66.4 及以上版本才与本内核声明兼容；配套的 pnpm 11 供应链策略（新包发布满 24 小时才参与解析）意味着市场安装将在 1.66.4 发布满 24 小时后（2026-09-29 晚）自动恢复，此前安装会显示可重试的分类失败说明，无需用户操作。</li>
-    <li><strong>升级与隔离契约延续</strong>：跨版本升级冒烟（设置/数据保留断言）、插件损坏隔离（Safe Mode）在新内核上复验通过。</li>
-  </ul>
-
-  <h2>v0.1.7-rc.2.shell.2 <small>（内核 0.1.7-rc.2）</small></h2>
-  <ul>
-    <li><strong>多网卡多二维码完全支持（#65）</strong>：LAN 配对不再只展示主网卡一个地址。桌面端与移动配对代理现在为机器上每一个私有地址（物理网卡 + Tailscale/ZeroTier 等虚拟网卡）各起一套完整监听，扫码窗口为每个地址渲染独立二维码并标注类型（局域网 / VPN 虚拟网卡）——手机接哪个网段都能扫到对应的码。</li>
-    <li><strong>网卡选择与覆盖</strong>：配对面板新增网卡勾选，勾选结果持久化；高级场景可用 <code>DSH_LAN_IP</code> 环境变量覆盖（单地址、逗号分隔多地址、或 <code>0.0.0.0</code>/<code>all</code> 全网卡通配）。</li>
-    <li><strong>代理稳定性修复</strong>：多地址监听重构中遗留的循环嵌套导致升级（WebSocket）处理器与 SSE 长连接超时配置未应用到实际监听的服务，已修复；双地址冒烟 + 双 LAN E2E 全绿。</li>
-    <li><strong>边界说明</strong>：LAN 配对仅限局域网/虚拟局域网内使用，令牌一次性配对、不穿透公网，不上传任何数据。</li>
   </ul>
   <!-- changelog:auto:end -->
 
