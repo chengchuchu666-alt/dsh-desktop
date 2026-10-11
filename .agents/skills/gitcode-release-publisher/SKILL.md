@@ -14,6 +14,9 @@ Publish assets through GitCode's attachment reservation and signed-storage flow 
 3. Confirm that the user authorized release creation and asset upload. Treat publishing as an external write.
 4. Verify the local tag, peeled tag commit, filenames, byte sizes, and checksums before upload.
 5. Check the GitCode releases page for an existing release with the same tag. Never create a duplicate or move an existing tag silently.
+6. Immediately check the current tab's origin/login without exposing values.
+   If `find_tab` reports GitCode but evaluate still uses a previous page,
+   navigate the current task tab to the GitCode releases URL and verify again.
 
 For protocol details and failure diagnosis, read [references/gitcode-release-api.md](references/gitcode-release-api.md).
 
@@ -58,6 +61,10 @@ jq -s 'sort_by(.name) | if (map(.name) | unique | length) == length then . else 
 If the browser's native chooser works reliably, it may be used for small files. Prefer the script after `DOM.setFileInputFiles` reports `Not allowed`, the chooser cannot be controlled, or a large EXE/DMG stalls.
 
 ### 3. Create the release
+
+The repository's `mirror-gitcode-v2.mjs` repairs links on an existing release;
+it does not create a missing release. A new tag returning 404 needs this POST
+creation step after all six attachments upload; never assume PUT will upsert.
 
 Write the intended release description to a task-specific file, then call:
 
