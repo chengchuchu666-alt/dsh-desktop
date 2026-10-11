@@ -17,10 +17,11 @@
 | MSG-04 | 完成 | 使用指南、双语 ADR 0036、文档契约与完整 verify |
 | FS-01 | 完成 | 单活动应用、分层健康、持久关闭/启动偏好及受限窗口契约 |
 | FS-02 | 完成 | 无损旧配置迁移、隔离凭证修订、应用 CRUD/去重与失败恢复 |
-| FS-03～FS-04 | 未完成 | 生命周期、统一管理窗口 |
+| FS-03 | 完成 | 串行单进程、持久关闭、启动偏好与真实分层健康 |
+| FS-04 | 未完成 | 统一管理窗口 |
 | QA-01 / shell 发布 | 未完成 | 安装包、受控真实验收、发布与镜像 |
 
-下一任务：**FS-03**。
+下一任务：**FS-04**。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -217,3 +218,44 @@ MSG-01～MSG-04 源码/配置/IPC/UI/文档门禁完成。未覆盖：真实飞�
 应用不读取旧全局凭证的回归；没有跳过/弱化断言。所有数据是临时目录及假 Secret。
 未覆盖项：实际单进程切换、停止失败、重启/自动连接、健康状态交 FS-03；用户界面/扫码交
 FS-04；安装包/真实飞书交 QA-01。未修改子模块或真实用户数据。
+
+## FS-03 — 生命周期权威与可靠健康
+
+允许范围：main-only 控制器、连接存储/健康/Supervisor、主进程及内核重启协调、IPC/preload
+生命周期说明、扫码保存成功文案和相应回归。父任务提交：`fdaaa9ac29f3008aa464bb4d66290e6fb4e621c8`。
+子模块先提交并推送：`3febee7fcc3217da581e1e796ef4d28d014889b3`。
+
+所有入口使用同一串行控制器；切换先等旧进程退出，停止失败保留所有权且拒绝第二个进程。
+显式关闭先落盘禁用，Safe Mode/内核重启/退出仅暂停；启动自动连接独立且仅影响启动。
+旧设置页限定选中应用，不再覆盖另一 App ID；QR 保存独立记录。公共状态用一次锁内快照，
+新机器人独立会话数据目录，迁移机器人保留旧目录；移除不删除工作区或 DSH/聊天数据。
+
+Sidecar opt-in 输出有版本、无内容的结构化事件。飞书健康来自官方 SDK 生命周期回调，
+DSH 只在真实 ACP turn 结果后报告模型可用/缺 key；进程 ready、通道在线、任务可用和收发
+验证时间互不冒充。普通日志不能改变健康。ready 后反复崩溃仍耗尽预算；停止取消自动重试
+计时器；旧进程回调不能覆盖当前应用。没有新增 management API 或放宽 IPC guard。
+
+| 命令 | 结果 | 退出码 |
+|---|---|---:|
+| `node --test test/cc-connect-{applications,controller,health,supervisor,ipc,lifecycle}.test.ts test/shell-app.test.ts` | 46 passed，0 failed，0 skipped | 0 |
+| `pnpm run verify` | 392 单测 + 1 ACP 全绿；覆盖率 89.76/82.93/86.45%，类型/运行边界/站点/构建通过 | 0 |
+| `pnpm exec playwright test e2e/electron-shell.spec.ts -g 'close persists\|display settings IPC\|renderer bridge drives\|Extensions menu completes QR' --repeat-each=2` | 8 passed；多次重启/关闭/自动连接、Safe Mode、崩溃/重连、分层健康/缺 key、QR 保存 | 0 |
+| 子模块 `go test ./...`、`go test -race ./...`、`go build ./...`、`go vet ./...` | 全部通过；真实本地 SDK WebSocket / 模拟 ACP，无真实凭证或飞书调用 | 0 |
+| 子模块 `go test ./core -run TestCUJ -count=1` | 通过 | 0 |
+| `git diff --check` | 通过 | 0 |
+
+Go 门禁使用 canonical 临时 `TMPDIR=/private/tmp/dsh-connect-go-QCLP8U`，避免 macOS `/var` 与
+`/private/var` 的既有夹具路径别名差异；未改动断言。首次全包 build 的 embed 缺 Web 产物，
+按已有流程在子模块 web 执行冻结锁安装/构建，生成物未提交。默认 Go proxy 超时后仅本轮
+使用 `GOPROXY=https://goproxy.cn,direct`，没有更改用户全局设置。
+
+相关依赖例外：原飞书 SDK 3.5.3 缺可靠生命周期回调，真实断线 race 测试还发现其 connID
+并发读写；只将直接相关 SDK 升至官方 3.12.0（含回调/可取消生命周期及该竞态修复）。适配
+生成代码改名的枚举，值/原测试断言不变，不升级其他依赖。见
+[官方生命周期实现](https://github.com/larksuite/oapi-sdk-go/blob/v3.12.0/ws/client_lifecycle.go)。
+初版 session 包装会丢可选权限模式能力，改为窄 ACP turn observer 保留原 Session 类型。
+
+迭代修复：自动重试停止后遗留计时器、纯 Node 夹具遗漏 command、Playwright 多次 relaunch
+错误关闭初始实例。修复后重跑，未跳过/删除/降低断言；自动测试全部隔离真实 home/Secret。
+未覆盖项：可操作应用列表、扫码过期/取消/重试、编辑/移除 UI 和新窗口授权交 FS-04；
+安装包/三平台实机/真实飞书卡片与收发交 QA-01；本项尚未发布新版本。
