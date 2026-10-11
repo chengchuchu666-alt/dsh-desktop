@@ -1198,7 +1198,7 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
     const mainWindow = await harness.app.browserWindow(page)
     // The native shell minimum is 960px. Lower it only in this isolated fixture
     // to exercise an 800px responsive content viewport, not the user window.
-    await mainWindow.evaluate(window => { window.setMinimumSize(800, 600); window.setSize(800, 700) })
+    await mainWindow.evaluate(window => { window.setMinimumSize(800, 600); window.setContentSize(800, 700) })
     await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(800)
     await expectManagementLayout()
     await expect(connect).toContainText('Quiet still sends the final answer')

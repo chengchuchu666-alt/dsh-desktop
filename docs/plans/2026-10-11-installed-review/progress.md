@@ -71,10 +71,15 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
 | 06-bound-feishu-full-tool.mp4 | 52.168s / 2926×1898；已复核发送→思考/工具消息→最终标记 |
 | 07-bound-main-real-task.mp4 | 57.372s / 2922×1898；已复核发送→运行→最终答复；工具展开另有截图 |
 | 08-real-trash-delete.mp4 | 首次定位过程，不能单独证明删除/还原 |
-| 09-real-trash-delete-restore.mp4 | 已录制真实删除/还原，关键帧复核待完成 |
+| 09-real-trash-delete-restore.mp4 | 关键帧复核只覆盖删除→列表清空→桶内出现；还原发生在录像结束后，不能据此称还原已录到 |
 | screenshots/06–10 | 主任务工具、完整模式、关闭探针、删除/还原即时侧栏证据 |
 
-尚待：正式 Safe Mode/运行恢复、语言主题/最小窗口、LAN、诊断/更新、其余矩阵及修复新包。
+- 正式 Safe Mode 进入/退出通过：插件隔离、飞书暂停/离线，原意图保留；退出后插件及
+  飞书在线恢复。正常 GUI 切换英文/深色并审查设置，再恢复中文/浅色，未改变权限偏好。
+  更新检查真实返回“已是最新版本 shell.1”。相关截图 11–13；录像 10 只覆盖前半段主题
+  切换，不把未录到的英文操作纳入该录像证明。
+
+尚待：正式最小窗口、LAN、诊断、其余矩阵及修复新包。
 手机扫码和跨系统本机硬件无法自动替代；竞争/危险故障仅在隔离 profile 中验证。
 
 ## BUG-01 — 布局修复与回归
@@ -89,8 +94,17 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
   首次失败因产品最小窗口限制（收到 960，要求 800，退出 1）；只在隔离 fixture 放宽尺寸
   后重跑成功，原边界断言未删除/降低。正式应用按原最小尺寸验收。
 - `pnpm exec playwright test e2e/electron-shell.spec.ts -g 'real Desktop display controls'`：1/1，退出 0。
-- `pnpm run verify`：完整门禁退出 0，日志 `/tmp/dsh-installed-review-layout-verify.log`。
-- 提交 SHA 待完成原子提交后回填；正式新包视觉验证仍待 QA-02，不把隔离测试等同实机完成。
+- `pnpm run verify`：398 单测 + 1 ACP，0 failed/skipped，完整门禁退出 0，日志
+  `/tmp/dsh-installed-review-layout-verify.log`。
+- 原子提交 `5cc8d267c8bf9428b99cedc08eccddc2e1737441`，origin 集成分支已推送（退出 0）。
+  精确暂存遇到既有 lib ignore 提示（退出 1），核对索引仅为允许的五文件后提交成功；
+  不能由暂存命令退出码推断没有入索引。已在既有 release skill 中记录同类坑，不改 ignore。
+- GitCode 集成分支也已推送（退出 0）。跨平台补充用 `setContentSize` 代替外框 `setSize`，
+  保持 800px 内容断言以避免 Windows 窗框误差；同一 Harness 用例重跑 1/1（退出 0）。
+- 全开发 E2E：26 passed / 9 独立套件未在此命令启用 / 0 failed（退出 0），未改跳过条件；
+  打包/市场/设备覆盖分别记账。双树 `pnpm run security:audit` 退出 0，没有新增忽略项。
+- 新包视觉验证仍待 QA-02，不把隔离测试等同实机完成。下一任务：完成剩余安全实机检查，
+  shell-only 新版本构建后执行全部 packaged gates，再按原场景复验。
 
 ## 安装后安全基线门禁
 
