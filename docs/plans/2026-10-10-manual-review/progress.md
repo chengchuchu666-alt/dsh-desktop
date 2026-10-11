@@ -19,9 +19,10 @@
 | FS-02 | 完成 | 无损旧配置迁移、隔离凭证修订、应用 CRUD/去重与失败恢复 |
 | FS-03 | 完成 | 串行单进程、持久关闭、启动偏好与真实分层健康 |
 | FS-04 | 完成 | 统一受限管理窗口、扫码/应用操作、中英文真实界面与权限回归 |
-| QA-01 / shell 发布 | 未完成 | 安装包、受控真实验收、发布与镜像 |
+| QA-01 | 本地完成 | 当前源码 macOS 安装包、受控真实收发/降噪/关闭、指南与 setup skill；三平台门禁随发布 CI 再核对 |
+| shell 发布 | 未完成 | 新版本打包、三平台 CI、GitHub/GitCode 资产与官网 |
 
-下一任务：**QA-01**。
+下一任务：**shell-only 发布**（`0.2.1-alpha.2.shell.1`）。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -292,3 +293,47 @@ Secret 回读。主进程精确检查 owner/完整页面 URL/顶层 frame；相�
 未覆盖项：packaged 注入必须保持生产环境不接受 test-bin 覆盖，三平台安装包与受控真实飞书
 留给 QA-01。已只读确认本机旧 settings/credentials 存在且为 0600；未将存在性当真实收发通过，
 未写入真实用户目录、发送真实消息或发布新版本。下一任务 QA-01。
+
+## QA-01 — 当前安装包与受控真实飞书验收
+
+允许范围：packaged 夹具/定位器及回归、用户指南/setup skill、构建 manifest、记录。真实降噪
+发现 ACP 双映射阻断验收，窄范围修复子模块 `agent/acp/{mapping.go,session.go,session_thought_test.go}`。
+子模块先提交并推送 `dc8132ef5f6a30056b2b69036458156edbbfb25d`；父仓库随后提交 gitlink 与验收
+改动：`b5c73420f66eae4f0c202a6a81363f0e4506e4e0`。不升级内核或无关依赖。
+
+| 命令 | 结果 | 退出码 |
+|---|---|---:|
+| `go test ./agent/acp -run TestNotificationThoughtChunkEmitsOnlyThinking -count=1`（修复前） | 一条 thought + answer 实际发出 3 个事件，精简过滤失效；诊断失败不计通过 | 1 |
+| `go test ./agent/acp ./agent/dsh -count=1` | 通知边界只输出 1 thought + 1 answer，旧映射/健康均通过 | 0 |
+| `TMPDIR=/private/tmp/dsh-connect-go-QCLP8U GOPROXY=https://goproxy.cn,direct go test ./...`、`go test -race ./...` | 完整 Go / race 均通过（同一隔离 TMPDIR/proxy）；没有跳过或降低断言 | 0 / 0 |
+| `go build ./...`、`go vet ./...` | 通过 | 0 / 0 |
+| `pnpm run verify` | 397 单测 + 1 ACP；覆盖率 89.99/82.92/86.41%；类型/运行边界/站点/构建均通过 | 0 |
+| `pnpm run test:e2e` | 26 passed；9 项按原有 packaged/Android/market 专项条件不在开发轮运行 | 0 |
+| `DSH_E2E_PACKAGED=1 pnpm exec playwright test e2e/electron-shell.spec.ts -g 'real Desktop display\|Feishu extension setup' --repeat-each=5` | 20 passed；新管理与降噪真实 Harness 五轮 | 0 |
+| `pnpm run test:e2e:packaged`（最终重跑） | 全部 15 passed，0 skipped；含登录、四项飞书、垃圾桶四项及活动/外部 lease 拒绝 | 0 |
+| `pnpm test:e2e:market:offline`、`pnpm test:e2e:market:real` | 1 / 2 passed | 0 / 0 |
+| `GOPROXY=https://goproxy.cn,direct pnpm run dist:dir`、`pnpm run smoke:packaged`、`pnpm run smoke:packaged-ui` | 修复后当前源码 mac-arm64 解包产物与两个 smoke 通过（当时版本 shell.0）；新 shell 版本仍需重建 | 0 / 0 / 0 |
+| `pnpm run security:audit` | 双树审计通过；未新增 ignore 或升级无关依赖 | 0 |
+| `node --test test/cc-connect-docs.test.ts test/feishu-cli.test.ts test/packaged-locator.test.ts` | 最终 2 TAP 测试及 CLI 顶层检查通过 | 0 |
+| `python3 .../skill-creator/scripts/quick_validate.py .agents/skills/feishu-dsh-setup`、`git diff --check` | 通过 | 0 / 0 |
+
+打包 Sidecar commit `dc8132ef...`，SHA-256 `2c279d633f011822582037ff8fc8ba3130f821444a51231253ca86041e4d2966`，
+已独立校验 manifest 与二进制一致；构建时含时间戳，后续新打包摘要会变化。
+
+真实验收使用用户此前明确授权的机器人会话；既存凭据只读，授权副本位于独立临时
+DSH_HOME/userData/工作区，0600。经 tenant-token/bot-info 确认凭据有效且目标匹配，没有打印
+Secret、token、OAuth 内容。旧配置迁移、通道 online、ACP 成功任务 available 均已实际观察。
+修复前 compact 出现思考正文与最终重复内容；修复后 compact、quiet 各 1 条最终答复，rich
+1 条 Done 卡片与用时；full 正常回包。只读目录工具确实产生 tool/call 与 tool/result，compact
+仍仅 1 条最终答复。显式关闭后 disabled/offline、Sidecar 退出；探针超过 30 秒无回复，2 份
+持久会话摘要均未变化。最终原 3 份配置/凭据 SHA 与权限一致，整份临时目录/凭据已清理。
+
+迭代问题：通用 ACP fallback 将 thought 当 EventText，又走专用 EventThinking，改为统一一次
+映射；相对安装包路径在隔离 cwd 下 ENOENT，定位器保证 absolute；boot overlay 不存在并不
+代表页面就绪，改为必须 desktop-controls mounted，同时正确处理导航中 body=null/context 销毁。
+初轮 packaged suite 2 failed/13 passed（启动 body=null；并发重打包让运行中的垃圾桶 Harness
+断连）；保留断言、修正夹具并停止重打包后全轮 15 passed。禁止在 smoke/E2E/真实验收中重写 dist。
+
+未覆盖项：本轮真实手机扫码新增应用需人工扫码，二维码取消/超时/保存/隔离改由假服务与
+真实管理窗口回归；不把前次扫码或手机提示当新流程通过。Windows/Linux 本轮安装包与
+安装/升级/相关 packaged 回归交发布 CI；macOS 尚未签名公证。下一任务：shell-only 发布。
