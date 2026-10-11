@@ -212,6 +212,16 @@ test('desktop controls expose the agent deletion interception preference', async
   assert.match(main, /candidate\.agentDeletionInterception/)
 })
 
+test('Feishu management entry and health text share the settings design system', async () => {
+  const client = await readFile(join(pluginRoot, 'lib/client.js'), 'utf8')
+  const css = client.match(/const css = `([\s\S]*?)`;/)?.[1]
+  assert.ok(css)
+  assert.match(css, /\[data-dsh-connect-manager\] \{[^}]*border-radius: 999px;/)
+  assert.match(css, /\[data-dsh-connect-manager\]\[data-primary\] \{[^}]*background: var\(--dsh-controls-accent\);/)
+  assert.match(css, /\[data-dsh-connect-manager\] \{[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere;[^}]*white-space: normal;/)
+  assert.match(css, /\[data-dsh-connect-health\],[^}]*display: block;/)
+})
+
 test('trash section uses the settings design system with guarded destructive actions', async () => {
   const client = await readFile(join(pluginRoot, 'lib/client.js'), 'utf8')
   const main = await readFile(resolve('src/main/index.ts'), 'utf8')

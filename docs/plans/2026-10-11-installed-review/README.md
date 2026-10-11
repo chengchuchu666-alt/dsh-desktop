@@ -60,3 +60,14 @@
 再逐项最小修复、单独提交/更新进度。子模块变更先推子分支，再提交父 gitlink。
 完整门禁不通过或真实验收未完成时不发布；已发布 tag 不移动。新版本沿用 shell-only
 release skill，最终真实安装验证不能被旧本地包/前三平台 CI 记录替代。
+
+## BUG-01 — 飞书设置卡片入口与健康文案布局
+
+- 级别 P2；正式 shell.1 桌面设置可复现：管理应用按钮为未样式化的原生按钮，
+  通道/任务健康文案紧接按钮同一行，窄卡片内换行混杂。
+- 证据：本轮 `03-real-health.png`，以及初次桌面设置 CUA 截图。
+- 允许修改：`plugins/dsh-desktop-controls/lib/client.js`、
+  `test/desktop-controls.test.ts`、`e2e/electron-shell.spec.ts`、本目录两份文档。
+- 仅补入口按钮样式、健康说明块级布局和必要的窄宽换行；不改 IPC、Secret、连接意图或内核。
+- 验证：公开源码 CSS + 隔离 headless 诊断；既有真实 Harness UI E2E 追加计算样式/边界断言，
+  全量 verify；解锁后正式新包回到原场景复验。隔离渲染不能代替正式包实机验收。

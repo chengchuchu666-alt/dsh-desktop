@@ -1126,6 +1126,19 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
       .toMatchObject({ secretConfigured: true, credentialProtection: 'file' })
     await openSettings()
     const connect = page.locator('[data-dsh-desktop-connect]')
+    async function expectManagementLayout() {
+      const entry = connect.locator('[data-dsh-connect-manager]')
+      const health = connect.locator('[data-dsh-connect-health]')
+      await expect(entry).toHaveCSS('border-radius', '999px')
+      await expect(health).toHaveCSS('display', 'block')
+      const [buttonBox, healthBox, cardBox] = await Promise.all([entry.boundingBox(), health.boundingBox(), connect.boundingBox()])
+      expect(buttonBox).not.toBeNull()
+      expect(healthBox).not.toBeNull()
+      expect(cardBox).not.toBeNull()
+      expect(healthBox!.y).toBeGreaterThanOrEqual(buttonBox!.y + buttonBox!.height)
+      expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width)
+    }
+    await expectManagementLayout()
     await expect(connect.getByLabel('App ID', { exact: true })).toHaveValue(base.appId)
     await expect(connect.locator('select')).toHaveCount(4)
     const detail = connect.getByRole('combobox', { name: '消息详细度', exact: true })
@@ -1182,6 +1195,12 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
     await expect(connect.getByRole('combobox', { name: 'Refresh interval', exact: true }).locator('option:checked')).toHaveText('Current: 8s')
     await expect(connect.getByRole('combobox', { name: 'Card style', exact: true })).toHaveValue('rich')
     await expect(connect.getByRole('combobox', { name: 'Progress display', exact: true })).toHaveValue('card')
+    const mainWindow = await harness.app.browserWindow(page)
+    // The native shell minimum is 960px. Lower it only in this isolated fixture
+    // to exercise an 800px responsive content viewport, not the user window.
+    await mainWindow.evaluate(window => { window.setMinimumSize(800, 600); window.setSize(800, 700) })
+    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(800)
+    await expectManagementLayout()
     await expect(connect).toContainText('Quiet still sends the final answer')
     await connect.getByRole('button', { name: 'Save connection', exact: true }).click()
     await expect(connect.getByRole('status')).toHaveText('Connection settings saved.')
