@@ -97,6 +97,13 @@ bash .agents/skills/gitcode-release-publisher/scripts/gitcode-release.sh verify 
 
 Do not use HEAD: GitCode commonly returns HTTP 401 for HEAD while anonymous range GET correctly returns 200 or 206.
 
+HTTP status alone is not content verification. Reject HTML responses; for 206,
+check `Content-Range: bytes 0-0/<expected size>` and compare the returned byte
+with the verified local file. For 200, compare the complete size and SHA-256.
+Also fully download at least one installer through the stable anonymous URL
+and compare it with the GitHub file; keep this readback outside the strict
+eight-file artifact directory. Record the checked size/hash in HANDOFF.
+
 ### 5. Refresh downstream delivery
 
 If the repository generates website data from release availability:
