@@ -377,3 +377,24 @@ packaged 中断退出 1，不计通过；清理已知测试进程后保留所有
 skill quick_validate、文档/站点检查和 `git diff --check` 均退出 0。shell.1 打包/真实飞书
 验证见上述 QA-01；尚未创建 tag 或发布，下一步合并远端站点 bot 提交、三平台 CI，
 再完成 GitCode 六资产和官网/HANDOFF，不把本地通过当作发布完成。
+
+### shell.1 首轮 CI 与跨平台夹具修复
+
+首轮未发布候选 tag 指向 `496df80e3f46e3dad4f4820a5d6ad2f8700eba61`，双远端对齐。
+Release run `38110150474`：审计/verify 通过，Electron 20 passed/3 failed/12 原有条件未运行，
+退出 1；构建/publish 未运行，无 Release 或资产。三项都在中文输入框初始化超时，未到业务
+操作；旧 settings 的异步导入不应决定垃圾桶夹具的语言。失败日志保留，不记作验收通过。
+
+修复提交 `21f83749012d236d98d78da7686f2ee3c1354243`：允许范围仅 5 份相关 E2E
+夹具/回归和 release skill；直接配置 active profile 的中文/主题/欢迎状态，增加渲染语言与
+输入框就绪断言。发现并一并修正 Windows 原生磁盘路径动态 import，统一 `pathToFileURL`；
+会话恢复原路径改为完整 `path.join` 等值断言，比原 POSIX 前缀断言更严格。未改产品逻辑，
+未跳过/删除/降低断言；专门的旧配置迁移测试仍运行。
+
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle|Host refuses|external kernel' --repeat-each=2`：6 passed，退出 0。
+- `pnpm run test:e2e:packaged`：完整 15 passed、0 skipped（含精确会话原路径、真正跨进程 lease、重启），退出 0。
+- `pnpm run verify`：397 + 1 ACP，退出 0；typecheck、三份 helper `node --check`、skill 校验与 diff check 均退出 0。
+- 原生 `C:\\fixture\\kernel.js` 动态 import 探针确实返回 `ERR_UNSUPPORTED_ESM_URL_SCHEME`，修复后由真实 persistence helpers / 三平台 CI 验证。
+
+下一步重新同步 bot 站点提交、仅重指向这个尚未发布的 shell.1 候选 tag，重跑三平台全流程；
+历史已发布 tag 与默认分支禁止强推。真实凭据未使用或修改，产物代码版本未变，测试期间未重写 dist。
