@@ -80,7 +80,13 @@ export async function launchTrashHarness(packaged: boolean) {
       await expect.poll(() => page.locator('[data-dsh-desktop-controls]').count(), { timeout: 90_000 }).toBe(1)
       await dismissOnboardingModals(page)
       await expect(page.locator('html')).toHaveAttribute('lang', /^zh/)
-      await expect(page.getByRole('textbox', { name: /描述你想要构建/ })).toBeVisible()
+      try {
+        await expect(page.getByRole('textbox', { name: /描述你想要构建/ })).toBeVisible()
+      } catch (error) {
+        // Isolated fixtures contain only fake credentials and local mock data.
+        console.error('[trash-harness-start]', await page.locator('body').ariaSnapshot())
+        throw error
+      }
       return page
     }
     let page = await launch()
