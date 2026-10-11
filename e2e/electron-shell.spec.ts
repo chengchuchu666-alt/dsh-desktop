@@ -168,6 +168,9 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
         // Unpacked build from dist/ — no stub server, the real Harness renders.
         executablePath = await locatePackagedExecutable()
         currentApp = await electron.launch({ executablePath, args: launchArgs, cwd: process.cwd(), env: launchEnv })
+        // Fake secrets belong only to this temporary profile, never the user's
+        // OS keychain (ad-hoc local builds can block on a system prompt).
+        await currentApp.evaluate(({ safeStorage }) => { safeStorage.isEncryptionAvailable = () => false })
         if (connectSidecar || feishuSetupSidecar) {
           // The production app ignores test-bin overrides. Replace only the
           // child-process dependency in this isolated test main process instead.
@@ -236,6 +239,7 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       launchArgs = ['.', ...launchArgs]
       launchEnv.DSH_DESKTOP_DEV_WEB_URL = `http://127.0.0.1:${address.port}`
       currentApp = await electron.launch({ executablePath, args: launchArgs, cwd: process.cwd(), env: launchEnv })
+      await currentApp.evaluate(({ safeStorage }) => { safeStorage.isEncryptionAvailable = () => false })
       return currentApp
     }
     activeLaunch = { launch, current: () => currentApp }
@@ -1118,6 +1122,8 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
   try {
     const base = { enabled: false, appId: 'cli_ui_fake', workspace: harness.workspace }
     expect(await save({ ...base, appSecret: 'fake-ui-secret' })).toMatchObject({ ok: true })
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState()))
+      .toMatchObject({ secretConfigured: true, credentialProtection: 'file' })
     await openSettings()
     const connect = page.locator('[data-dsh-desktop-connect]')
     await expect(connect.getByLabel('App ID', { exact: true })).toHaveValue(base.appId)

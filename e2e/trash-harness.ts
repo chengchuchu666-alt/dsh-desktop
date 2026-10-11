@@ -67,6 +67,9 @@ export async function launchTrashHarness(packaged: boolean) {
     if (process.platform === 'linux') args.push('--no-sandbox')
     async function launch() {
       app = await electron.launch({ ...(packaged ? { executablePath: await locatePackagedExecutable() } : {}), args, cwd: workspace, env })
+      // This fixture only saves fake credentials. Exercise the permission-
+      // protected file fallback without requesting access to the real keychain.
+      await app.evaluate(({ safeStorage }) => { safeStorage.isEncryptionAvailable = () => false })
       const page = await app.firstWindow()
       await expect.poll(() => page.locator('[data-dsh-desktop-controls]').count(), { timeout: 90_000 }).toBe(1)
       await dismissOnboardingModals(page)
