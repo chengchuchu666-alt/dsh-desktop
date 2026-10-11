@@ -23,7 +23,10 @@ For protocol details and failure diagnosis, read [references/gitcode-release-api
 
 Use only the files required by the repository's release contract. Do not infer that every GitHub asset belongs on GitCode.
 
-For `dsh-desktop`, mirror only the macOS DMG, Windows EXE, and their two `.sha256` files. Keep `latest.yml` and the EXE `.blockmap` on GitHub for `electron-updater`; do not mirror or render them as user downloads.
+For `dsh-desktop`, follow `scripts/release-shape.mjs`: mirror the macOS DMG,
+Windows EXE, Linux DEB and their three `.sha256` files (six assets). Keep
+`latest.yml` and the EXE `.blockmap` on GitHub for `electron-updater`; do not
+mirror or render them as user downloads. Do not copy an older four-asset policy.
 
 Create a task-specific staging directory:
 

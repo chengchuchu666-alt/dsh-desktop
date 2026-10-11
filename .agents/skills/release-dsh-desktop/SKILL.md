@@ -1,6 +1,6 @@
 ---
 name: release-dsh-desktop
-description: "Run a full dsh-desktop release — bump the bundled @deepseek-ai/dsh kernel, pass local gates, cut the composite tag, watch the GitHub release CI, mirror installers to GitCode, verify the site data, and record the run in HANDOFF. Use when the user asks to 发版/发布/release/bump kernel/重发版本, or when version.mjs check reports an upstream update. Companion: gitcode-release-publisher (browser-based GitCode uploads when backfill stalls)."
+description: "Run a full dsh-desktop shell-only or kernel release, pass local gates, cut the composite tag, watch the GitHub release CI, mirror installers to GitCode, verify the site data, and record the run in HANDOFF. Use when the user asks to 发版/发布/release/bump kernel/重发版本, or when version.mjs check reports an upstream update. Companion: gitcode-release-publisher."
 ---
 
 # dsh-desktop Release Runbook
@@ -15,13 +15,47 @@ are all part of the release, not afterthoughts.
 1. `gh` authenticated to `citrusli2026/dsh-desktop` (workflow
    dispatch, run watching, release verification).
 2. Working tree clean; `main` fetched. Remote bot commits are common
-   (`dsh-shell-bot` site syncs) — always `git pull --rebase` right
-   before tagging and re-create the tag if it was made pre-rebase.
+   (`dsh-shell-bot` site syncs). Sync before tagging; for an integration
+   branch use the merge route below to preserve completed task SHAs.
 3. Local gates runnable: pnpm 10.33.2 (the repo's `packageManager` pin; see the pnpm fault-table entry for why 11.x is banned), Node 24, network to npm registry.
 4. For the mirror step: kimi-webbridge daemon + a logged-in gitcode.com
    tab in the user's browser (`~/.kimi-webbridge/bin/kimi-webbridge start`).
 
 ## Release-day playbook (follow in order; each step names its success signal)
+
+### Choose shell-only vs kernel upgrade first
+
+For shell features/fixes without an authorized kernel upgrade, run only
+`node scripts/version.mjs bump shell`. Keep the harness pin, peer ranges,
+patch versions, release-age excludes and lockfiles unchanged. Do not turn an
+upstream update discovered during a shell release into an implicit upgrade.
+Skip kernel-only steps 1–7 below; run local verification, fresh versioned
+packaging, notes, CI, mirrors and site/HANDOFF as usual. Notes must describe
+the unchanged kernel and the actual shell revision, not blindly use `.shell.0`.
+
+When releasing from a user-designated integration branch, preserve its atomic
+commit SHAs: fetch and merge `origin/main` on that branch after the task tree is
+clean, inspect conflicts, and push the integration branch. A normal `HEAD:main`
+push is allowed only after it is a fast-forward; never force the default branch.
+Tag that checked commit and push the exact tag to both remotes. Record the tag
+SHA separately from later site/HANDOFF commits. Do not rebase completed task
+commits merely to incorporate site bot updates.
+
+Published release tags are immutable. Any re-point procedure below applies
+only to a new, unpublished candidate after canceling its old run and verifying
+that no release assets were published; otherwise bump the shell revision.
+Never force-push the default branch or move a historical published tag.
+
+Build `dist:dir` to completion before starting smoke, packaged E2E or real
+Feishu acceptance; never rebuild/overwrite the executable they are running.
+After the final version bump, repeat both packaged smokes and packaged E2E.
+For Feishu changes run the display/manager cases with `--repeat-each=5` and
+the full `pnpm run test:e2e:packaged` subset. Production must continue to
+ignore fake-bin environment overrides; inject dependencies only in isolated
+test main processes. Real messages require an authorized application/conversation,
+temporary credential copies and cleanup; verify thoughts cannot enter answer text.
+
+### Kernel-upgrade route
 
 1. `node scripts/version.mjs check` → exit 3 with `update available: <v>`.
 2. `node scripts/version.mjs bump dsh <v>` → prints `synced N dsh-* peer pins`.
@@ -391,6 +425,13 @@ GITCODE_TOKEN=$(cat ~/.gitcode-token) GITCODE_REPO=citrusli2026/dsh-desktop \
 
 | Symptom | Cause / fix |
 |---|---|
+| a fresh local ad-hoc package blocks fake-secret E2E on a macOS keychain dialog | fake Secrets do not justify real keychain access. In the isolated test main process, inject safeStorage unavailable and assert the existing restricted-file fallback; retain safeStorage adapter unit tests and real protected-storage acceptance. Do not approve system dialogs, modify keychain access or add production bypasses |
+| packaged launch with a temporary workspace fails `ENOENT` although the binary exists | a relative `dist` path was resolved against the new cwd; `locatePackagedExecutable` must return an absolute path (unit regression covers relative input) |
+| packaged manager remains closed / actions unexpectedly rejected just after launch | absence of the boot overlay is not readiness; require mounted desktop-controls, tolerate only expected navigation/context transitions and body=null while loading; preserve failure-surface assertions |
+| live compact/quiet still leaks reasoning as answer text | ACP thought passed through generic fallback and a dedicated mapper; test the complete notification boundary, not only the thought helper, and map `agent_thought_chunk` once |
+| packaged trash or another Harness disconnects while tests are running | a concurrent dist rebuild replaced running resources; serialize packaging and runtime gates, then rerun the complete failed suite without weakening assertions |
+| `git add` says the manually maintained tracked plugin client is ignored | the broad lib ignore matches even this exact path; use precise `git add -f plugins/dsh-desktop-controls/lib/client.js`, never `git add -A` |
+| GitCode upload reports `no extension connected` | start the daemon once; if the browser extension remains disconnected, report this mirror prerequisite to the user while completing other release gates. Do not report the mirror or full release complete |
 | publish fails: `release-notes: missing docs/release-notes/v<tag>.md` | every release must write notes; scaffold with `node scripts/write-release-notes.mjs v<tag>`, fill it, commit, re-run (or re-push the tag) |
 | publish fails/ warns: `still contains placeholder <>` | fill every `<...>` in the notes file before tagging |
 | `pnpm -C manifest/harness install --lockfile-only` reports `ERR_PNPM_UNUSED_PATCH` after a kernel bump | the `patchedDependencies` key and patch filename still target the previous `dsh-client-ui-settings-account` version; use the exact `pnpm patch` → edit → `patch-commit` flow above, remove the obsolete patch, regenerate the lockfile, and verify `openedAttemptId` in the staged closure |
