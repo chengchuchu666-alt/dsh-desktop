@@ -356,3 +356,24 @@ packaged 中断退出 1，不计通过；清理已知测试进程后保留所有
 
 未覆盖项与下一任务不变：三平台发布 CI、GitCode 六资产与官网/HANDOFF。GitCode 浏览器
 扩展连接曾缺失，启动后已响应且发行版管理可见，前置条件已恢复，不将它保留为凭据缺失阻塞。
+
+### QA-01 发布前补充 — 官网显式开启规则
+
+官网中英文入口和翻译数据仍称扫码后自动启动，与 FS-04 已验收的显式开启规则不符。
+仅同步对应文案、缓存版本和文档断言，提交
+`1204954edc57f35fad85d2f7990a7397c922c266`；`node --test test/cc-connect-docs.test.ts`
+1 passed、`pnpm run site:check` 与 `git diff --check` 均退出 0。新增禁止自动启动旧文案的
+断言，未删减功能断言。下一任务仍是 shell.1 三平台发布及镜像/官网验证。
+
+### shell.1 发布候选
+
+候选提交 `1dcbc6e30baa522d34ff8532b13cd0083bc9ef5b`：仅将壳修订升至
+`0.2.1-alpha.2.shell.1`，内核仍为 `0.2.1-alpha.2`；锁文件、peer pins、release-age
+配置无差异。同步双语说明、完整 release notes 与两份发布 skill；固化最终版本重打包、
+串行运行门禁、假 Secret 隔离、ACP 单映射、六镜像资产、保留任务 SHA 和已发布 tag 不可变。
+
+最后源码 `pnpm run verify`（`/tmp/dsh-connect-shell1-final-source-verify.log`）397 单测
++ 1 ACP 全绿，退出 0；`node scripts/version.mjs show`、release-notes check、两份
+skill quick_validate、文档/站点检查和 `git diff --check` 均退出 0。shell.1 打包/真实飞书
+验证见上述 QA-01；尚未创建 tag 或发布，下一步合并远端站点 bot 提交、三平台 CI，
+再完成 GitCode 六资产和官网/HANDOFF，不把本地通过当作发布完成。
