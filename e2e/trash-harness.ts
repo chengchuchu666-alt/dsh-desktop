@@ -1,7 +1,7 @@
 /** Real Harness + local model, isolated from every real credential and data home. */
 import { createServer, type ServerResponse } from 'node:http'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron as electron, expect } from '@playwright/test'
@@ -9,9 +9,10 @@ import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
 
 export async function launchTrashHarness(packaged: boolean) {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-trash-real-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-trash-real-')))
   const home = join(root, 'home')
-  const workspace = join(root, 'workspace')
+  const documents = join(root, 'documents')
+  const workspace = join(documents, 'deepseek-harness', 'default-workspace')
   const userData = join(root, 'electron')
   let requests = 0
   let paused = false
@@ -50,7 +51,7 @@ export async function launchTrashHarness(packaged: boolean) {
     await rm(root, { recursive: true, force: true })
   }
   try {
-    await Promise.all([mkdir(join(home, 'profiles', 'web'), { recursive: true }), mkdir(workspace), mkdir(userData)])
+    await Promise.all([mkdir(join(home, 'profiles', 'web'), { recursive: true }), mkdir(workspace, { recursive: true }), mkdir(userData)])
     server.listen(0, '127.0.0.1')
     await once(server, 'listening')
     const port = (server.address() as { port: number }).port
@@ -62,6 +63,9 @@ export async function launchTrashHarness(packaged: boolean) {
       '- id: locale', '  config:', '    preference: zh',
       '- id: ui-theme', '  config:', '    preference: dark',
       '- id: ui-settings-general', '  config:', '    welcomeNoticeVersion: "2026-08-13.1"', '',
+      // cwd is not the kernel's default-workspace location. Keep Documents
+      // resolution inside this fixture instead of probing the host's account.
+      '- id: workspace-controller', '  config:', `    documentsDirectory: ${JSON.stringify(documents)}`, '',
     ].join('\n'))
     await writeFile(join(home, 'settings.yaml'), 'locale:\n  preference: zh\nui-theme:\n  preference: dark\n' + WELCOME_ACKNOWLEDGED_YAML)
     await writeFile(join(userData, 'shell-preferences.json'), JSON.stringify({ closeToTrayExplained: true, firstRunGuideDismissed: true }))
@@ -80,13 +84,7 @@ export async function launchTrashHarness(packaged: boolean) {
       await expect.poll(() => page.locator('[data-dsh-desktop-controls]').count(), { timeout: 90_000 }).toBe(1)
       await dismissOnboardingModals(page)
       await expect(page.locator('html')).toHaveAttribute('lang', /^zh/)
-      try {
-        await expect(page.getByRole('textbox', { name: /描述你想要构建/ })).toBeVisible()
-      } catch (error) {
-        // Isolated fixtures contain only fake credentials and local mock data.
-        console.error('[trash-harness-start]', await page.locator('body').ariaSnapshot())
-        throw error
-      }
+      await expect(page.getByRole('textbox', { name: /描述你想要构建/ })).toBeVisible()
       return page
     }
     let page = await launch()

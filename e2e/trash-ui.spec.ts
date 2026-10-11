@@ -217,6 +217,9 @@ async function createRealSession(harness: Awaited<ReturnType<typeof launchTrashH
   const sessions = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrashSessions(): Promise<Array<{ sessionId: string; projectKey: string }> | null> } }).dshDesktop.listTrashSessions())
   expect(sessions).toHaveLength(1)
   expect(sessions![0]!.sessionId).toMatch(/^session-/)
+  const node = join(process.cwd(), 'resources/harness/node/bin', process.platform === 'win32' ? 'node.exe' : 'node')
+  const durable = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, sessions![0]!.sessionId], { encoding: 'utf8', timeout: 30_000 }))
+  expect(durable.cwd).toBe(harness.workspace)
   return sessions![0]!
 }
 
@@ -364,7 +367,7 @@ realTrashTest('external kernel writer lease prevents cold session deletion @smok
     const newDrafts = ids.filter(id => !durableIds.includes(id))
     expect(newDrafts).toHaveLength(1) // the kernel's new blank selected session
     const draft = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, newDrafts[0]!], { encoding: 'utf8', timeout: 30_000 }))
-    expect(draft).toEqual({ id: newDrafts[0], eventTypes: ['permission/preset', 'sandbox/mode', 'approval/policy'], parentSession: null })
+    expect(draft).toEqual({ id: newDrafts[0], cwd: harness.workspace, eventTypes: ['permission/preset', 'sandbox/mode', 'approval/policy'], parentSession: null })
     expect(harness.requests).toBe(2)
   } finally { if (holder.exitCode === null) holder.kill('SIGKILL') }
 })

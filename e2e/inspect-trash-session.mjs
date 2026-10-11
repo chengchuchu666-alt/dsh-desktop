@@ -11,5 +11,5 @@ const storage = new Persistence(new Context(), { root: join(home, 'sessions') })
 const handle = await storage.open(id, 'read')
 try {
   const { events } = await handle.read()
-  console.log(JSON.stringify({ id: handle.header.id, eventTypes: events.map(event => event.type), parentSession: handle.header.parentSession ?? null }))
+  console.log(JSON.stringify({ id: handle.header.id, cwd: handle.header.cwd, eventTypes: events.map(event => event.type), parentSession: handle.header.parentSession ?? null }))
 } finally { await handle.close() }
