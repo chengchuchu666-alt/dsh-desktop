@@ -18,10 +18,10 @@
 | FS-01 | 完成 | 单活动应用、分层健康、持久关闭/启动偏好及受限窗口契约 |
 | FS-02 | 完成 | 无损旧配置迁移、隔离凭证修订、应用 CRUD/去重与失败恢复 |
 | FS-03 | 完成 | 串行单进程、持久关闭、启动偏好与真实分层健康 |
-| FS-04 | 未完成 | 统一管理窗口 |
+| FS-04 | 完成 | 统一受限管理窗口、扫码/应用操作、中英文真实界面与权限回归 |
 | QA-01 / shell 发布 | 未完成 | 安装包、受控真实验收、发布与镜像 |
 
-下一任务：**FS-04**。
+下一任务：**QA-01**。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -259,3 +259,36 @@ Go 门禁使用 canonical 临时 `TMPDIR=/private/tmp/dsh-connect-go-QCLP8U`，�
 错误关闭初始实例。修复后重跑，未跳过/删除/降低断言；自动测试全部隔离真实 home/Secret。
 未覆盖项：可操作应用列表、扫码过期/取消/重试、编辑/移除 UI 和新窗口授权交 FS-04；
 安装包/三平台实机/真实飞书卡片与收发交 QA-01；本项尚未发布新版本。
+
+## FS-04 — 统一飞书应用管理窗口
+
+允许范围：管理窗口/页面、QR runner 与 main-only 管理器、受限 preload/IPC、设置入口、
+原生菜单文案、构建 preload 与对应单测/Electron 回归。任务提交：
+`462102f9fb33bea56be98423dab3f931c86e5aa5`；子模块未改动，保持 `3febee7`。
+
+设置和菜单复用同一窗口及 FS-03 控制器。默认扫码，显示授权等待倒计时、取消/超时/重试；
+手机成功后须等主进程保存，只显示“应用已保存”，不会自动切换或开启。支持多份本地应用
+命名、工作区、降噪偏好、替换 Secret、显式保存并开启、切换、持久关闭、启动偏好与确认移除。
+窗口关闭不停止已保存连接；创建中关闭会取消、等待子进程退出并清理整份临时目录。
+提交保存已进入原子存储阶段时，关闭仍允许该次保存完成，但绝不会因此开启连接。
+
+专用 preload 只含受控管理动作、选目录和固定平台外链；没有通用 Desktop/files/shell 或
+Secret 回读。主进程精确检查 owner/完整页面 URL/顶层 frame；相同 URL 的伪造窗口也拒绝。
+页面 hash-only script CSP、无远程资源，动态名称/路径仅 textContent/value；Secret 保存后清空。
+健康分为服务/通道/任务，缺模型 key 指向 Models，不把进程 ready 或用户 OAuth 当连通。
+
+| 命令 | 结果 | 退出码 |
+|---|---|---:|
+| `node --test test/feishu-manager.test.ts test/feishu-page.test.ts test/feishu-setup.test.ts test/menu-template.test.ts test/desktop-controls.test.ts` | 23 passed，0 failed，0 skipped | 0 |
+| `pnpm run verify` | 396 单测 + 1 ACP 全绿；覆盖率 90.00/82.91/86.46%；类型/运行边界/站点/构建通过 | 0 |
+| `pnpm exec playwright test e2e/electron-shell.spec.ts -g 'real Desktop display\|Feishu extension setup' --repeat-each=5` | 20 passed；真实设置/菜单、双语回显、多应用 CRUD/切换、持久关闭、QR 取消/超时/关闭清理、同页面伪造窗口拒绝 | 0 |
+| `pnpm run typecheck`、`node --check plugins/dsh-desktop-controls/lib/client.js`、`git diff --check` | 通过 | 0 |
+
+实现后发现并修复自动连接 checkbox 被保存前的旧状态同步改回；断言保留。中文入口回归首次
+定位了简写而非完整按钮名，修正定位后重跑五次；第一次重复运行因此中断（130），不计成功。
+取消夹具忽略 SIGTERM，检查已知 PID 消失与临时目录 ENOENT，不只检查从未生成的文件。
+已核对中英文截图，未打印凭据；使用假 QR/Secret/Sidecar、隔离 userData/DSH_HOME。
+
+未覆盖项：packaged 注入必须保持生产环境不接受 test-bin 覆盖，三平台安装包与受控真实飞书
+留给 QA-01。已只读确认本机旧 settings/credentials 存在且为 0600；未将存在性当真实收发通过，
+未写入真实用户目录、发送真实消息或发布新版本。下一任务 QA-01。
