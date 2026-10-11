@@ -426,3 +426,17 @@ cwd 断言；诊断 logger 已移除。没有修改产品、内核或真实配�
 
 下一步：合并站点 bot 提交，确认两平台 Release 仍不存在后仅更新尚未发布的 shell.1 tag，
 重跑三平台发布；成功后六资产镜像、官网与 HANDOFF。历史发布 tag 不变。
+
+### 发布 runbook 防重复踩坑补充
+
+两份 skill 提交 `501fac2acde8a72f8acd69e7edc444f1afaece94`；HANDOFF 当前运维入口
+提交 `9e0805db0b77934a0168074fd6cedfc92e9e6c76`。范围仅发布说明与操作指引：
+新 GitCode Release 用 helper 上传→POST 创建，既有对象才走 mirror-v2 PUT；当前管道为
+登录浏览器 v2，不再将旧 v5/backfill 当可靠备用。实际遇到 find_tab 成功却 evaluate 仍在
+前一 GitHub 页，显式 navigate 后核对 origin/login 恢复，未输出凭据。所有重试限定尚未
+发布的精确 tag + force-with-lease，默认分支不强推，bot 提交通过 merge 保留任务 SHA。
+
+两份 skill quick_validate、`node --test test/cc-connect-docs.test.ts test/release-assets.test.ts test/release-shape-parity.test.ts`
+（7 passed）、`pnpm run site:check`、`git diff --check` 全部退出 0。没有产品/依赖改动。
+发布 tag 指向 `b31fac1e06e7e721df9d53e9b72716688f38345a`，子模块 `dc8132ef...`
+在 origin 可达。下一步等待 Release run `38112224676` 三平台门禁，再上传/创建六资产镜像。
