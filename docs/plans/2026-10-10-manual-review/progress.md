@@ -337,3 +337,22 @@ Secret、token、OAuth 内容。旧配置迁移、通道 online、ACP 成功任�
 未覆盖项：本轮真实手机扫码新增应用需人工扫码，二维码取消/超时/保存/隔离改由假服务与
 真实管理窗口回归；不把前次扫码或手机提示当新流程通过。Windows/Linux 本轮安装包与
 安装/升级/相关 packaged 回归交发布 CI；macOS 尚未签名公证。下一任务：shell-only 发布。
+
+### QA-01 发布前补充 — 假凭据不访问真实钥匙串
+
+新 shell.1 ad-hoc 签名触发本机 macOS 钥匙串提示，假 Secret 测试阻塞。只修改两个隔离
+E2E main 进程夹具的 safeStorage 可用性依赖，明确验证现有 0600 文件回退；产品逻辑与
+safeStorage adapter 单测未改，真实受保护存储已由上述授权副本验收。没有批准系统提示或
+修改钥匙串授权。修复提交 `539bc04`（完整 SHA 见 Git）；初轮 manager 失败/中断退出 130，
+packaged 中断退出 1，不计通过；清理已知测试进程后保留所有断言重跑：
+
+- shell.1 五轮 display/manager：20 passed，退出 0；增加 `credentialProtection=file` 断言。
+- shell.1 完整 packaged：15 passed、0 skipped；开发态：26 passed，原有 9 专项条件未运行，均退出 0。
+- `pnpm run verify`：397 + 1 ACP，退出 0；凭据/Sidecar 构建/资产专项 6 passed，退出 0。
+- shell.1 两种 packaged smoke、LAN QR 2/2、market offline 1/1 与 real 2/2、双树审计均退出 0。
+- shell.1 mac-arm64 产物 Sidecar `dc8132ef...`，manifest/二进制独立校验一致，SHA-256
+  `baa0d24b46aa72c697e000e01afd032dde16ae0db15aebef1e0c47bc6bf6a56d`。源码 hash-only 构建变化已还原，
+  保留真正的子模块 commit 更新；新产物的实际 manifest 不变。
+
+未覆盖项与下一任务不变：三平台发布 CI、GitCode 六资产与官网/HANDOFF。GitCode 浏览器
+扩展连接曾缺失，启动后已响应且发行版管理可见，前置条件已恢复，不将它保留为凭据缺失阻塞。
