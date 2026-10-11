@@ -506,3 +506,9 @@ worker teardown 45s warning 保留；macOS ad-hoc/未公证和 Windows 未商业
 文档/资产/形状专项 7 passed，退出 0；两份 skill quick_validate、release-notes check、
 23 个本地文档链接目标与 `git diff --check` 全部退出 0。允许改动仅发布/HANDOFF、两份
 skill 和相关计划/架构状态，不改产品、测试或依赖；失败历史保留，未覆盖项不变。
+
+最终交付文档/skills 提交：`40da09431f18866334287441cf6cd7017549e805`。
+站点 bot 以 `54661258068599e5fdb233396c834b9282fe0c4b` merge 保留；合并后
+`pnpm run site:check`、文档/资产/形状 7 项专项均退出 0，父工作树干净，gitlink 仍为
+`dc8132ef5f6a30056b2b69036458156edbbfb25d`。本补记只记录既有完成提交，不新增实施
+任务；精确暂存并正常推送两个父分支/两个远端，已发布 tag 不变。下一任务：无。
