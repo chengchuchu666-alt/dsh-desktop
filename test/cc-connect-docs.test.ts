@@ -39,6 +39,13 @@ test('cc-connect user documentation covers setup, lifecycle, storage, and remova
     '最终答复',
     '未保存编辑',
     '多项目/多平台',
+    '管理应用／扫码创建',
+    '应用已保存',
+    '关闭连接',
+    '启动 Desktop 时自动连接',
+    'applications.json',
+    'Models',
+    '关闭管理窗口不会关闭',
   ]) {
     assert.match(guide, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
@@ -46,6 +53,7 @@ test('cc-connect user documentation covers setup, lifecycle, storage, and remova
   assert.match(index, /cc-connect\.md/)
   assert.match(cliGuide, /lark-cli whoami/)
   assert.match(cliGuide, /skills/i)
+  assert.doesNotMatch(guide, /状态变为「已连接」后即可|自动尝试启动连接|「停止」只停止当前/)
   assert.match(releaseNotes, /cc-connect|飞书消息连接/i)
   assert.match(siteHome, /配置飞书机器人/)
   assert.match(siteHomeEn, /Set up Feishu bot/)

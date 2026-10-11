@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "commit": "dd637656761ecaea0144bedbf3c7576e962f7da3",
+  "commit": "dc8132ef5f6a30056b2b69036458156edbbfb25d",
   "platform": "darwin",
   "arch": "arm64",
   "binary": "bin/cc-connect",
-  "sha256": "23e8e56cdeebb9fb1a982219b130af217f36f58a714cbc8a5200d380666bc43f"
+  "sha256": "2c279d633f011822582037ff8fc8ba3130f821444a51231253ca86041e4d2966"
 }

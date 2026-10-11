@@ -1,6 +1,6 @@
 /** Shared unpacked-app locator for packaged smoke and packaged E2E. */
 import { readdir } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 
 async function filesBelow(root) {
   const result = []
@@ -27,7 +27,7 @@ export function packagedResourcesDir(executable) {
 
 /** Absolute path of the unpacked app binary under distRoot. */
 export async function locatePackagedExecutable(distRoot = 'dist') {
-  const executable = (await filesBelow(distRoot)).find(isExecutable)
+  const executable = (await filesBelow(resolve(distRoot))).find(isExecutable)
   if (executable === undefined) throw new Error(`packaged executable not found under ${distRoot} for ${process.platform}`)
   return executable
 }

@@ -168,6 +168,29 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
         // Unpacked build from dist/ — no stub server, the real Harness renders.
         executablePath = await locatePackagedExecutable()
         currentApp = await electron.launch({ executablePath, args: launchArgs, cwd: process.cwd(), env: launchEnv })
+        if (connectSidecar || feishuSetupSidecar) {
+          // The production app ignores test-bin overrides. Replace only the
+          // child-process dependency in this isolated test main process instead.
+          await currentApp.evaluate(() => {
+            const childProcess = process.getBuiltinModule('node:child_process')!
+            const path = process.getBuiltinModule('node:path')!
+            const spawn = childProcess.spawn
+            childProcess.spawn = ((command: string, args: string[], options: unknown) => {
+              if (/[\\/]cc-connect[\\/]bin[\\/]cc-connect(?:\.exe)?$/.test(command)) {
+                const fake = args[0] === 'feishu' ? process.env.DSH_CC_CONNECT_SETUP_TEST_BIN : process.env.DSH_CC_CONNECT_TEST_BIN
+                if (!fake) throw new Error('missing isolated fake sidecar')
+                const node = path.join(process.resourcesPath, 'harness', 'node', 'bin', process.platform === 'win32' ? 'node.exe' : 'node')
+                return spawn(node, [fake, ...args], options as any)
+              }
+              return spawn(command, args, options as any)
+            }) as typeof childProcess.spawn
+            if (process.env.DSH_CC_CONNECT_SETUP_TEST_BIN) {
+              const timeout = globalThis.setTimeout
+              globalThis.setTimeout = ((callback: (...args: any[]) => void, delay?: number, ...args: any[]) =>
+                timeout(callback, delay === 600_000 ? 3000 : delay, ...args)) as typeof globalThis.setTimeout
+            }
+          })
+        }
         return currentApp
       }
       server = createServer((request, response) => {
@@ -257,10 +280,14 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       await expect.poll(
         () => window.evaluate(() => ({
           boot: document.querySelector('[data-dsh-boot]') !== null,
-          failed: document.body.innerText.includes('Failed to load plugins'),
-        })),
+          failed: document.body?.innerText.includes('Failed to load plugins') ?? false,
+          mounted: document.querySelector('[data-dsh-desktop-controls]') !== null,
+        })).catch(error => {
+          if (!String(error).includes('Execution context was destroyed')) throw error
+          return { boot: true, failed: false, mounted: false }
+        }),
         { timeout: 120_000 },
-      ).toEqual({ boot: false, failed: false })
+      ).toEqual({ boot: false, failed: false, mounted: true })
     }
     await use(window)
   },
@@ -1162,7 +1189,7 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
 shellTest.describe('Feishu extension setup', () => {
   shellTest.use({ connectSidecar: true, feishuSetupSidecar: true })
 
-  shellTest('manager edits, switches, closes and removes local applications; forged same-page window is rejected @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
+  shellTest('manager edits, switches, closes and removes local applications; forged same-page window is rejected @smoke @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
     const managerPromise = electronApp.waitForEvent('window')
     await clickMenuItem(electronApp, 'Manage Feishu connections…')
     const manager = await managerPromise
@@ -1238,7 +1265,7 @@ shellTest.describe('Feishu extension setup', () => {
     expect((await stat(dshHome)).isDirectory()).toBe(true)
   })
 
-  shellTest('manager cancels, expires and retries QR setup; closing during creation removes temporary credentials @critical', async ({ electronApp, window, dshHome, userData, feishuSetupModePath }) => {
+  shellTest('manager cancels, expires and retries QR setup; closing during creation removes temporary credentials @smoke @critical', async ({ electronApp, window, dshHome, userData, feishuSetupModePath }) => {
     await writeFile(feishuSetupModePath!, 'wait\n')
     const open = async () => {
       const pending = electronApp.waitForEvent('window')
