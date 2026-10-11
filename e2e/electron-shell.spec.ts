@@ -1455,6 +1455,12 @@ shellTest('LAN pairing shows a scannable QR link for the private address', async
   for (const address of addresses) {
     expect(address).toMatch(/http:\/\/\d+\.\d+\.\d+\.\d+:\d+\//)
   }
+  const countdown = pairingPage!.locator('#countdown')
+  await expect(countdown).toBeVisible()
+  const remainingSeconds = async () => Number(/\d+/.exec(await countdown.innerText())?.[0])
+  const initialSeconds = await remainingSeconds()
+  expect(initialSeconds).toBeGreaterThan(0)
+  await expect.poll(remainingSeconds, { timeout: 4000 }).toBeLessThan(initialSeconds)
   await pairingPage!.close().catch(() => {})
   await expect.poll(() => electronApp.windows().some(candidate => candidate !== window
     && candidate.url().startsWith('data:') && !candidate.isClosed()))
