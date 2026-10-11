@@ -440,3 +440,31 @@ cwd 断言；诊断 logger 已移除。没有修改产品、内核或真实配�
 （7 passed）、`pnpm run site:check`、`git diff --check` 全部退出 0。没有产品/依赖改动。
 发布 tag 指向 `b31fac1e06e7e721df9d53e9b72716688f38345a`，子模块 `dc8132ef...`
 在 origin 可达。下一步等待 Release run `38112224676` 三平台门禁，再上传/创建六资产镜像。
+
+### shell.1 第三轮 CI — Windows 第二客户端响应式侧栏
+
+Release run `38112224676`（tag commit `b31fac1e06e7e721df9d53e9b72716688f38345a`）
+verify 通过：23 passed/12 原有专项条件未运行，保留既有 worker teardown warning；Linux
+与 macOS 全套构建、各 15 packaged E2E、升级保留 6 份用户文件、安装/来源证明均通过。
+Windows 安装器内容、跨版本升级、Safe Mode/故障恢复/完整性，以及 S1 损坏/S2 只读/S3
+锁定残留矩阵均通过；packaged E2E 14 passed/1 failed（重试同样失败），退出 1。
+publish 未运行，Windows 后续离线市场/静默安装/来源证明未运行，不能计作发布完成。
+
+失败只在第二客户端初始侧栏，尚未执行删除：ARIA 显示“打开侧边栏”，会话层级已经显示
+TRASH-REAL-ANSWER，却没有会话树。不是列表广播失败或默认工作区错误；响应式折叠后的
+真实界面必须先展开。浏览器直播日志没有及时更新，一度只显示 S1；最终完整 Actions log
+明确 S1/S2/S3 全通过，后续以任务状态和完成日志为准，不靠缓存 UI 判定通过。
+
+修复提交 `fb7ae33c7d69e95c9c064b1aeaf03b0e53172f74`，允许范围仅该回归与 release
+skill：第二客户端固定 800px 窄窗口，强制断言展开按钮可见、点击后会话树可见，再执行
+全部原始双客户端删除/还原/归档/取消归档/重启断言。没有产品改动、跳过测试、增加超时
+或放宽原断言；现在所有平台都验证原先仅 Windows 暴露的折叠路径。
+
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle' --repeat-each=2`：2 passed，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-dev.log`）。
+- `pnpm run test:e2e:packaged`：15 passed、0 skipped，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-packaged.log`）。
+- `pnpm run verify`：397 + 1 ACP，覆盖率 89.99/82.88/86.41%，类型/边界/站点/构建全绿，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-verify.log`）。
+- typecheck、skill quick_validate 与 diff check 均退出 0；未重写 dist。
+
+GitHub/GitCode 同名 Release 均确认 404；GitCode 页内 fetch 较慢时改用本机请求、仅在内存
+借用已登录浏览器授权后恢复，未输出 token/cookie，最终页内请求也返回 404。下一步合并
+新 bot 提交，只重试尚未发布的候选 tag；通过后六资产镜像、官网与 HANDOFF。
