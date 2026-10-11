@@ -1,18 +1,20 @@
-import { BrowserWindow, nativeTheme } from 'electron'
+import { BrowserWindow, nativeTheme, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 import { shellText, type ShellLocale } from './locale.ts'
 import { asDataUrl } from './shell-html.ts'
-import { feishuSetupPageMarkup, type FeishuSetupPageState } from './feishu-page.ts'
+import { feishuManagerPageMarkup } from './feishu-page.ts'
+import { isConnectManagerSender } from './cc-connect-policy.ts'
 import { hiddenTitleBarOptions } from './window-chrome.ts'
 
 export interface FeishuSetupWindowController {
-  update(state: FeishuSetupPageState): void
+  accepts(event: IpcMainInvokeEvent): boolean
   show(): void
   close(): void
   isOpen(): boolean
 }
 
 let setupWindow: BrowserWindow | undefined
+let setupController: FeishuSetupWindowController | undefined
 
 export function showFeishuSetupWindow(
   parent: BrowserWindow | undefined,
@@ -22,17 +24,17 @@ export function showFeishuSetupWindow(
   if (setupWindow !== undefined && !setupWindow.isDestroyed()) {
     setupWindow.show()
     setupWindow.focus()
-    return controllerFor(setupWindow, locale)
+    return setupController!
   }
 
   const window = new BrowserWindow({
-    width: 500,
-    height: 650,
-    minWidth: 460,
+    width: 800,
+    height: 760,
+    minWidth: 600,
     minHeight: 600,
-    resizable: false,
+    resizable: true,
     show: false,
-    modal: parent !== undefined,
+    modal: false,
     parent,
     center: true,
     title: shellText(locale, 'feishu.setupTitle'),
@@ -41,35 +43,36 @@ export function showFeishuSetupWindow(
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      preload: join(__dirname, '..', 'preload', 'feishu.cjs'),
     },
   })
   setupWindow = window
-  let closedByController = false
   window.once('ready-to-show', () => window.show())
   window.on('closed', () => {
-    if (setupWindow === window) setupWindow = undefined
-    if (!closedByController) onClosed()
+    if (setupWindow === window) { setupWindow = undefined; setupController = undefined }
+    onClosed()
   })
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  const controller = controllerFor(window, locale, () => { closedByController = true })
-  controller.update({ stage: 'starting' })
+  const pageUrl = asDataUrl(feishuManagerPageMarkup(locale))
+  window.webContents.on('will-navigate', (event, url) => { if (url !== pageUrl) event.preventDefault() })
+  window.webContents.on('will-redirect', event => event.preventDefault())
+  const controller = controllerFor(window, pageUrl)
+  setupController = controller
+  void window.loadURL(pageUrl)
   return controller
 }
 
 export function closeFeishuSetupWindow(): void {
   if (setupWindow !== undefined && !setupWindow.isDestroyed()) setupWindow.close()
   setupWindow = undefined
+  setupController = undefined
 }
 
-function controllerFor(window: BrowserWindow, locale: ShellLocale, markClosed?: () => void): FeishuSetupWindowController {
-  let updateQueue = Promise.resolve()
-  let latest: FeishuSetupPageState = { stage: 'starting' }
+function controllerFor(window: BrowserWindow, pageUrl: string): FeishuSetupWindowController {
   return {
-    update(state) {
-      latest = state
-      updateQueue = updateQueue.then(async () => {
-        if (!window.isDestroyed()) await window.loadURL(asDataUrl(feishuSetupPageMarkup(locale, latest)))
-      }).catch(() => undefined)
+    accepts(event) {
+      return !window.isDestroyed() && isConnectManagerSender({ sender: window.webContents, pageUrl },
+        event.sender, event.senderFrame?.url, event.senderFrame === window.webContents.mainFrame)
     },
     show() {
       if (!window.isDestroyed()) {
@@ -79,7 +82,6 @@ function controllerFor(window: BrowserWindow, locale: ShellLocale, markClosed?: 
     },
     close() {
       if (!window.isDestroyed()) {
-        markClosed?.()
         window.close()
       }
     },

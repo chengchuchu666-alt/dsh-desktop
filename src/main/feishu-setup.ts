@@ -1,8 +1,16 @@
-import { spawn, type ChildProcess } from 'node:child_process'
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { nodeBin } from './paths.ts'
+import { ManagedChild } from './process-lifecycle.ts'
+
+export class FeishuSetupError extends Error {
+  readonly reason: 'cancelled' | 'expired' | 'start' | 'credentials' | 'exit' | 'stop-failed'
+  constructor(reason: FeishuSetupError['reason']) {
+    super(`Feishu setup ${reason === 'expired' ? 'timed out' : reason}`)
+    this.reason = reason
+  }
+}
 
 export type FeishuSetupStage = 'starting' | 'waiting-for-scan' | 'completed' | 'cancelled'
 
@@ -55,7 +63,7 @@ export function extractFeishuCredentials(config: string): { appId: string; appSe
   const appId = readTomlString(config, 'app_id')
   const appSecret = readTomlString(config, 'app_secret')
   if (appId === undefined || appSecret === undefined || appId === '' || appSecret === '') {
-    throw new Error('cc-connect completed without Feishu credentials')
+    throw new FeishuSetupError('credentials')
   }
   return { appId, appSecret }
 }
@@ -73,7 +81,7 @@ function readTomlString(config: string, key: string): string | undefined {
 export class FeishuSetupRun {
   private readonly options: FeishuSetupRunOptions
   private readonly timeoutMs: number
-  private child: ChildProcess | undefined
+  private readonly managed = new ManagedChild()
   private temporaryDirectory: string | undefined
   private started = false
   private cancelled = false
@@ -87,7 +95,7 @@ export class FeishuSetupRun {
   async start(): Promise<FeishuSetupResult> {
     if (this.started) throw new Error('Feishu setup already started')
     this.started = true
-    if (this.cancelled) throw new Error('Feishu setup cancelled')
+    if (this.cancelled) throw new FeishuSetupError('cancelled')
     this.emit('starting')
     const directory = await mkdtemp(join(this.options.tempDirectory ?? tmpdir(), 'dsh-feishu-setup-'))
     this.temporaryDirectory = directory
@@ -104,6 +112,7 @@ export class FeishuSetupRun {
     ]
 
     try {
+      if (this.cancelled) throw new FeishuSetupError('cancelled')
       const result = await this.waitForProcess(paths, args)
       this.emit('completed')
       return { ...result, status: 'completed' }
@@ -116,8 +125,8 @@ export class FeishuSetupRun {
     if (this.cancelled) return
     this.cancelled = true
     this.emit('cancelled')
-    this.child?.kill('SIGTERM')
-    this.finishReject?.(new Error('Feishu setup cancelled'))
+    this.managed.process?.kill('SIGTERM')
+    this.finishReject?.(new FeishuSetupError('cancelled'))
   }
 
   private emit(stage: FeishuSetupStage): void {
@@ -130,7 +139,7 @@ export class FeishuSetupRun {
       let qrSeen = false
       let qrTimer: NodeJS.Timeout | undefined
       let qrPollInFlight: Promise<void> | undefined
-      const timeout = setTimeout(() => finishReject(new Error('Feishu QR setup timed out')), this.timeoutMs)
+      const timeout = setTimeout(() => finishReject(new FeishuSetupError('expired')), this.timeoutMs)
       timeout.unref()
       const finishResolve = (value: { appId: string; appSecret: string }): void => {
         if (settled) return
@@ -171,25 +180,28 @@ export class FeishuSetupRun {
       void pollQr()
       try {
         const spawnCommand = feishuSetupSpawnCommand(this.options.command, args)
-        this.child = spawn(spawnCommand.command, spawnCommand.args, {
+        this.managed.spawn({
+          command: spawnCommand.command, args: spawnCommand.args,
           cwd: this.options.workspace,
           env: { ...process.env, HOME: this.temporaryDirectory, USERPROFILE: this.temporaryDirectory },
-          stdio: 'ignore',
           windowsHide: true,
         })
-      } catch (error) {
-        finishReject(new Error(`could not start cc-connect: ${error instanceof Error ? error.message : String(error)}`))
+      } catch {
+        finishReject(new FeishuSetupError('start'))
         return
       }
-      this.child.once('error', error => finishReject(new Error(`cc-connect setup failed to start: ${error.message}`)))
-      this.child.once('close', async code => {
+      const child = this.managed.process!
+      // Drain, never log potentially credential-bearing CLI output.
+      child.stdout?.resume(); child.stderr?.resume()
+      child.once('error', () => finishReject(new FeishuSetupError('start')))
+      child.once('close', async code => {
         if (settled) return
         if (this.cancelled) {
-          finishReject(new Error('Feishu setup cancelled'))
+          finishReject(new FeishuSetupError('cancelled'))
           return
         }
         if (code !== 0) {
-          finishReject(new Error(`cc-connect setup exited with code ${String(code ?? 'unknown')}`))
+          finishReject(new FeishuSetupError('exit'))
           return
         }
         try {
@@ -199,16 +211,21 @@ export class FeishuSetupRun {
           await pollQr()
           const config = await readFile(paths.configPath, 'utf8')
           finishResolve(extractFeishuCredentials(config))
-        } catch (error) {
-          finishReject(error instanceof Error ? error : new Error('cc-connect setup did not produce a valid config'))
+        } catch {
+          finishReject(new FeishuSetupError('credentials'))
         }
       })
     })
   }
 
-  private async cleanup(): Promise<void> {
+  async cleanup(): Promise<void> {
     this.finishReject = undefined
-    this.child = undefined
+    let timer: NodeJS.Timeout | undefined
+    try {
+      await Promise.race([this.managed.stop(1000), new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new FeishuSetupError('stop-failed')), 2500)
+      })])
+    } finally { if (timer !== undefined) clearTimeout(timer) }
     if (this.temporaryDirectory !== undefined) {
       await rm(this.temporaryDirectory, { recursive: true, force: true })
       this.temporaryDirectory = undefined

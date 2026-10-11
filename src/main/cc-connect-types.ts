@@ -70,3 +70,19 @@ export interface ConnectApplicationInput extends Omit<ConnectSettingsSource, 'en
   name: string
   appSecret?: string
 }
+
+export interface FeishuQrState {
+  stage: 'idle' | 'starting' | 'waiting-for-scan' | 'saving' | 'saved' | 'expired' | 'cancelled' | 'error'
+  qrDataUrl?: string
+  expiresAt?: number
+  applicationId?: string
+}
+
+export interface FeishuManagerState extends ConnectManagerState {
+  qr: FeishuQrState
+  safeMode: boolean
+  harnessReady: boolean
+}
+
+export type FeishuManagerResult = { ok: true; state: FeishuManagerState }
+  | { ok: false; reason: 'invalid-input' | 'invalid-workspace' | 'storage' | 'stop-failed' | 'not-found' | 'duplicate-app-id' | 'active-application' | 'not-started' | 'setup'; state?: FeishuManagerState }

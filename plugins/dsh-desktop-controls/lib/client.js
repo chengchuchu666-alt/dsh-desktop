@@ -921,6 +921,7 @@ window.__ModuleLoader__.load({
         connectTitle: "飞书消息连接", connectCopy: "从飞书发起 DSH 任务；Secret 只保存在本机主进程。", connectEnabled: "启用连接", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "留空以保留已保存的 Secret", connectWorkspace: "默认工作区", connectChoose: "选择", connectSave: "保存连接", connectStart: "启动", connectStop: "停止", connectRestart: "重连", connectStatus: "状态", connectDisabled: "未启用", connectStopped: "已停止", connectStarting: "启动中", connectReady: "已连接", connectDegraded: "连接不稳定", connectCrashed: "连接已崩溃", connectSecretStored: "Secret 已保存", connectSecretMissing: "尚未保存 Secret", connectProtected: "系统安全存储", connectFileFallback: "本机受限存储", connectSaved: "连接设置已保存。", connectInvalidWorkspace: "请选择存在的绝对工作区目录。", connectInvalid: "请填写 App ID 并选择工作区。", connectStorage: "设置或凭证保存失败，请重试。", connectUnavailable: "连接桥不可用；请使用系统托盘或重新打开桌面设置。", connectLastError: "最近错误",
         lanSettings: "连接移动设备", lanSettingsDetail: "手机与电脑连接同一局域网，扫码即可进入 Harness Web 界面。",
         connectDetailTitle: "消息详细度", connectDetailFull: "完整", connectDetailCompact: "精简", connectDetailQuiet: "静默", connectQuietHint: "静默仍会回复最终结果，并保留必要错误与权限交互。",
+        connectManage: "管理应用／扫码创建", connectAdvanced: "高级：当前应用配置", connectServiceReady: "服务已启动", connectChannel: "飞书通道", connectDsh: "DSH 任务", connectUnknown: "尚未确认", connectOnline: "在线", connectOffline: "离线", connectModelUnknown: "尚未通过任务验证", connectModelAvailable: "任务已完成", connectModelUnavailable: "任务失败", connectModelKeyMissing: "请在主窗口 Models 页面配置模型 API key，不要填入机器人 Secret。",
         connectStreamPreview: "流式预览", connectStreamPreviewInterval: "刷新间隔", connectPreviewCurrent: "当前：{seconds}s",
         connectCardModeTitle: "卡片样式", connectCardModeLegacy: "经典", connectCardModeRich: "富卡片（Card 2.0）",
         connectProgressStyleTitle: "进度展示", connectProgressStyleLegacy: "逐条", connectProgressStyleCompact: "单消息更新", connectProgressStyleCard: "结构化卡片",
@@ -980,6 +981,7 @@ window.__ModuleLoader__.load({
         connectTitle: "Feishu message connection", connectCopy: "Start DSH tasks from Feishu. The Secret stays in the local main process.", connectEnabled: "Enable connection", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "Leave blank to keep the saved Secret", connectWorkspace: "Default workspace", connectChoose: "Choose", connectSave: "Save connection", connectStart: "Start", connectStop: "Stop", connectRestart: "Reconnect", connectStatus: "Status", connectDisabled: "Disabled", connectStopped: "Stopped", connectStarting: "Starting", connectReady: "Connected", connectDegraded: "Unstable", connectCrashed: "Crashed", connectSecretStored: "Secret saved", connectSecretMissing: "Secret not saved", connectProtected: "System secure storage", connectFileFallback: "Protected local file", connectSaved: "Connection settings saved.", connectInvalidWorkspace: "Choose an existing absolute workspace directory.", connectInvalid: "Enter an App ID and choose a workspace.", connectStorage: "Settings or credential storage failed; retry.", connectUnavailable: "The connection bridge is unavailable; use the system tray or reopen Desktop settings.", connectLastError: "Last error",
         lanSettings: "Connect a mobile device", lanSettingsDetail: "Same LAN as the computer; scan the QR code to enter the Harness Web UI.",
         connectDetailTitle: "Message detail", connectDetailFull: "Full", connectDetailCompact: "Compact", connectDetailQuiet: "Quiet", connectQuietHint: "Quiet still sends the final answer and essential errors and permission prompts.",
+        connectManage: "Manage applications / create with QR", connectAdvanced: "Advanced: selected application settings", connectServiceReady: "Service started", connectChannel: "Feishu channel", connectDsh: "DSH tasks", connectUnknown: "Not confirmed", connectOnline: "Online", connectOffline: "Offline", connectModelUnknown: "Not verified by a task", connectModelAvailable: "Task completed", connectModelUnavailable: "Task failed", connectModelKeyMissing: "Configure the model API key on the main window Models page, not in the robot Secret field.",
         connectStreamPreview: "Stream preview", connectStreamPreviewInterval: "Refresh interval", connectPreviewCurrent: "Current: {seconds}s",
         connectCardModeTitle: "Card style", connectCardModeLegacy: "Classic", connectCardModeRich: "Rich card (Card 2.0)",
         connectProgressStyleTitle: "Progress display", connectProgressStyleLegacy: "Separate messages", connectProgressStyleCompact: "Single message updates", connectProgressStyleCard: "Structured card",
@@ -1740,7 +1742,7 @@ window.__ModuleLoader__.load({
         : marketResult.installed === true ? "success"
         : "failure";
       const connectPhase = connectState?.phase ?? "disabled";
-      const connectPhaseLabel = connectPhase === "ready" ? copy.connectReady
+      const connectPhaseLabel = connectPhase === "ready" ? copy.connectServiceReady
         : connectPhase === "starting" ? copy.connectStarting
         : connectPhase === "degraded" ? copy.connectDegraded
         : connectPhase === "crashed" ? copy.connectCrashed
@@ -1750,6 +1752,8 @@ window.__ModuleLoader__.load({
         ? copy.connectSecretStored + " · " + (connectState.credentialProtection === "safeStorage" ? copy.connectProtected : copy.connectFileFallback)
         : copy.connectSecretMissing;
       const connectActive = connectPhase === "ready" || connectPhase === "starting" || connectPhase === "degraded";
+      const connectHealthLabel = copy.connectChannel + ": " + ({ online: copy.connectOnline, offline: copy.connectOffline, connecting: copy.connectStarting }[connectState?.health?.channel] ?? copy.connectUnknown)
+        + " · " + copy.connectDsh + ": " + ({ available: copy.connectModelAvailable, unavailable: copy.connectModelUnavailable }[connectState?.health?.dsh] ?? copy.connectModelUnknown);
       return react_jsx_runtime.jsxs("div", {
         "data-dsh-desktop-settings": true,
         children: [
@@ -1823,6 +1827,11 @@ window.__ModuleLoader__.load({
                 ] }),
                 react_jsx_runtime.jsx("span", { "data-dsh-connect-status": true, "data-state": connectPhase, children: connectPhaseLabel }),
               ] }),
+              typeof bridge?.openConnectManager === "function" ? react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, "data-dsh-connect-manager": true, onClick: () => void bridge.openConnectManager(), children: copy.connectManage }) : null,
+              react_jsx_runtime.jsx("small", { "data-dsh-connect-health": true, children: connectHealthLabel }),
+              connectState?.health?.errorCode === "model-key-missing" ? react_jsx_runtime.jsx("small", { "data-dsh-connect-message": true, "data-state": "error", children: copy.connectModelKeyMissing }) : null,
+              react_jsx_runtime.jsxs("details", { "data-dsh-connect-advanced": true, children: [
+              react_jsx_runtime.jsx("summary", { children: copy.connectAdvanced }),
               react_jsx_runtime.jsxs("fieldset", { "data-dsh-connect-fields": true, disabled: connectState === null, children: [
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectEnabled }),
@@ -1881,8 +1890,9 @@ window.__ModuleLoader__.load({
               react_jsx_runtime.jsx("small", { "data-dsh-connect-copy": true, children: copy.connectQuietHint }),
               react_jsx_runtime.jsxs("div", { "data-dsh-connect-actions": true, children: [
                 react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, disabled: connectBusy !== "" || connectState === null, onClick: () => void saveConnect(), children: connectBusy === "save" ? "…" : copy.connectSave }),
-                react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.enabled !== true || connectState?.secretConfigured !== true, onClick: () => void connectAction(connectActive ? "stop" : "start"), children: connectActive ? copy.connectStop : copy.connectStart }),
+                react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.secretConfigured !== true, onClick: () => void connectAction(connectActive ? "stop" : "start"), children: connectActive ? copy.connectStop : copy.connectStart }),
                 react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.enabled !== true || connectState?.secretConfigured !== true, onClick: () => void connectAction("restart"), children: connectBusy === "restart" ? "…" : copy.connectRestart }),
+              ] }),
               ] }),
               react_jsx_runtime.jsx("small", { "data-dsh-connect-meta": true, children: connectMeta }),
               connectState?.lastError ? react_jsx_runtime.jsx("small", { "data-dsh-connect-message": true, "data-state": "error", children: copy.connectLastError + ": " + connectState.lastError }) : null,

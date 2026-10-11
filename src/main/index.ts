@@ -73,6 +73,7 @@ import type { ConnectStartReason } from './cc-connect-policy.ts'
 import { ConnectSupervisor, type ConnectSupervisorEvents } from './cc-connect-supervisor.ts'
 import type { ConnectApplication, ConnectSaveResult, ConnectSettingsInput, ConnectState } from './cc-connect-types.ts'
 import { FeishuSetupRun } from './feishu-setup.ts'
+import { FeishuManager } from './feishu-manager.ts'
 import { closeFeishuSetupWindow, showFeishuSetupWindow, type FeishuSetupWindowController } from './feishu-window.ts'
 
 const DEV_WEB_URL = process.env[DEV_WEB_URL_ENV]
@@ -86,7 +87,7 @@ let lastPublicStatus: PublicStatusSnapshot | undefined
 let lastHarnessPhase: HarnessState['phase'] | undefined
 const sessionTrashClient = new SessionTrashClient()
 let connectController: ConnectController | undefined
-let feishuSetupRun: FeishuSetupRun | undefined
+let feishuManager: FeishuManager | undefined
 let feishuSetupWindow: FeishuSetupWindowController | undefined
 /** Decision 0026: one healthy boot is guaranteed for the overlay selected at
  *  launch; its failure rolls the shell back to the bundled kernel. */
@@ -452,16 +453,22 @@ async function startConnectAfterHarness(reason: ConnectStartReason = 'manual', i
   }
 }
 
-async function chooseFeishuWorkspace(): Promise<string | undefined> {
-  const settings = await readConnectState()
-  const configured = process.env.DSH_CC_CONNECT_SETUP_TEST_WORKSPACE ?? settings.workspace
-  if (configured !== '' && await validConnectWorkspace(configured)) return configured
-  const result = windowContext.mainWindow === undefined
-    ? await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
-    : await dialog.showOpenDialog(windowContext.mainWindow, { properties: ['openDirectory', 'createDirectory'] })
-  if (result.canceled) return undefined
-  const workspace = result.filePaths[0]
-  return workspace !== undefined && await validConnectWorkspace(workspace) ? workspace : undefined
+function getFeishuManager(): FeishuManager {
+  const testTimeout = Number(process.env.DSH_CC_CONNECT_SETUP_TEST_TIMEOUT_MS)
+  const timeoutMs = !app.isPackaged && process.env.DSH_CC_CONNECT_SETUP_TEST_BIN !== undefined
+    && Number.isInteger(testTimeout) && testTimeout >= 1000 && testTimeout <= 600_000 ? testTimeout : 600_000
+  if (feishuManager === undefined) feishuManager = new FeishuManager({
+    controller: getConnectController(),
+    environment: () => ({ safeMode: safeModeActive(), harnessReady: shellApp.state?.phase === 'ready' && !windowContext.quitInProgress }),
+    validWorkspace: validConnectWorkspace,
+    timeoutMs,
+    createRun: options => new FeishuSetupRun({ ...options,
+      timeoutMs,
+      command: !app.isPackaged && process.env.DSH_CC_CONNECT_SETUP_TEST_BIN !== undefined
+        ? process.env.DSH_CC_CONNECT_SETUP_TEST_BIN : ccConnectBin(),
+    }),
+  })
+  return feishuManager
 }
 
 async function showFeishuSetup(): Promise<void> {
@@ -469,41 +476,10 @@ async function showFeishuSetup(): Promise<void> {
     feishuSetupWindow.show()
     return
   }
-  const workspace = await chooseFeishuWorkspace()
-  if (workspace === undefined) return
-
-  let qrDataUrl: string | undefined
-  const window = showFeishuSetupWindow(windowContext.mainWindow, currentLocale, () => {
+  feishuSetupWindow = showFeishuSetupWindow(windowContext.mainWindow, currentLocale, () => {
     feishuSetupWindow = undefined
-    feishuSetupRun?.cancel()
+    void feishuManager?.cancelQr().catch(() => console.warn('dsh-desktop: Feishu temporary setup cleanup failed'))
   })
-  feishuSetupWindow = window
-  const run = new FeishuSetupRun({
-    command: process.env.DSH_CC_CONNECT_SETUP_TEST_BIN ?? ccConnectBin(),
-    workspace,
-    onStage: stage => {
-      if (stage === 'starting') window.update({ stage: 'starting' })
-    },
-    onQr: image => {
-      qrDataUrl = `data:image/png;base64,${image.toString('base64')}`
-      window.update({ stage: 'waiting-for-scan', qrDataUrl })
-    },
-  })
-  feishuSetupRun = run
-  try {
-    const result = await run.start()
-    const saved = await getConnectController().saveApplication({ name: 'Feishu', appId: result.appId, workspace, appSecret: result.appSecret })
-    window.update({ stage: 'completed', qrDataUrl })
-    await startConnectAfterHarness('manual', saved.id)
-    refreshNativeSurfaces()
-  } catch (error) {
-    if (!(error instanceof Error && /cancelled/.test(error.message))) {
-      console.warn(`dsh-desktop: Feishu setup failed: ${error instanceof Error ? error.message : String(error)}`)
-      window.update({ stage: 'error', qrDataUrl })
-    }
-  } finally {
-    if (feishuSetupRun === run) feishuSetupRun = undefined
-  }
 }
 
 async function restartConnectForCurrentKernel(): Promise<boolean> {
@@ -1056,6 +1032,32 @@ ipcMain.handle('desktop:action', async (event, action: unknown) => {
 ipcMain.handle('desktop:connect:get-state', async (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
   return readConnectState()
+})
+
+ipcMain.handle('desktop:connect:open-manager', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  await showFeishuSetup()
+  return true
+})
+
+ipcMain.handle('desktop:connect:manager', async (event, action: unknown, input: unknown) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return null
+  return getFeishuManager().execute(action, input)
+})
+
+ipcMain.handle('desktop:connect:manager:pick-workspace', async (event) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return null
+  const owner = BrowserWindow.fromWebContents(event.sender)
+  if (owner === null) return null
+  const result = await dialog.showOpenDialog(owner, { properties: ['openDirectory', 'createDirectory'] })
+  const workspace = result.filePaths[0]
+  return result.canceled || workspace === undefined || !await validConnectWorkspace(workspace) ? null : workspace
+})
+
+ipcMain.handle('desktop:connect:manager:open-platform', async (event) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return false
+  await shell.openExternal('https://open.feishu.cn/app')
+  return true
 })
 
 ipcMain.handle('desktop:connect:save-settings', async (event, raw: unknown) => {
@@ -1624,7 +1626,6 @@ app.on('before-quit', (event) => {
   windowContext.quitInProgress = true
   releaseDesktopShortcut()
   closeLanPairingWindow()
-  feishuSetupRun?.cancel()
   closeFeishuSetupWindow()
   localeController?.dispose()
   destroyTray()
@@ -1638,7 +1639,7 @@ app.on('before-quit', (event) => {
     for (const runtimeWindow of runtimeWindows.values()) {
       if (!runtimeWindow.isDestroyed()) runtimeWindow.close()
     }
-    void Promise.all([stopConnectSupervisor().then(() => shellApp.stopHarness()), lanService.stop()]).then(() => runtimeManager?.stopAll()).catch(() => {
+    void Promise.all([stopConnectSupervisor().then(() => shellApp.stopHarness()), feishuManager?.cancelQr(), lanService.stop()]).then(() => runtimeManager?.stopAll()).catch(() => {
       console.warn('dsh-desktop: shutdown incomplete; quitting with process stop errors')
     }).finally(() => {
       clearTimeout(forceQuitTimer)

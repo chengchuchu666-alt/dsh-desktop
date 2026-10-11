@@ -152,6 +152,8 @@ contextBridge.exposeInMainWorld('dshDesktop', {
     ipcRenderer.invoke('desktop:preferences:get'),
   /** Read non-sensitive cc-connect settings and runtime state. */
   getConnectState: (): Promise<ConnectState | null> => ipcRenderer.invoke('desktop:connect:get-state'),
+  /** Open the shared, separately sandboxed Feishu application manager. */
+  openConnectManager: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:open-manager'),
   /** Persist non-sensitive settings and optionally replace the Secret. */
   saveConnectSettings: (input: ConnectSettingsInput): Promise<ConnectSaveResult | null> =>
     ipcRenderer.invoke('desktop:connect:save-settings', input),

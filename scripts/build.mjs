@@ -50,6 +50,11 @@ await build({
   sourcemap: true,
 })
 
+await build({
+  entryPoints: ['src/preload/feishu.ts'], bundle: true, platform: 'node', format: 'cjs',
+  external: ['electron'], outfile: 'lib/preload/feishu.cjs', sourcemap: true,
+})
+
 // Keep the hand-maintained client/Host plugin and its shared filesystem code
 // in the deployed closure in sync without reinstalling or upgrading packages.
 const controlsTarget = resolve('resources/harness/node_modules/dsh-desktop-controls')

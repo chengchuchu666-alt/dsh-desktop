@@ -1,10 +1,10 @@
 import { test, expect, _electron as electron, chromium, webkit, type ElectronApplication, type Page } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { execFile, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
@@ -38,6 +38,7 @@ interface Fixture {
   dshHome: string
   userData: string
   connectModePath: string | undefined
+  feishuSetupModePath: string | undefined
   relaunch: () => Promise<ElectronApplication>
 }
 
@@ -72,6 +73,7 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
     let connectModePath: string | undefined
     let connectBinPath: string | undefined
     let feishuSetupBinPath: string | undefined
+    let feishuSetupModePath: string | undefined
     if (connectSidecar) {
       connectModePath = join(root, 'fake-cc-connect.mode')
       connectBinPath = join(root, 'fake-cc-connect.mjs')
@@ -90,13 +92,18 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       await chmod(connectBinPath, 0o755)
     }
     if (feishuSetupSidecar) {
+      feishuSetupModePath = join(root, 'fake-feishu-setup.mode')
+      await writeFile(feishuSetupModePath, 'ready\n')
       feishuSetupBinPath = join(root, 'fake-feishu-setup.mjs')
       await writeFile(feishuSetupBinPath, [
         '#!/usr/bin/env node',
-        "import { writeFileSync } from 'node:fs'",
+        "import { writeFileSync, readFileSync, appendFileSync } from 'node:fs'",
         "const arg = name => process.argv[process.argv.indexOf(name) + 1]",
+        "const mode = readFileSync(process.env.DSH_CC_CONNECT_SETUP_TEST_MODE, 'utf8').trim()",
+        "appendFileSync(process.env.DSH_CC_CONNECT_SETUP_TEST_MODE + '.runs', JSON.stringify({ pid: process.pid, config: arg('--config') }) + '\\n')",
         `writeFileSync(arg('--qr-image'), Buffer.from(${JSON.stringify(FAKE_QR_PNG_BASE64)}, 'base64'))`,
-        "setTimeout(() => writeFileSync(arg('--config'), '[[' + 'projects]]\\nname = \\\"dsh-desktop\\\"\\n\\n[[projects.platforms]]\\ntype = \\\"feishu\\\"\\n\\n[projects.platforms.options]\\napp_id = \\\"cli_fake_id\\\"\\napp_secret = \\\"fake-secret-value\\\"\\n'), 40)",
+        "if (mode === 'wait') { process.on('SIGTERM', () => {}); setInterval(() => {}, 1000) }",
+        "else setTimeout(() => writeFileSync(arg('--config'), '[[' + 'projects]]\\nname = \\\"dsh-desktop\\\"\\n\\n[[projects.platforms]]\\ntype = \\\"feishu\\\"\\n\\n[projects.platforms.options]\\napp_id = \\\"cli_fake_id\\\"\\napp_secret = \\\"fake-secret-value\\\"\\n'), 1500)",
         '',
       ].join('\n'))
       await chmod(feishuSetupBinPath, 0o755)
@@ -153,6 +160,8 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       if (feishuSetupBinPath !== undefined) {
         launchEnv.DSH_CC_CONNECT_SETUP_TEST_BIN = feishuSetupBinPath
         launchEnv.DSH_CC_CONNECT_SETUP_TEST_WORKSPACE = dshHome
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_MODE = feishuSetupModePath!
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_TIMEOUT_MS = '3000'
       }
       let executablePath: string | undefined
       if (PACKAGED) {
@@ -278,6 +287,9 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       ? await electronApp.evaluate(() => process.env.DSH_CC_CONNECT_TEST_MODE ?? '')
       : undefined
     await use(mode === '' ? undefined : mode)
+  },
+  feishuSetupModePath: async ({ feishuSetupSidecar, electronApp }, use) => {
+    await use(feishuSetupSidecar ? await electronApp.evaluate(() => process.env.DSH_CC_CONNECT_SETUP_TEST_MODE) : undefined)
   },
 
   relaunch: async ({ electronApp }, use) => {
@@ -1074,6 +1086,7 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
     const dialog = page.getByRole('dialog', { name: /^(设置|Settings)$/ })
     await dialog.getByText(/^(桌面设置|Desktop settings)$/, { exact: true }).click()
     await expect(page.locator('[data-dsh-desktop-connect]')).toBeVisible()
+    await page.locator('[data-dsh-connect-advanced] > summary').click()
   }
   try {
     const base = { enabled: false, appId: 'cli_ui_fake', workspace: harness.workspace }
@@ -1119,6 +1132,18 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
     await expect(interval).toHaveValue('8000')
     await expect(interval.locator('option:checked')).toHaveText('当前：8s')
     await expect(interval).toBeEnabled()
+    const managerPromise = harness.app.waitForEvent('window')
+    await connect.getByRole('button', { name: '管理应用／扫码创建', exact: true }).click()
+    const manager = await managerPromise
+    await expect(manager.getByRole('heading', { name: '飞书连接管理', exact: true })).toBeVisible()
+    await manager.locator('article').filter({ hasText: base.appId }).getByRole('button', { name: '编辑', exact: true }).click()
+    await expect(manager.getByRole('combobox', { name: '消息详细度', exact: true })).toHaveValue('quiet')
+    await expect(manager.getByRole('combobox', { name: '刷新间隔', exact: true })).toHaveValue('8000')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await expect(manager.locator('#channel')).toHaveText('尚未确认')
+    await expect(manager.locator('#dsh')).toHaveText('尚未通过任务验证')
+    await manager.screenshot({ path: testInfo.outputPath('feishu-manager-zh.png') })
+    await manager.close()
     await page.evaluate(() => { document.documentElement.lang = 'en' })
     await expect(connect.getByRole('combobox', { name: 'Message detail', exact: true })).toHaveValue('quiet')
     await expect(connect.getByRole('combobox', { name: 'Refresh interval', exact: true }).locator('option:checked')).toHaveText('Current: 8s')
@@ -1137,23 +1162,149 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
 shellTest.describe('Feishu extension setup', () => {
   shellTest.use({ connectSidecar: true, feishuSetupSidecar: true })
 
-  shellTest('the Extensions menu completes QR setup and starts the sidecar @smoke @critical', async ({ electronApp, window, dshHome, userData }) => {
+  shellTest('manager edits, switches, closes and removes local applications; forged same-page window is rejected @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
+    const managerPromise = electronApp.waitForEvent('window')
+    await clickMenuItem(electronApp, 'Manage Feishu connections…')
+    const manager = await managerPromise
+    await expect(manager.getByRole('heading', { name: 'Feishu connections', exact: true })).toBeVisible()
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByLabel('Local name', { exact: true }).fill('First robot')
+    await manager.getByText('Existing application (advanced)', { exact: true }).click()
+    await manager.getByLabel('App ID', { exact: true }).fill('cli_manager_first')
+    await manager.getByLabel('App Secret', { exact: true }).fill('fake-manager-first')
+    await manager.getByRole('button', { name: 'Save and open connection', exact: true }).click()
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    const first = manager.locator('article').filter({ hasText: 'cli_manager_first' })
+    await expect(first).toHaveCount(1)
+    await manager.getByRole('checkbox', { name: 'Connect automatically when Desktop starts', exact: true }).check()
+    await expect.poll(async () => JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8')).autoConnect).toBe(true)
+    await manager.getByRole('button', { name: 'Add application', exact: true }).click()
+    await manager.getByLabel('Local name', { exact: true }).fill('Second robot')
+    await manager.getByText('Existing application (advanced)', { exact: true }).click()
+    await manager.getByLabel('App ID', { exact: true }).fill('cli_manager_second')
+    await manager.getByLabel('App Secret', { exact: true }).fill('fake-manager-second')
+    await manager.getByRole('combobox', { name: 'Message detail', exact: true }).selectOption('quiet')
+    await manager.getByRole('combobox', { name: 'Refresh interval', exact: true }).selectOption('5000')
+    await manager.getByRole('checkbox', { name: 'Streaming preview', exact: true }).uncheck()
+    await expect(manager.getByRole('combobox', { name: 'Refresh interval', exact: true })).toBeDisabled()
+    await manager.getByRole('combobox', { name: 'Card style', exact: true }).selectOption('rich')
+    await manager.getByRole('combobox', { name: 'Progress display', exact: true }).selectOption('card')
+    await manager.getByRole('button', { name: 'Save application', exact: true }).click()
+    const second = manager.locator('article').filter({ hasText: 'cli_manager_second' })
+    await expect(second).toHaveCount(1)
+    await expect(manager.locator('#selected')).toHaveText('First robot')
+    expect((await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n')).toHaveLength(1)
+    await second.getByRole('button', { name: 'Open connection', exact: true }).click()
+    await expect(manager.locator('#selected')).toHaveText('Second robot')
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
+    expect(config).toContain('app_id = "cli_manager_second"'); expect(config).toContain('mode = "quiet"')
+    expect(config).toContain('enabled = false'); expect(config).toContain('interval_ms = 5000'); expect(config).toContain('card_mode = "rich"'); expect(config).toContain('progress_style = "card"')
+    expect(config).not.toContain('fake-manager')
+    await second.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(manager.getByRole('combobox', { name: 'Message detail', exact: true })).toHaveValue('quiet')
+    await manager.getByLabel('Local name', { exact: true }).fill('Renamed robot')
+    // A confirmed poll changes QR state while unsaved form edits stay intact.
+    expect(await manager.evaluate(() => (window as any).dshFeishu.execute('qr-cancel'))).toMatchObject({ ok: true })
+    await expect(manager.locator('#qr-status')).toHaveText('Setup cancelled; temporary credentials removed.')
+    await expect(manager.getByLabel('Local name', { exact: true })).toHaveValue('Renamed robot')
+    await manager.getByRole('button', { name: 'Save application', exact: true }).click()
+    await expect(manager.locator('#selected')).toHaveText('Renamed robot')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await manager.screenshot({ path: testInfo.outputPath('feishu-manager-en.png') })
+    const forgedPromise = electronApp.waitForEvent('window')
+    await electronApp.evaluate(async ({ app, BrowserWindow }, url) => {
+      const forged = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false,
+        preload: app.getAppPath() + '/lib/preload/feishu.cjs' } })
+      await forged.loadURL(url)
+    }, manager.url())
+    const forged = await forgedPromise
+    await expect.poll(() => forged.evaluate(() => typeof (window as any).dshFeishu)).toBe('object')
+    expect(await forged.evaluate(() => (window as any).dshFeishu.execute('state'))).toBeNull()
+    expect(await forged.evaluate(() => (window as any).dshFeishu.execute('close'))).toBeNull()
+    await forged.close()
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    await manager.getByRole('button', { name: 'Close connection', exact: true }).click()
+    await expect(manager.locator('#process')).toHaveText('Closed')
+    manager.once('dialog', dialog => dialog.accept())
+    await second.getByRole('button', { name: 'Remove locally', exact: true }).click()
+    await expect(second).toHaveCount(0)
+    await expect(first).toHaveCount(1)
+    await expect(manager.locator('#selected')).toHaveText('None')
+    expect(JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8'))).toMatchObject({ enabled: false, applications: [{ appId: 'cli_manager_first' }] })
+    expect(await manager.locator('body').innerText()).not.toContain('fake-manager')
+    expect((await stat(dshHome)).isDirectory()).toBe(true)
+  })
+
+  shellTest('manager cancels, expires and retries QR setup; closing during creation removes temporary credentials @critical', async ({ electronApp, window, dshHome, userData, feishuSetupModePath }) => {
+    await writeFile(feishuSetupModePath!, 'wait\n')
+    const open = async () => {
+      const pending = electronApp.waitForEvent('window')
+      await window.evaluate(() => (window as any).dshDesktop.openConnectManager())
+      const page = await pending
+      await expect(page.getByRole('heading', { name: 'Feishu connections', exact: true })).toBeVisible()
+      return page
+    }
+    let manager = await open()
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByRole('button', { name: 'Generate QR code', exact: true }).click()
+    await expect(manager.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await manager.getByRole('button', { name: 'Cancel setup', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Setup cancelled; temporary credentials removed.')
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Authorization timed out. Generate a new QR code.', { timeout: 8000 })
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await manager.close()
+    const runs = async () => (await readFile(feishuSetupModePath! + '.runs', 'utf8')).trim().split('\n').map(line => JSON.parse(line) as { pid: number; config: string })
+    await expect.poll(async () => {
+      const entries = await runs()
+      return Promise.all(entries.map(async entry => stat(dirname(entry.config)).then(() => false, error => (error as NodeJS.ErrnoException).code === 'ENOENT')))
+    }).toEqual([true, true, true])
+    await expect.poll(async () => (await runs()).map(entry => { try { process.kill(entry.pid, 0); return false } catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH' } })).toEqual([true, true, true])
+    expect(JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8')).applications).toHaveLength(0)
+    await writeFile(feishuSetupModePath!, 'ready\n')
+    manager = await open()
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Application saved. Select it below to open the connection.', { timeout: 8000 })
+    await expect(manager.locator('article')).toHaveCount(1)
+    await expect(manager.locator('#process')).toHaveText('Closed')
+  })
+
+  shellTest('the Extensions menu and settings share QR application management with explicit open @smoke @critical', async ({ electronApp, window, dshHome, userData }) => {
     await packagedOrStubHeadline(window)
-    await expect.poll(() => menuLabels(electronApp)).toContain('Set up Feishu bot…')
+    await expect.poll(() => menuLabels(electronApp)).toContain('Manage Feishu connections…')
 
     const setupWindowPromise = electronApp.waitForEvent('window')
-    await clickMenuItem(electronApp, 'Set up Feishu bot…')
+    await clickMenuItem(electronApp, 'Manage Feishu connections…')
     const setupWindow = await setupWindowPromise
     await setupWindow.waitForLoadState('domcontentloaded')
-    await expect(setupWindow.locator('img.qr')).toBeVisible()
-    await expect(setupWindow.getByText('Application saved. Check connection status in Desktop settings.')).toBeVisible({ timeout: 10_000 })
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await setupWindow.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await expect(setupWindow.getByLabel('Workspace', { exact: true })).toHaveValue(dshHome)
+    await setupWindow.getByRole('button', { name: 'Generate QR code', exact: true }).click()
+    await expect(setupWindow.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await expect(setupWindow.getByText('Application saved. Select it below to open the connection.', { exact: true })).toBeVisible({ timeout: 10_000 })
 
     const settings = JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8'))
-    expect(settings).toMatchObject({ enabled: true, applications: [{ appId: 'cli_fake_id', workspace: dshHome }] })
+    expect(settings).toMatchObject({ enabled: false, applications: [{ appId: 'cli_fake_id', workspace: dshHome }] })
+    await setupWindow.getByRole('button', { name: 'Open connection', exact: true }).click()
     await expect.poll(() => window.evaluate(async () => {
       const bridge = (window as unknown as { dshDesktop?: { getConnectState(): Promise<{ phase: string } | null> } }).dshDesktop
       return bridge?.getConnectState().then(state => state?.phase)
     })).toBe('ready')
+    await expect(setupWindow.locator('#process')).toHaveText('Service started')
+    await expect(setupWindow.locator('#channel')).toHaveText('Not confirmed')
+    await expect(setupWindow.locator('#dsh')).toHaveText('Not verified by a task')
+    expect(await setupWindow.evaluate(() => ({ generalBridge: typeof (window as any).dshDesktop, node: typeof (window as any).require }))).toEqual({ generalBridge: 'undefined', node: 'undefined' })
+    expect(await window.evaluate(() => (window as any).dshDesktop.openConnectManager())).toBe(true)
+    expect(electronApp.windows()).toHaveLength(2)
+    await setupWindow.close()
+    await expect.poll(() => window.evaluate(() => (window as any).dshDesktop.getConnectState())).toMatchObject({ enabled: true, phase: 'ready' })
   })
 })
 
