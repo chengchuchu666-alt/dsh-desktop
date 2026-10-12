@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-11。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-12。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,7 +9,7 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | ✅ `0.2.1-alpha.2.shell.1`（2026-10-11 已发布；内核 `0.2.1-alpha.2` 未变，见 §76） |
+| 最新代码基线 | 集成分支 `0.2.1-alpha.2.shell.2` 未发布候选（§77）；main/正式发布仍为 shell.1，内核 `0.2.1-alpha.2` 未变 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.1`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ verify 397 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
 | 核心发布 | ✅ Release run `38114383738` 全绿；三平台各 15 packaged E2E、安装/升级/来源证明及 publish 通过，tag commit `da4e474`（§76） |
@@ -1923,3 +1923,37 @@ GitCode：<https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alph
 [Release CI](https://github.com/citrusli2026/dsh-desktop/actions/runs/38114383738) ·
 [GitCode](https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alpha.2.shell.1) ·
 [官网](https://dsh-desktop.com)。
+
+## 77. shell.1 正式安装验收与 shell.2 修复候选（2026-10-11，未发布）
+
+1. **正式安装与真实验收**：GitHub shell.1 DMG 校验/只读挂载/覆盖 Applications/验签通过，
+   shell.0 备份可恢复。仅操作本轮测试会话及授权的本人机器人：实际模型工具、compact/quiet/
+   rich/full 回包、持久关闭与重开、垃圾桶即时删除/还原、Safe Mode、语言主题、诊断和更新均有
+   真实证据。私人录像/截图保留在忽略的本机目录，不上传；录像 09 未录到还原末段、录像 10
+   未录到英文选择，不能以文件名代替内容审查。详细矩阵见
+   [执行记录](docs/plans/2026-10-11-installed-review/progress.md)。
+2. **两项最小产品修复**：`5cc8d267c8bf9428b99cedc08eccddc2e1737441` 修复飞书管理入口及
+   健康块样式；`863960fe7148fff539a31274b12ff680e3510498` 修复局域网二维码固定 600 秒文案。
+   `50dbfaeb6025ca1577169cc5d20b45a2ff4e8ae3` 使用内容尺寸避免跨平台窗框误差。没有升级内核、
+   依赖或改变 Secret/生命周期权限；实现后验证、修复、再验证，未降低断言。
+3. **Go 门禁的坑与修正**：默认 macOS 临时目录存在 `/var`/`/private/var` 别名，Codex 和
+   workspace-skills 精确路径夹具失败；使用 `TMPDIR=/private/tmp`，不改全局环境或放宽路径。
+   race 还发现两个 release-local 用例未等最终保存就清理；多会话模拟器共用事件通道，单纯等
+   两条回复仍有 unsolicited save 竞态。改为独立模拟会话并等待最终回复，保留原拒绝/不泄露
+   断言；两项各 100 轮 race、完整 test/race/build/vet 和 CUJ 通过。子提交
+   `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb` 已先推子分支；父 pin
+   `c3a984a0fd94dd8c73693c5aa6fb74a257456afb` 已推两个集成远端。
+4. **覆盖后的系统认证边界**：本地 shell.2 候选已覆盖 Applications，旧 shell.1 保留在
+   `/private/tmp/dsh-installed-shell2.0ME74t/previous-shell.1.app`。ad-hoc 签名变更后主线程在
+   `SecItemCopyMatching` 等待钥匙串；已请求用户自行处理系统提示，未代输入密码、访问认证
+   应用、绕过安全保护或转成明文 Secret。当前安装候选仍是旧子 pin，不当作最终发布包。
+5. **发布状态与下一步**：仅准备 shell.2 候选说明和本地最终包，不创建 tag/Release，不推 main，
+   不刷新官网到未发布版本。正式新包视觉/录屏复验待系统认证，物理手机扫码待实际回报；旧包
+   临时 LAN 已停止共享，3081 无监听。人工步骤完成后换装最终 pin、重做原始场景，再执行
+   三平台 CI、GitCode 六资产内容验证与官网刷新；已发布 shell.1 tag 保持不可变。
+6. **2026-10-12 最终 pin 复跑**：verify 400 + 1 ACP、双树安全审计、dist:dir、两项 packaged
+   smoke、packaged 15、飞书五轮 20、市场 offline 1 + real 2 全部退出 0，Go CUJ 额外重跑通过。
+   新包 Sidecar pin 为 `5cf99a27`，SHA `2e306e602e3ba9610bbfa1837c4c419474b1c022f7387cd8696ca231c8851344`。
+   原系统等待解除后，已正常换装此最终本地包；新 ad-hoc 签名再次要求系统钥匙串授权，仍待
+   用户手动处理，不访问认证界面。防复发：先固定版本/子 pin、完成打包门禁再覆盖 Applications；
+   运行中不重打包替换资源，也不为减少提示而绕过钥匙串或保存明文凭据。

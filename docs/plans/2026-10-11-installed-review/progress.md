@@ -159,6 +159,28 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
   新二维码需待系统授权后重新生成。真实新包视觉/录屏与手机部分尚未完成，REL-02 不创建 tag。
   下一任务：完成新 pin 的本地门禁，等待用户处理钥匙串，然后正式复验并发布；不声称目标已完成。
 
+### 2026-10-12 继续：最终 pin 本地包与系统授权
+
+- 父 pin 原子提交 `c3a984a0fd94dd8c73693c5aa6fb74a257456afb` 已推两集成远端，退出 0。
+- 最终子 pin `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb` 的串行门禁全部退出 0：
+  verify 400 + 1 ACP、双树安全审计、dist:dir、两项 packaged smoke、packaged E2E 15、
+  飞书五轮 20、市场 offline 1 + real 2；Go CUJ 独立重跑退出 0。日志 `/tmp/dsh-shell2-pinned-*.log`。
+- 最终本地包 Sidecar SHA `2e306e602e3ba9610bbfa1837c4c419474b1c022f7387cd8696ca231c8851344`，
+  与实际二进制/manifest/子 HEAD 等值断言一致，版本 shell.2 和 codesign 深度校验均退出 0。
+  源码 manifest 的同 pin 构建时间 hash-only 变化按发布约定恢复，不混入源码提交；包内摘要不变。
+- 继续时旧候选的系统等待已解除，CUA 真实主界面恢复。正常退出（确认主进程 0 个），
+  暂存/验签后换装最终 pin；原未固定 pin 的 shell.2 保留在
+  `/private/tmp/dsh-installed-shell2-final.bLdqDp/previous-unpinned-shell.2.app`，旧正式 shell.1 备份仍保留。
+- 新签名再次触发系统钥匙串等待，已请用户处理当前提示；没有代输入或访问认证应用。
+  安装顺序的坑：版本/子 pin/全部打包门禁固定后再覆盖正式 bundle，减少候选 hash 变化导致的
+  重复系统授权。仍需用户系统授权后完成实机视觉/录屏与手机结果，不提前创建发布 tag。
+- 当前最终安装主进程 sample 再次确认 `SecItemCopyMatching` 等待，私有证据 0600；
+  `pnpm exec playwright test -g 'LAN pairing'` 在最终 pin 下重跑 2/2（退出 0），
+  3081 TCP 连接返回 ECONNREFUSED（关闭状态断言退出 0）。手机仍未实测，不混同浏览器模拟。
+- shell.2 双语候选说明 `write-release-notes check` 退出 0；源 manifest 同 pin hash 已恢复，
+  无产品额外改动、真实凭据/录像入仓库或运行中的 dist 重写。候选版本与文档精确提交到
+  集成分支，正式发布仍为 shell.1；下一步只待当前系统认证与正式界面/手机复验。
+
 ## 安装后安全基线门禁
 
 - `pnpm run verify`：397 单测 + 1 ACP，0 failed/skipped，覆盖率
