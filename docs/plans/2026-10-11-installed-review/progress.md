@@ -225,5 +225,6 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
   配置；不重签测试这个身份，以免再次授权。长期稳定签名/CI 管理作为 README 的 P1 后续迭代，
   不宣称“记住明文”能解决，不绕过系统安全。来源：
   https://www.electronjs.org/docs/latest/api/safe-storage 及 Apple TN2206。
-- 本原子文档门禁：差异/本地链接检查；提交 SHA 与推送结果由 REL-02 后续记录补齐。
+- 本原子文档门禁：`git diff --check` 与两份文档本地链接/结尾检查均退出 0；提交
+  `aa5c9270c5f5718c29f3cf931a93d60a5a49a4f0`，origin/GitCode 集成分支均推送成功（退出 0）。
   下一任务：合并远端 main，保持历史提交 SHA，正式 shell.2 tag、三平台 CI、六资产镜像与官网。
