@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | 集成分支 `0.2.1-alpha.2.shell.2` 未发布候选（§77）；main/正式发布仍为 shell.1，内核 `0.2.1-alpha.2` 未变 |
-| 已发布 | ✅ `0.2.1-alpha.2.shell.1`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ verify 397 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
-| 核心发布 | ✅ Release run `38114383738` 全绿；三平台各 15 packaged E2E、安装/升级/来源证明及 publish 通过，tag commit `da4e474`（§76） |
-| 官网数据 | ✅ 线上 release JSON、实时 API 与下载页为 shell.1，6/6 `gitcode_ok=true`；Refresh `38116456051` 成功，bot `e08fc54`（首轮提交竞争见 §76） |
-| 国内镜像 | ✅ GitCode v2 六资产匿名内容校验和 DEB 全量回读一致；release id `56569`，tag 对齐 `da4e474`，沿用平台限额的普通 Release 标记 |
-| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.1；2026-10-11 05:59 UTC 快照累计 6436（mac 746 / Windows 5065 / Linux 625，71 个版本；GitHub 5626 + GitCode 810） |
+| 最新代码基线 | ✅ main/集成分支 `0.2.1-alpha.2.shell.2`；内核 `0.2.1-alpha.2` 未变，CI-only 后续见 §78 |
+| 已发布 | ✅ `0.2.1-alpha.2.shell.2`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
+| 本地门禁 | ✅ verify 402 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
+| 核心发布 | ✅ Release `38249871041` 三平台安装/升级/来源证明及 publish 通过，tag `8038553`；mac/Linux 各 15，Windows 14 + 1 重试通过。CI 告警不隐瞒，见 §78 |
+| 官网数据 | ✅ 线上 release JSON、实时 API 与下载按钮为 shell.2，6/6 `gitcode_ok=true`；Refresh `38253677766` 成功，bot `d4f5c60` |
+| 国内镜像 | ✅ GitCode v2 六资产匿名 Range 内容校验与 DEB 全量回读一致；release id `57058`，tag 对齐 `8038553`，沿用限额下的普通 Release 标记 |
+| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.2；2026-10-12 快照累计 6587（mac 756 / Windows 5203 / Linux 628，72 个版本）；此为实时快照，非固定计数 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -1970,3 +1970,47 @@ GitCode：<https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alph
    签名和真实跨版本升级门禁，不导出私钥、不自动点击认证或保存明文 Secret。
    浏览器自动验收首次访问必须等待“预览版说明”并正常点继续；截图应等待侧栏动画结束，
    录屏绑定正确窗口且串行执行，失败录像与未录到的末段不得记为通过。
+
+## 78. v0.2.1-alpha.2.shell.2 发布与自动扫码闭环（2026-10-12）
+
+1. **发布固定点**：tag `v0.2.1-alpha.2.shell.2` 双远端同指
+   `8038553acf6720465635271ff46141109d53f739`；子 pin
+   `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb`。仅壳修订，不升级内核或无关依赖。
+   Release run `38249871041` 成功，8 文件契约、SHA-256、Windows SHA-512/blockmap、三份
+   attestation 均通过；本机又核对公开校验文件与 CI artifacts 一致，并验证三份 attestation。
+2. **发布包核验**：macOS DMG 只读 CRC/版本 shell.2/deep strict codesign/Sidecar pin 与实际二进制
+   摘要一致，挂载已卸载。CI 包 Sidecar SHA
+   `2212a8389621c1b02a23fce9737deb04f6c2968dbb42be9c0d40b6abc6564e3c`；Applications 保留已授权、
+   已真实复验的最终本地 shell.2，SHA `2e306e602e3ba9610bbfa1837c4c419474b1c022f7387cd8696ca231c8851344`。
+   二者同产品源码/版本/子 pin，构建元数据及签名不同；不冒称 CI DMG 已再次覆盖实机，不因
+   文档/CI-only 提交重装引发额外钥匙串授权。旧 bundle 备份仍可恢复。
+3. **国内镜像**：登录浏览器 v2 顺序上传六资产约 53.6 秒，POST 创建 id `57058`，commit 与
+   tag 完全相同；沿用 `--status unset` 避免已知 prerelease 数量限额，不新建重复对象。
+   六份匿名下载均为 206，逐份拒绝 HTML、核对 Content-Range 总尺寸与首字节。
+   DEB 稳定地址全量回读 229,987,916 字节，SHA 与公开 GitHub 校验一致。
+4. **官网**：等待自动 Refresh `38253677766` 成功后才合并 bot
+   `d4f5c60aa0894700a2a6fb5d6f3926ac240d513f`，不与 re-probe 争写。
+   线上 JSON/API 都为 shell.2、六镜像可用。隔离无头 Chrome 核对宽/窄下载页三平台各有
+   GitCode/GitHub 按钮、正确 shell.2 链接、无横向溢出及 pageerror；截图已复核。
+   最后 Mac 再次锁屏，未自动解锁或要求重复确认；这部分是公共官网无头渲染，不冒充原生截图。
+5. **普通 CI 的真实修复**：main run `38249860196` 因 bootstrap 顺序错误报真实内核源码 ENOENT，
+   CI-only 提交 `4a7b819b302ee46f311dbd3e69c3f82ae2b7d0aa` 将 bootstrap 移到 verify 前，补两个
+   YAML 回归；全量本地 402 + 1 ACP 退出 0，新 main CI `38252364542` 成功，含干净环境安装
+   与三条开发 smoke。发布 tag 保持不变，未降低/跳过原失败断言。
+6. **不能称作零告警**：mac/Linux packaged 各 15；Windows 14 首次通过 + 1 用例重试通过，
+   首次 `autoConnect` 持久化谓词 8 秒超时，保留原断言与既有 retry 规则。Linux 开发 E2E
+   23 passed/12 既有环境条件未启用，但仍有 worker teardown 非用例错误；既有 guarded runner
+   按完整用例 summary 判定通过，未改这条规则。下一轮需定位收尾及偏好就绪竞态，不能把
+   job success 写成无日志错误，也不能仅扩大 timeout、删断言或新加 skip。
+
+已验证安装包（另两个 Windows updater 文件仅在 GitHub）：
+
+| 资产 | 字节 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 286741648 | `d7e691d75fd8d1e0aac878b51824109f1f9c762b37852b8b5fa91d5c06e19410` |
+| Windows EXE | 261982792 | `defdc5bdc3532f47faa851a189932aa64d3acf69594e0c01c2bd578722c6010e` |
+| Linux DEB | 229987916 | `988f9b552254aa445b6bd122465422855462c9614cb0c3bf608a23cfc1d7cc57` |
+
+本轮真实飞书、自动扫码、视觉/录像及授权边界详见安装验收 progress。残余迭代：P1 稳定发行
+签名/CI 密钥配置（外部身份前置；不能靠明文 Secret 或自动批准系统认证解决）；P2 测试收尾/
+Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi 不在无头模拟证明中。
