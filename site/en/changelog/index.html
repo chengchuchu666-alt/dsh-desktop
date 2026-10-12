@@ -42,6 +42,15 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.2 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li>Styles the Feishu management entry consistently and separates connection health text from the button,</li>
+    <li>Fixes the localized LAN QR countdown without changing expiry, one-time pairing or sharing permissions.</li>
+    <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup.</li>
+    <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into</li>
+    <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.1 <small>（kernel 0.2.1-alpha.2）</small></h2>
   <ul>
     <li>Refreshes the sidebar after trash deletion, restoration and unarchiving, while protecting active turns, child sessions, identity conflicts and external writer leases.</li>
@@ -103,14 +112,6 @@
     <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
     <li>Clean up a silently launched desktop process between Windows NSIS residue scenarios so the next installer cannot block on an interactive close prompt.</li>
     <li>No new permissions or user-data changes. The release includes the downstream <code>http-cache-semantics</code> security patch and passed both dependency audits.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.0 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Upgrade the bundled kernel from 0.2.0-rc.2 to 0.2.1-alpha.1 and sync the packaged dependency closure.</li>
-    <li>Persist the chosen LAN address and validate pairing URLs on multi-interface hosts.</li>
-    <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
-    <li>No new permissions or user-data changes. The release includes the downstream security patch for <code>http-cache-semantics</code> and passed both dependency audits.</li>
   </ul>
   <!-- changelog:auto:end -->
 

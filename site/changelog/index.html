@@ -42,6 +42,13 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.2 <small>（内核 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li><strong>飞书设置布局</strong>：管理应用/扫码创建入口复用桌面设置按钮样式，健康说明独立成块；</li>
+    <li><strong>局域网配对倒计时</strong>：二维码窗口正确逐秒更新剩余时间，不再一直显示 600 秒；</li>
+    <li><strong>发布回归稳定性</strong>：窗口宽度断言按内容尺寸跨平台验证；cc-connect 测试使用独立</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.1 <small>（内核 0.2.1-alpha.2）</small></h2>
   <ul>
     <li><strong>垃圾桶与侧栏同步</strong>：删除、还原和取消归档后无需重启；活动任务、驻留子任务、身份冲突及其他进程持有的会话会被安全拒绝，不强停或覆盖。</li>
@@ -99,14 +106,6 @@
     <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
     <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
     <li><strong>Windows 发布门禁</strong>：NSIS 残留矩阵在场景之间清理由静默安装器启动的桌面进程，避免后续静默安装被交互式关闭提示阻塞。</li>
-    <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.0 <small>（内核 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：从 0.2.0-rc.2 升级到 0.2.1-alpha.1，同步桌面壳的插件兼容版本与随包依赖。</li>
-    <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
-    <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
     <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
   </ul>
   <!-- changelog:auto:end -->
