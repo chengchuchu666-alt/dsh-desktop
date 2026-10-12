@@ -228,3 +228,19 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
 - 本原子文档门禁：`git diff --check` 与两份文档本地链接/结尾检查均退出 0；提交
   `aa5c9270c5f5718c29f3cf931a93d60a5a49a4f0`，origin/GitCode 集成分支均推送成功（退出 0）。
   下一任务：合并远端 main，保持历史提交 SHA，正式 shell.2 tag、三平台 CI、六资产镜像与官网。
+
+## BUG-03 — main CI bootstrap 顺序（2026-10-12）
+
+- REL-02 准备提交 `6cb1e1c1aa3826f9b383390b4feea027e23ab4cc`、正常合并 main 的提交
+  `8038553acf6720465635271ff46141109d53f739` 已推两远端 main/集成分支；shell.2 tag 双远端
+  同指该合并提交（退出 0）。Release run `38249871041` 的 verify 已通过，三平台构建进行中。
+- 普通 main CI `38249860196` verify 退出 1：`session-trash-patch.test.ts` 与 `trash-host.test.ts`
+  读取未安装的真实内核文件报 ENOENT；完整失败日志 `/tmp/dsh-shell2-main-ci-failed.log`。
+- 诊断顺序：最可能为 bootstrap 在 verify 后；其次路径/版本漂移；再次 frozen 依赖缺失。
+  同 tag Release verify 先 bootstrap 即通过，支持顺序根因，不用跳过依赖检查或虚假内核源码。
+- 按 README 原子范围移动原步骤并补普通 CI/Release 两项 YAML 顺序回归，随后执行本地全量
+  verify 和真实新 main CI。仅 CI/测试/文档改变，不移动 tag、不重签或重装当前应用。
+- 新 YAML 回归 2/2（退出 0）；首轮全量 typecheck 因测试 tuple 推断报 TS2538（退出 1），
+  加 `as const` 保留精确 job 类型后全量 `pnpm run verify` 通过：402 单测 + 1 ACP、0 failed/skipped，
+  覆盖率 89.99/82.97/86.41%，退出 0，日志 `/tmp/dsh-shell2-ci-order-verify.log`。
+  下步推送 CI-only 原子提交，等待真实新 main CI，不用本机已装依赖冒充 clean runner 验证。

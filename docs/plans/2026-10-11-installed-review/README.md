@@ -102,3 +102,12 @@ release skill，最终真实安装验证不能被旧本地包/前三平台 CI �
   Secret 无需重复授权。当前 ad-hoc 指定要求随 cdhash 变化，不能靠再次保存 Secret 消除系统授权。
   不自动点击系统认证、修改钥匙串 ACL、导出签名私钥或改成明文；现有 Apple Development 身份
   不等于公开发行所需的 Developer ID 配置。此项为独立基础设施前置，不伪称本版已经永久解决。
+
+## BUG-03 — 普通 CI 在真实依赖安装前运行验证
+
+- shell.2 main CI `38249860196` 的 verify 明确失败：session-controller 与 persistence-jsonl
+  源码尚未安装，两个真实内核契约测试报 ENOENT。Release 工作流同提交先 bootstrap 后 verify 已通过。
+- 允许修改仅 `.github/workflows/ci.yml`、`test/ci-bootstrap-order.test.ts`、本目录两份文档。
+  将既有 bootstrap 移到 verify 前，补两工作流先安装真实闭包的顺序断言；不改测试断言、产品或依赖。
+- 本地全量 verify 与新 main CI 都要通过；保持 shell.2 已推 tag 不变。这是 CI-only 后续提交，
+  不重打包/替换已授权 Applications，也不因工作流修正重新发同版安装包。
