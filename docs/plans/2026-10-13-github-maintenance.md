@@ -79,3 +79,22 @@
 - 门禁：锁解析/版本回归、frozen install、bootstrap、双树 audit、full verify 均 exit 0；
   未增加安全忽略项。sdk 包更新不等于清理历史 OAuth 凭据，旧凭据 issuer/撤销要求按公告单列风险，
   不触碰真实账号凭据。sprintf-js 尚无官方修复版本，原有单一例外保留。
+- 安全修复提交 `728e112`；main 合入后 GitHub 3 项可修复告警都自动关闭，仅 sprintf-js medium 剩余。
+- #91 修正头 CI `38328176497` success 后 merge `18f92b6`；开放 PR 为零，开放 issue 仅 #100。
+- 本地 LAN `pnpm exec playwright test -g 'LAN pairing'` exit 0（2 通过）。
+- 下一任务：shell.3 最终候选打包门禁、不可变 tag 发布、GitCode 六资产与官网新日志交付。
+
+### 候选门禁发现的子模块收尾回归
+
+- 新增原子任务允许修改：子模块 `core/cuj_test.go` 中的 `TestCUJ_A5_FileReachesAgent`；
+  仅修正测试完成边界，不修改生产逻辑或其它 CUJ。父仓库后续只更新 gitlink、sidecar manifest 和记录。
+- 全量 race 首次 exit 1：TempDir cleanup 仍遇到后台写文件；
+  `TMPDIR=/private/tmp go test -race ./core -run '^TestCUJ_A5_FileReachesAgent$' -count=100`
+  exit 1、反复复现。当前用例仅发现 Agent session 创建就返回，并未等消息处理完成。
+- 修正后须单用例重复 race、全量 test/race/build/vet/CUJ 全绿；先提交推送子模块，
+  再更新父 gitlink，最终版本重新打包及 smoke/E2E，不能复用旧 pin 的候选通过记录。
+- 子模块最终修复 `a9a936c5102ffa24f8165d74d5199206ba6d724a` 已先推 origin 分支。
+  单用例修前 100 轮 race 失败 8 次；修后 200 轮 exit 0；全量 test/race/build/vet 和 CUJ 均 exit 0。
+  首轮编译时 helper API 名称/返回类型使用不符，已按真实定义修正后重跑全部门禁。
+- `pnpm cc-connect:build` exit 0：版本 shell.3、目标 darwin/arm64、最终 pin a9a936c5。
+  Sidecar manifest SHA-256 `47c092e40d73edd59758413d69560c64719563ccbdc136a52864120af1a2ddc6`。
