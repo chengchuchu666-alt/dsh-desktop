@@ -116,3 +116,16 @@
 - 官网每日镜像探测曾只看 200/206，可把 WAF HTML 当成安装包；现在用独立可测试的 availability
   probe 拒绝 HTML、核对已知资产尺寸、取消 body 并设置 20 秒超时。交付完整性仍由六文件内容校验
   和完整安装包回读负责，不把 availability 冒称为哈希证明。
+- 发布已完成：Release `38330491175` success，三平台 packaged 各 15 首过；verify 23 通过 / 12 既有
+  环境跳过仍有 worker teardown 45000ms 告警，未更改 guarded runner 或掩盖告警。
+- GitHub 8 文件契约、三个公开 SHA-256 对照、三项 SLSA attestation、mac DMG CRC/签名/版本/最终pin
+  与安全依赖版本均验证通过。未覆盖 `/Applications`，原生浏览器复核因 Mac 锁屏不可用。
+- GitCode Release `57181`：tag/commit 匹配 `93d0f2f…`、六资产，沿用既有配额约束用 unset，未改其它版本。
+  六项匿名 206 的 Content-Range/首字节通过，DEB 完整回读 231001652 B，SHA
+  `acd9e0b8e72b634e2e074909afb2b8fa84fc2df3e402b5cec85f381856671b97` 与 GitHub 一致。
+- 浏览器 fetch GET 超时，改用已有私密 header helper 的 CLI GET 确认不存在后才创建；
+  create 返回 `commit` 是字符串、`asset_count` 是数字，显示层 jq 错误没有导致重复 POST。
+- 自动 Refresh `38333222697` success，bot `d97328a` 正常快进；线上 release JSON 为 shell.3，六镜像 true，
+  `/api/downloads` HTTP 200。已发布后才更新首页版本重点为 shell.3，缓存键升至 46。
+- 交付 main 最新 `pnpm verify` exit 0（411 + 1 ACP，增加了一项 availability 网站回归，发布 tag 仍410）；
+  本地发布后网站 UI 8 场景 exit 0。下一任务为线上 UI/完整日志复验、交接记录和最终两远端同步。
