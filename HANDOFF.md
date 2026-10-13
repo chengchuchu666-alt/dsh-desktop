@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | 🚧 `0.2.1-alpha.2.shell.3` 候选；内核 `0.2.1-alpha.2` 未变，GitHub/官网/安全维护见 §79，已发布 shell.2 见 §78 |
-| 已发布 | ✅ `0.2.1-alpha.2.shell.2`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ verify 402 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
-| 核心发布 | ✅ Release `38249871041` 三平台安装/升级/来源证明及 publish 通过，tag `8038553`；mac/Linux 各 15，Windows 14 + 1 重试通过。CI 告警不隐瞒，见 §78 |
-| 官网数据 | ✅ 线上 release JSON、实时 API 与下载按钮为 shell.2，6/6 `gitcode_ok=true`；Refresh `38253677766` 成功，bot `d4f5c60` |
-| 国内镜像 | ✅ GitCode v2 六资产匿名 Range 内容校验与 DEB 全量回读一致；release id `57058`，tag 对齐 `8038553`，沿用限额下的普通 Release 标记 |
-| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.2；2026-10-12 快照累计 6587（mac 756 / Windows 5203 / Linux 628，72 个版本）；此为实时快照，非固定计数 |
+| 最新代码基线 | ✅ `0.2.1-alpha.2.shell.3` 已发布；内核 `0.2.1-alpha.2` 未变，GitHub/官网/安全维护与 site-only 后续见 §79 |
+| 已发布 | ✅ `0.2.1-alpha.2.shell.3`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
+| 本地门禁 | ✅ release 候选 verify 410 + 1 ACP；网站后续 main verify 411 + 1 ACP；Go test/race/build/vet/CUJ、附件回归 race 200、最终 pin packaged 15、飞书五轮 35、LAN 2、市场 offline 1 / real 2、两项 smoke、双树审计通过 |
+| 核心发布 | ✅ Release `38330491175` 三平台安装/升级/来源证明及 publish 通过，tag `93d0f2f`；三平台 packaged 各 15 首过。verify 的既有 worker teardown 告警不隐瞒，见 §79 |
+| 官网数据 | ✅ 线上 release JSON 与实时 API 为 shell.3，6/6 `gitcode_ok=true`；Refresh `38333222697` 成功，bot `d97328a`；中英日志保留完整换行内容，首页 cache 46 |
+| 国内镜像 | ✅ GitCode v2 六资产匿名 Range 内容与 DEB 全量回读一致；release id `57181`，tag 对齐 `93d0f2f`，沿用配额约束下的 unset 标记 |
+| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.3；2026-10-13 快照总量 6628（官网现有计数口径，实时变化）；仓库生成的 GitHub 原始下载快照 5805 / 73 个版本，不混称同一计数 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2015,7 +2015,7 @@ GitCode：<https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alph
 签名/CI 密钥配置（外部身份前置；不能靠明文 Secret 或自动批准系统认证解决）；P2 测试收尾/
 Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi 不在无头模拟证明中。
 
-## 79. GitHub 待办、官网维护与 shell.3 候选（2026-10-13，未发布）
+## 79. GitHub 待办、官网维护与 shell.3 发布（2026-10-13）
 
 1. **待办盘点**：原开放 issue #100/#101/#104/#105/#106、PR #55/#91/#99/#102/#103。
    历史发布/同步告警 #101/#104/#105/#106 已按失败日志、对应修复及后续成功 CI 关闭；
@@ -2028,7 +2028,7 @@ Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi �
 3. **原子提交**：`c7a16e3` 官网生成提交限次重试（临时 worktree、不 rebase JSON）；
    `1db39e6` 中英飞书独立介绍/FAQ 与 UI 检查，`351b1d9` 已发布 changelog 上界；
    `8e54782` 补回英文显式开启说明，保留原文档断言；`728e112` 高危安全闭包维护。
-   子模块仍 `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb`，无新修改。
+   审查初期子模块为 `5cf99a27`；额外收尾测试修复后的最终 pin a9a936c5 见第 7 点。
 4. **官网**：同步新流程 live run `38327109918` success；本地及正式站点 UI 各 8 场景通过
    （中英 × 390/1280 × 明暗），检查飞书介绍、FAQ、锚点、无溢出、已发布日志，无 pageerror。
    公共页面截图为无登录的隔离 Chrome，不借用真实账户，不复用私人飞书截图作营销图。
@@ -2037,8 +2037,8 @@ Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi �
    双树审计通过；GitHub open alert 当前只剩 sprintf-js medium（无官方修复，原有单一例外）。
    SDK 升级不自动迁移/撤销历史 OAuth 凭据；按官方 GHSA 核对旧 issuer 与重登/撤销要求。
 6. **候选与发布理由**：运行时安全内容会进入安装包，值得发 `v0.2.1-alpha.2.shell.3`；
-   Harness 保持 `0.2.1-alpha.2`，当前仍未打 tag、未发布。最终版本重新跑 verify、打包、
-   两项 smoke、packaged E2E、市场/LAN、三平台 Release，之后镜像和官网按实际结果回填。
+   Harness 保持 `0.2.1-alpha.2`，最终版本重新跑 verify、打包、两项 smoke、packaged E2E、
+   市场/LAN 和三平台 Release，实际镜像/官网交付见下文。
    不用 shell.2 旧 dist 的结果代替新候选，不覆盖 `/Applications` 或反复请求系统钥匙串。
 7. **最终 pin 与候选门禁**：额外 race 回归发现附件 CUJ 提前结束（100 轮旧代码失败 8 次）；
    仅修测试完成边界，子模块 `a9a936c5102ffa24f8165d74d5199206ba6d724a` 先推后父 pin `a594e04`。
@@ -2048,3 +2048,35 @@ Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi �
 8. **后续可复用检查**：`3ce65f2` 新增 `check-gitcode-assets.mjs` 匿名内容验证（两项 mock 回归），
    取代按 shell.2 硬编码的私人 helper；一次性 worktree 处理网站竞争，changelog 以实际发布 tag 为上界。
    README/CONTEXT 已纠正实际随包 Node 24，并补飞书入口；未改开发主机 Node 22/24 engine 契约。
+9. **正式发布**：不可变 tag `v0.2.1-alpha.2.shell.3` → `93d0f2fa8556aaa0828d8c1e3f95df321313ea78`，
+   两远端一致；Release `38330491175` success。mac/Linux/Windows packaged 各 15 首过，市场离线各 1，
+   Windows corrupt/readonly/lock 三项 residue、三平台跨版本数据保持、两项 smoke 和 provenance 门禁通过。
+   verify 23 passed / 12 既有环境 skip，仍报告 worker teardown 45000ms / 非用例 error；guarded runner
+   保持原样，未把这个历史 P2 称为修复或零告警。既有 Windows 偏好偶发风险本次未复现，不冒称根因已除。
+10. **公开产物校验**：CI artifact 的八文件契约与 Windows updater SHA-512 通过；三个公开 `.sha256`
+    与本地文件一致。三项 SLSA verification 的 source digest 均为 tag93、source ref 为本 tag；
+    mac DMG CRC/codesign/CFBundleShortVersionString 验证通过，读出最终 pin a9a936c5 与 SDK/压缩/proxy 版本。
+    CI mac sidecar SHA `5a579b3a872522bb5f756ec1b7a135410379546a251d6a22fba0476c3e8677ff` 与本地
+    buildTime/Go 构建字节不同，源码/pin 一致。DMG 已卸载，未覆盖已安装的 shell.2，不再触发钥匙串授权。
+11. **GitCode 镜像**：浏览器 origin/login 检查正常；页面 fetch GET 超时后，用已有私密 header helper 的
+    CLI GET 确认新 tag Release 不存在，再上传/创建。`57181` / tag93 / 六资产，采用 unset（沿用既有
+    prerelease 数量约束；没有新观察到配额错误，也没有改动其它 Release）。六个匿名 206 的总尺寸和
+    首字节正确，DEB 完整回读 231001652 B / `acd9e0b8e72b634e2e074909afb2b8fa84fc2df3e402b5cec85f381856671b97`。
+    create 输出的 `commit` 是字符串、`asset_count` 是数字；显示 jq 字段错误不表示 POST 失败，未重复创建。
+12. **官网交付**：自动 Refresh `38333222697` success，bot `d97328a` 正常快进；main 的 availability
+    probe 现在拒绝 HTML/错误尺寸、取消 body、20s 超时，完整性仍由独立内容验证负责。发布后再更新
+    homepage 重点到 shell.3、app/data-model cache 46；完整中英 changelog 与飞书流程/FAQ 对应真实已发布状态。
+    当前本地/线上均用隔离 Chrome 做宽窄屏和明暗检查；Mac 锁屏导致原生浏览器视觉不可用，不能冒称
+    正式安装版 GUI/真实飞书已在 shell.3 重新人工验收。实际真人验收仍以 §78 的 shell.2 证据为准。
+
+shell.3 GitHub 原始安装包（GitCode 六项 Range 内容与 DEB 全量已核验）：
+
+| 产物 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 288365724 | `0bd30f5532c05838b1c8ab1726c3e1927055587d2f796186d539bf7d03f7350c` |
+| Windows EXE | 263608563 | `43f20cc34b00404d46211e3d39126f7df64fec402a726073468e7ac3de31ba43` |
+| Linux DEB | 231001652 | `acd9e0b8e72b634e2e074909afb2b8fa84fc2df3e402b5cec85f381856671b97` |
+
+剩余外部条件：#100 需要 Windows 原始提问步骤/renderer 异常和权限证据；mac 稳定分发签名/CI 密钥
+配置仍未提供；sprintf-js 无官方修复版本，保留已有单一例外。没有通过关闭未知白屏 issue 或明文凭据
+缓存来伪造完成。website-only 后续不移动已发布 tag，也不为文案/生成器单独发布 shell.4。

@@ -129,3 +129,17 @@
   `/api/downloads` HTTP 200。已发布后才更新首页版本重点为 shell.3，缓存键升至 46。
 - 交付 main 最新 `pnpm verify` exit 0（411 + 1 ACP，增加了一项 availability 网站回归，发布 tag 仍410）；
   本地发布后网站 UI 8 场景 exit 0。下一任务为线上 UI/完整日志复验、交接记录和最终两远端同步。
+- 首页版本重点/缓存更新 `f2243e6` 已推两远端；线上 UI 再验 exit 0（8 场景），真实 HTML 为 cache46，
+  中英 changelog 第一条为 shell.3，缩进续行中的 SDK 1.31.0 / compression 1.8.2 说明不再丢失。
+- 原有 5 个 PR 已处理（4 merge、#103 不符合运行时边界而关闭）；4 个历史 issue 已关闭，
+  #100 已分析/回复并明确 needs-info，缺少原始 Windows renderer/权限证据，不能认定已修复。
+- 剩余风险：稳定 mac 分发签名/密钥配置与 sprintf-js 上游修复缺失；既有 Linux worker teardown 告警、
+  Windows 历史偏好偶发仍如实列后续（本次 Windows15首过）。当前安装 app 未覆盖，未再请求钥匙串。
+- 交付代码、测试、README/FAQ/官网介绍/完整日志/发布与镜像均已完成；最后只做记录、干净树/远端检查。
+- 最终交接复验：full verify 411 + 1 ACP / 双树 audit exit 0；网站交付头 `f2243e6` 的 main CI
+  `38335604311` success，线上 UI 8 场景通过，三个 provenance source digest/ref 均严格匹配 tag93。
+  本轮只读 DMG 已卸载，自己的 loopback 4173 预览已关闭；公共八文件及非敏感校验记录保留在临时产物目录。
+- 已完成：原5PR处理、4历史issue关闭、#100证据分析/回应、依赖安全维护、官网/README/FAQ/完整日志、
+  本地/CI打包、GitHub发版、GitCode六文件与完整回读、两远端分支/tag同步。
+- 未完成且真实外部阻塞：#100 原始 Windows 场景/renderer/权限证据缺失；稳定分发签名密钥与 sprintf-js
+  官方修复缺失。没有因此虚假关掉 #100；不为网站后续再发 shell.4。
