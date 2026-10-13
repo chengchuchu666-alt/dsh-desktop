@@ -80,17 +80,11 @@ jobs:
           echo "::warning::GitCode mirror still incomplete after 6 attempts; the next scheduled run will re-probe"
 
       - name: Commit and push if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_CLI: '1'
         run: |
-          if git diff --quiet -- site/data/release.json; then
-            echo "no data change; nothing to commit"
-            exit 0
-          fi
-          TAG=$(node -p "require('./site/data/release.json').release.tag")
-          git add site/data/release.json site/changelog/index.html site/en/changelog/index.html
-          git commit -m "site: sync release data ${TAG}"
-          git pull --rebase origin main
-          git push origin HEAD:main
-          echo "pushed site data update for ${TAG}"
+          node scripts/push-site-refresh.mjs
 
       - name: Summary
         if: always()
