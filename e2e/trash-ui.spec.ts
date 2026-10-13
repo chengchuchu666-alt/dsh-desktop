@@ -217,6 +217,9 @@ async function createRealSession(harness: Awaited<ReturnType<typeof launchTrashH
   const sessions = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrashSessions(): Promise<Array<{ sessionId: string; projectKey: string }> | null> } }).dshDesktop.listTrashSessions())
   expect(sessions).toHaveLength(1)
   expect(sessions![0]!.sessionId).toMatch(/^session-/)
+  const node = join(process.cwd(), 'resources/harness/node/bin', process.platform === 'win32' ? 'node.exe' : 'node')
+  const durable = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, sessions![0]!.sessionId], { encoding: 'utf8', timeout: 30_000 }))
+  expect(durable.cwd).toBe(harness.workspace)
   return sessions![0]!
 }
 
@@ -230,11 +233,17 @@ realTrashTest('real idle session delete, restore and unarchive refresh sidebar w
   await expect(row.getByRole('button', { name: '取消置顶', exact: true })).toHaveCount(1)
   const peerOpening = harness.app.waitForEvent('window')
   await harness.app.evaluate(({ BrowserWindow }, url) => {
-    const peer = new BrowserWindow({ width: 1280, height: 900, show: true, webPreferences: { backgroundThrottling: false } })
+    // Exercise responsive sidebar collapse on every platform, not only on
+    // Windows runners whose work area can constrain a nominally wide window.
+    const peer = new BrowserWindow({ width: 800, height: 900, show: true, webPreferences: { backgroundThrottling: false } })
     void peer.loadURL(url)
   }, page.url())
   const peer = await peerOpening
   await peer.waitForLoadState('domcontentloaded')
+  const expandPeerSidebar = peer.getByRole('button', { name: '打开侧边栏', exact: true })
+  await expect(expandPeerSidebar).toBeVisible({ timeout: 30_000 })
+  await expandPeerSidebar.click()
+  await expect(peer.getByRole('tree', { name: '会话', exact: true })).toBeVisible()
   const peerRow = peer.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })
   try { await expect(peerRow).toHaveCount(1, { timeout: 30_000 }) }
   catch (error) {
@@ -256,7 +265,7 @@ realTrashTest('real idle session delete, restore and unarchive refresh sidebar w
   await trash.getByRole('tab', { name: /^资源 / }).click()
   const savedRow = trash.locator('[data-dsh-trash-row]').filter({ hasText: session.sessionId })
   const [saved] = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrash(): Promise<Array<{ id: string; originPath: string }>> } }).dshDesktop.listTrash())
-  expect(saved!.originPath.startsWith(harness.home + '/sessions/')).toBe(true)
+  expect(saved!.originPath).toBe(join(harness.home, 'sessions', session.projectKey, session.sessionId))
   await mkdir(saved!.originPath)
   await writeFile(join(saved!.originPath, 'new-data'), 'do not overwrite')
   await savedRow.getByRole('button', { name: '还原', exact: true }).click()
@@ -364,7 +373,7 @@ realTrashTest('external kernel writer lease prevents cold session deletion @smok
     const newDrafts = ids.filter(id => !durableIds.includes(id))
     expect(newDrafts).toHaveLength(1) // the kernel's new blank selected session
     const draft = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, newDrafts[0]!], { encoding: 'utf8', timeout: 30_000 }))
-    expect(draft).toEqual({ id: newDrafts[0], eventTypes: ['permission/preset', 'sandbox/mode', 'approval/policy'], parentSession: null })
+    expect(draft).toEqual({ id: newDrafts[0], cwd: harness.workspace, eventTypes: ['permission/preset', 'sandbox/mode', 'approval/policy'], parentSession: null })
     expect(harness.requests).toBe(2)
   } finally { if (holder.exitCode === null) holder.kill('SIGKILL') }
 })

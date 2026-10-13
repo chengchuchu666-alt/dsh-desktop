@@ -42,6 +42,41 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.2 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li>Styles the Feishu management entry consistently and separates connection health text from the button,</li>
+    <li>Fixes the localized LAN QR countdown without changing expiry, one-time pairing or sharing permissions.</li>
+    <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup.</li>
+    <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into</li>
+    <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted</li>
+  </ul>
+
+  <h2>v0.2.1-alpha.2.shell.1 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li>Refreshes the sidebar after trash deletion, restoration and unarchiving, while protecting active turns, child sessions, identity conflicts and external writer leases.</li>
+    <li>Adds a unified Feishu application manager with QR cancellation/expiry/retry, local app management and explicit persistent connection controls.</li>
+    <li>Adds quieter compact/3-second preview defaults and bounded card/progress preferences; fixes ACP reasoning leaking into answer text. Existing settings and credentials migrate without loss.</li>
+    <li>Separates service, channel and completed-task health. Secrets remain main-process-only; Safe Mode does not override explicit close.</li>
+    <li>Local unit, Go/race, packaged UI, market and controlled live Feishu gates passed. Release CI validates all three installers and provenance; domestic mirrors require anonymous verification.</li>
+  </ul>
+
+  <h2>v0.2.1-alpha.2.shell.0 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li>Upgrades the bundled <code>@deepseek-ai/dsh</code> runtime to <code>0.2.1-alpha.2</code>, synchronizes 32 kernel peer pins, and rebuilds the sign-in auto-open patch for the new package.</li>
+    <li>Adds a native Feishu setup flow with a QR window, supervised cc-connect sidecar, lifecycle controls, and a one-command official Lark CLI skill installer.</li>
+    <li>Adds the multi-runtime dashboard and tightens runtime version/path validation.</li>
+    <li>Temporary setup files and credentials stay isolated and permission-protected; secrets are never written to logs or ordinary settings.</li>
+    <li>Verification passed: 341 tests, typecheck, coverage, site checks, build, LAN pairing 2/2, market offline 1/1, market real 2/2, packaged smoke, and a live Feishu message round trip.</li>
+  </ul>
+
+  <h2>v0.2.1-alpha.1.shell.5 <small>（kernel 0.2.1-alpha.1）</small></h2>
+  <ul>
+    <li>Add a native Extensions / Desktop tools QR flow for setting up a Feishu bot, saving protected credentials, and starting cc-connect for the selected workspace.</li>
+    <li>Add <code>pnpm run feishu:setup</code> through the official <code>@larksuite/cli</code> installer to provision <code>lark-*</code> skills and user OAuth while keeping CLI and bot identities separate.</li>
+    <li>Keep App Secrets out of the window, TOML, status, logs, and repository; clean temporary setup data on success, cancellation, or timeout.</li>
+    <li>Update the Chinese and English website home/install pages; automated tests use fake secrets, temporary directories, and a local ACP mock. Real Feishu callback acceptance remains an organization-account QA step.</li>
+  </ul>
+
   <h2>v0.2.1-alpha.1.shell.4 <small>（kernel 0.2.1-alpha.1）</small></h2>
   <ul>
     <li>Keep the bundled official DeepSeek Harness kernel at 0.2.1-alpha.1 and publish shell revision 4.</li>
@@ -49,6 +84,7 @@
     <li>Remove the automatic legacy GitCode v5 backfill dispatch; verify the domestic v2 mirror independently with anonymous range requests.</li>
     <li>Upgrade sharp to 0.35.5 for GHSA-wq5f-xc86-pv6w; explicitly track the unfixable sprintf-js CVE-2026-97058 until upstream publishes a fix.</li>
     <li>Local verification passed typecheck, runtime checks, 305 unit tests, site/API checks, LAN pairing, offline market install, and packaged smoke. The current dshmarket release does not yet declare compatibility with the bundled prerelease kernel, so peer and publish-age safety gates remain unchanged.</li>
+    <li>Add the bundled cc-connect sidecar and the Desktop Feishu settings surface: main-process supervision, start/stop/reconnect, Safe Mode handling, protected local Secret storage, and a documented cleanup path. Automated coverage uses fake sidecars and local ACP/HTTP mocks; real Feishu acceptance still requires user credentials and organization approval.</li>
   </ul>
 
   <h2>v0.2.1-alpha.1.shell.3 <small>（kernel 0.2.1-alpha.1）</small></h2>
@@ -76,36 +112,6 @@
     <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
     <li>Clean up a silently launched desktop process between Windows NSIS residue scenarios so the next installer cannot block on an interactive close prompt.</li>
     <li>No new permissions or user-data changes. The release includes the downstream <code>http-cache-semantics</code> security patch and passed both dependency audits.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.0 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Upgrade the bundled kernel from 0.2.0-rc.2 to 0.2.1-alpha.1 and sync the packaged dependency closure.</li>
-    <li>Persist the chosen LAN address and validate pairing URLs on multi-interface hosts.</li>
-    <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
-    <li>No new permissions or user-data changes. The release includes the downstream security patch for <code>http-cache-semantics</code> and passed both dependency audits.</li>
-  </ul>
-
-  <h2>v0.2.0-rc.2.shell.0 <small>（kernel 0.2.0-rc.2）</small></h2>
-  <ul>
-    <li>Upgrade the bundled kernel from 0.2.0-rc.1 to 0.2.0-rc.2 and sync the 34 dsh package pins and resolved closure.</li>
-    <li>Keep the sign-in authorization URL opening once per attempt in the system browser, with the current theme, rebuilt and verified against rc.2.</li>
-    <li>Enforce plugin peer compatibility during install; a compatible community market release is selected automatically after it clears the bundled pnpm publish-age window.</li>
-    <li>No new permissions or data-directory changes. Windows x64, macOS arm64, and Linux packages are built by the release pipeline.</li>
-  </ul>
-
-  <h2>v0.2.0-rc.1.shell.0 <small>（kernel 0.2.0-rc.1）</small></h2>
-  <ul>
-    <li>Kernel upgrade 0.1.7-rc.2 → 0.2.0-rc.1 (first 0.2.0 release candidate); 34 dsh-* peer pins synced, release-age excludes re-pinned (229), and the sign-in auto-open patch rebuilt against the new version.</li>
-    <li>Kernel-side plugin installs now enforce peer compatibility: mismatched plugin versions are rejected with an explanation and an explicit risk-exemption path instead of crashing later. The community market (dshmarket) needs 1.66.4+ for this kernel; the bundled installer resolves to it automatically once published for 24 hours.</li>
-    <li>Upgrade-path and broken-plugin isolation contracts re-verified on the new kernel; LAN pairing E2E and packaged smokes green.</li>
-  </ul>
-
-  <h2>v0.1.7-rc.2.shell.2 <small>（kernel 0.1.7-rc.2）</small></h2>
-  <ul>
-    <li><strong>#65 fully supported</strong>: LAN pairing now listens on every private address (physical NICs + VPN virtual adapters) with one QR code per address, labelled lan/vpn.</li>
-    <li>NIC checkbox selection (persisted) and <code>DSH_LAN_IP</code> override (single / comma list / <code>0.0.0.0</code>) in the pairing panel.</li>
-    <li>Proxy fix: the multi-address rewrite left a nested loop so the WS-upgrade handler and SSE timeout config never reached the listening servers; repaired and smoke/E2E verified.</li>
   </ul>
   <!-- changelog:auto:end -->
 

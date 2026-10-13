@@ -582,14 +582,16 @@ window.__ModuleLoader__.load({
         justify-content: flex-end;
         margin-top: 10px;
       }
-      [data-dsh-desktop-settings] [data-dsh-connect-actions] button {
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button,
+      [data-dsh-desktop-settings] [data-dsh-connect-manager] {
         border: 1px solid var(--dsh-controls-border);
         border-radius: 999px;
         cursor: pointer;
         font-size: 11px;
         padding: 5px 9px;
       }
-      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[data-primary] {
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[data-primary],
+      [data-dsh-desktop-settings] [data-dsh-connect-manager][data-primary] {
         background: var(--dsh-controls-accent);
         border-color: var(--dsh-controls-accent);
         color: #fff;
@@ -598,8 +600,15 @@ window.__ModuleLoader__.load({
         background: var(--dsh-controls-panel);
         color: var(--dsh-controls-text);
       }
-      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[disabled] { cursor: wait; opacity: .6; }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[disabled],
+      [data-dsh-desktop-settings] [data-dsh-connect-manager][disabled] { cursor: wait; opacity: .6; }
+      [data-dsh-desktop-settings] [data-dsh-connect-manager] {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
       [data-dsh-desktop-settings] [data-dsh-connect-meta],
+      [data-dsh-desktop-settings] [data-dsh-connect-health],
       [data-dsh-desktop-settings] [data-dsh-connect-message] {
         color: var(--dsh-controls-muted);
         display: block;

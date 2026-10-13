@@ -1,16 +1,21 @@
 # 执行进度
 
-最后更新：2026-10-09。
+最后更新：2026-10-11。
 
 ## 当前基线
 
 - 父仓库分支：`codex/cc-connect-dsh-integration`
-- 父仓库当前提交：`ae0f9016f534322d638cd8bd304f5ceb9c0472b7`（QA-03 验收记录提交）
+- 父仓库发布基线：`da4e4744b1e80ac31121f393d9f1f60e53431df3`（`v0.2.1-alpha.2.shell.1`；后续文档/网站提交不移动已发布 tag）
 - 子模块远端：`git@github.com:citrusli2026/cc-connect.git`
 - 子模块目录：`third_party/cc-connect`
-- 子模块当前提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`
+- 子模块当前提交：`dc8132ef5f6a30056b2b69036458156edbbfb25d`
 - 子模块本地开发分支：`codex/dsh-agent-integration`
-- 产品功能实现：已完成；真实飞书应用回调、消息入站、DSH ACP 启动和飞书回包均已验证
+- 产品功能实现：已完成并发布；真实飞书应用回调、消息入站、DSH ACP 和回包均已验证，后续完整管理/降噪/垃圾桶修复见 [人工审查迭代记录](../2026-10-10-manual-review/progress.md)
+
+下表及逐项记录保留当时的提交与失败证据；历史 Go/网络和真实凭据阻塞已由后续验收解除。
+当前完整 Go test/race/build/vet 均通过，三平台 Release run `38114383738` 全绿。
+最终交付文档/skills 提交 `40da09431f18866334287441cf6cd7017549e805`，官网成功 bot
+通过 merge `54661258068599e5fdb233396c834b9282fe0c4b` 保留，完整门禁见后续迭代记录。
 
 ## 状态表
 
@@ -34,7 +39,7 @@
 | QA-02 DSH ACP 契约 | done | `5d980fcce09604a9b536b26195d7414f744f738b` | 临时 DSH_HOME + 当前捆绑 Node/DSH 真实 ACP 测试通过 initialize/new/mock prompt/close/list/resume/close |
 | QA-03 飞书人工验收 | done | `ae0f9016f534322d638cd8bd304f5ceb9c0472b7` | 真实 App ID/Secret 仅在隔离临时目录使用；Feishu websocket 入站、cc-connect 路由、真实 DSH ACP 和 Feishu 回包通过；凭证值未输出或写入仓库/真实用户目录 |
 | DOC-01 用户文档 | done | `34e4554` | 新增飞书后台、启动/停止、Safe Mode、数据位置、脱敏日志、禁用与凭证删除指南；更新文档索引和发布说明；文档契约、全量测试、覆盖率、typecheck、site:check 通过 |
-| REL-01 最终门禁 | done | `9b9459dfa4dc8affd760b2a2cb546a4abffc4f7b` | validation.md 命令已执行；Desktop 全量、E2E、unpacked sidecar SHA/版本和双仓库干净/gitlink 可达性通过；子模块全量保留既有 web/dist 与基线测试阻塞 |
+| REL-01 最终门禁 | done | `9b9459dfa4dc8affd760b2a2cb546a4abffc4f7b` | 原门禁记录保留；子模块全量历史阻塞已在 2026-10-11 解除，完整 Go/race/build/vet、三平台安装包和真实飞书通过，见后续迭代记录 |
 
 ## 下一任务
 

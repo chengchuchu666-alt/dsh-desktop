@@ -19,10 +19,10 @@
 | FS-02 | 完成 | 无损旧配置迁移、隔离凭证修订、应用 CRUD/去重与失败恢复 |
 | FS-03 | 完成 | 串行单进程、持久关闭、启动偏好与真实分层健康 |
 | FS-04 | 完成 | 统一受限管理窗口、扫码/应用操作、中英文真实界面与权限回归 |
-| QA-01 | 本地完成 | 当前源码 macOS 安装包、受控真实收发/降噪/关闭、指南与 setup skill；三平台门禁随发布 CI 再核对 |
-| shell 发布 | 未完成 | 新版本打包、三平台 CI、GitHub/GitCode 资产与官网 |
+| QA-01 | 完成 | 本地当前包/受控真实飞书、全部三平台 packaged E2E 与安装/升级门禁通过；指南与 setup skill 同步 |
+| shell 发布 | 完成 | shell.1 三平台 CI 全绿；GitHub 8 资产、GitCode 6 资产内容/DEB 全量回读和官网新版已核验 |
 
-下一任务：**shell-only 发布**（`0.2.1-alpha.2.shell.1`）。
+下一任务：无。本计划全部完成，验收限制保留在各任务及最终交付记录中。
 
 ## TR-01 — 真实垃圾桶复现与契约核对
 
@@ -377,3 +377,145 @@ packaged 中断退出 1，不计通过；清理已知测试进程后保留所有
 skill quick_validate、文档/站点检查和 `git diff --check` 均退出 0。shell.1 打包/真实飞书
 验证见上述 QA-01；尚未创建 tag 或发布，下一步合并远端站点 bot 提交、三平台 CI，
 再完成 GitCode 六资产和官网/HANDOFF，不把本地通过当作发布完成。
+
+### shell.1 首轮 CI 与跨平台夹具修复
+
+首轮未发布候选 tag 指向 `496df80e3f46e3dad4f4820a5d6ad2f8700eba61`，双远端对齐。
+Release run `38110150474`：审计/verify 通过，Electron 20 passed/3 failed/12 原有条件未运行，
+退出 1；构建/publish 未运行，无 Release 或资产。三项都在中文输入框初始化超时，未到业务
+操作；旧 settings 的异步导入不应决定垃圾桶夹具的语言。失败日志保留，不记作验收通过。
+
+修复提交 `21f83749012d236d98d78da7686f2ee3c1354243`：允许范围仅 5 份相关 E2E
+夹具/回归和 release skill；直接配置 active profile 的中文/主题/欢迎状态，增加渲染语言与
+输入框就绪断言。发现并一并修正 Windows 原生磁盘路径动态 import，统一 `pathToFileURL`；
+会话恢复原路径改为完整 `path.join` 等值断言，比原 POSIX 前缀断言更严格。未改产品逻辑，
+未跳过/删除/降低断言；专门的旧配置迁移测试仍运行。
+
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle|Host refuses|external kernel' --repeat-each=2`：6 passed，退出 0。
+- `pnpm run test:e2e:packaged`：完整 15 passed、0 skipped（含精确会话原路径、真正跨进程 lease、重启），退出 0。
+- `pnpm run verify`：397 + 1 ACP，退出 0；typecheck、三份 helper `node --check`、skill 校验与 diff check 均退出 0。
+- 原生 `C:\\fixture\\kernel.js` 动态 import 探针确实返回 `ERR_UNSUPPORTED_ESM_URL_SCHEME`，修复后由真实 persistence helpers / 三平台 CI 验证。
+
+下一步重新同步 bot 站点提交、仅重指向这个尚未发布的 shell.1 候选 tag，重跑三平台全流程；
+历史已发布 tag 与默认分支禁止强推。真实凭据未使用或修改，产物代码版本未变，测试期间未重写 dist。
+
+### shell.1 第二轮 CI — 默认工作区隔离
+
+候选 `599df38b9c619c89d63ecdc229d2a24064798961` 的 Release run `38111052258`
+审计/verify 通过，Electron 19 passed/4 failed/12 原有条件未运行，退出 1；构建/publish
+未运行，GitHub/GitCode 同名 Release 均不存在。直接 profile locale 修复不足以解释失败：
+中文 lang 断言已通过，输入框仍不是任务输入框，不把首轮语言假设当已证实根因。
+
+诊断提交 `c14ae61a63404c4eba7798fef041bb202da44593` 在隔离测试失败时捕获 ARIA。
+非发布 workflow_dispatch run `38111446259` 的现场为“暂无会话 / 选择工作区 / 发送禁用”；
+证据取得后主动取消，conclusion=cancelled，不计通过。核对绑定内核公开代码：默认工作区
+位于系统 Documents/deepseek-harness/default-workspace，不是启动 cwd；Linux headless
+没有 XDG Documents。macOS 先前夹具也没有限制这次系统 Documents 查找，不作真实目录清理。
+
+修复提交 `16976e24eeb999a00f66574440b9f109eff357bb`：只改相关夹具/断言/发布 skill。
+使用公开 `workspace-controller.documentsDirectory` 指向临时目录，seed cwd 与默认工作区
+一致；临时根目录 realpath 消除 macOS /var 别名。真实持久会话和重启后的空草稿均新增精确
+cwd 断言；诊断 logger 已移除。没有修改产品、内核或真实配置，没有降低断言。
+
+- 本地首轮 Documents 回归 4 passed/2 failed，退出 1：运行中改 helper 输出契约而已加载
+  spec 仍期待旧 shape；此轮不计通过。随后停止并发编辑，完整重跑。
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle|Host refuses|external kernel' --repeat-each=2`：6 passed，退出 0（`/tmp/dsh-connect-shell1-trash-documents-dev-final.log`）。
+- `pnpm run test:e2e:packaged`：15 passed、0 skipped，退出 0（`/tmp/dsh-connect-shell1-documents-packaged.log`）。
+- `pnpm run verify`：397 单测 + 1 ACP、类型/边界/覆盖率/站点/构建通过，退出 0（`/tmp/dsh-connect-shell1-documents-verify.log`）。
+- typecheck、helper 语法、release notes check、skill quick_validate、diff check 均退出 0。
+
+下一步：合并站点 bot 提交，确认两平台 Release 仍不存在后仅更新尚未发布的 shell.1 tag，
+重跑三平台发布；成功后六资产镜像、官网与 HANDOFF。历史发布 tag 不变。
+
+### 发布 runbook 防重复踩坑补充
+
+两份 skill 提交 `501fac2acde8a72f8acd69e7edc444f1afaece94`；HANDOFF 当前运维入口
+提交 `9e0805db0b77934a0168074fd6cedfc92e9e6c76`。范围仅发布说明与操作指引：
+新 GitCode Release 用 helper 上传→POST 创建，既有对象才走 mirror-v2 PUT；当前管道为
+登录浏览器 v2，不再将旧 v5/backfill 当可靠备用。实际遇到 find_tab 成功却 evaluate 仍在
+前一 GitHub 页，显式 navigate 后核对 origin/login 恢复，未输出凭据。所有重试限定尚未
+发布的精确 tag + force-with-lease，默认分支不强推，bot 提交通过 merge 保留任务 SHA。
+
+两份 skill quick_validate、`node --test test/cc-connect-docs.test.ts test/release-assets.test.ts test/release-shape-parity.test.ts`
+（7 passed）、`pnpm run site:check`、`git diff --check` 全部退出 0。没有产品/依赖改动。
+发布 tag 指向 `b31fac1e06e7e721df9d53e9b72716688f38345a`，子模块 `dc8132ef...`
+在 origin 可达。下一步等待 Release run `38112224676` 三平台门禁，再上传/创建六资产镜像。
+
+### shell.1 第三轮 CI — Windows 第二客户端响应式侧栏
+
+Release run `38112224676`（tag commit `b31fac1e06e7e721df9d53e9b72716688f38345a`）
+verify 通过：23 passed/12 原有专项条件未运行，保留既有 worker teardown warning；Linux
+与 macOS 全套构建、各 15 packaged E2E、升级保留 6 份用户文件、安装/来源证明均通过。
+Windows 安装器内容、跨版本升级、Safe Mode/故障恢复/完整性，以及 S1 损坏/S2 只读/S3
+锁定残留矩阵均通过；packaged E2E 14 passed/1 failed（重试同样失败），退出 1。
+publish 未运行，Windows 后续离线市场/静默安装/来源证明未运行，不能计作发布完成。
+
+失败只在第二客户端初始侧栏，尚未执行删除：ARIA 显示“打开侧边栏”，会话层级已经显示
+TRASH-REAL-ANSWER，却没有会话树。不是列表广播失败或默认工作区错误；响应式折叠后的
+真实界面必须先展开。浏览器直播日志没有及时更新，一度只显示 S1；最终完整 Actions log
+明确 S1/S2/S3 全通过，后续以任务状态和完成日志为准，不靠缓存 UI 判定通过。
+
+修复提交 `fb7ae33c7d69e95c9c064b1aeaf03b0e53172f74`，允许范围仅该回归与 release
+skill：第二客户端固定 800px 窄窗口，强制断言展开按钮可见、点击后会话树可见，再执行
+全部原始双客户端删除/还原/归档/取消归档/重启断言。没有产品改动、跳过测试、增加超时
+或放宽原断言；现在所有平台都验证原先仅 Windows 暴露的折叠路径。
+
+- `pnpm exec playwright test e2e/trash-ui.spec.ts -g 'real idle' --repeat-each=2`：2 passed，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-dev.log`）。
+- `pnpm run test:e2e:packaged`：15 passed、0 skipped，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-packaged.log`）。
+- `pnpm run verify`：397 + 1 ACP，覆盖率 89.99/82.88/86.41%，类型/边界/站点/构建全绿，退出 0（`/tmp/dsh-connect-shell1-peer-sidebar-verify.log`）。
+- typecheck、skill quick_validate 与 diff check 均退出 0；未重写 dist。
+
+GitHub/GitCode 同名 Release 均确认 404；GitCode 页内 fetch 较慢时改用本机请求、仅在内存
+借用已登录浏览器授权后恢复，未输出 token/cookie，最终页内请求也返回 404。下一步合并
+新 bot 提交，只重试尚未发布的候选 tag；通过后六资产镜像、官网与 HANDOFF。
+
+### shell.1 最终交付 — 三平台、镜像与官网
+
+发布提交 `da4e4744b1e80ac31121f393d9f1f60e53431df3`，tag
+`v0.2.1-alpha.2.shell.1` 在 GitHub/GitCode 一致；子模块
+`dc8132ef5f6a30056b2b69036458156edbbfb25d` 已先推 origin。内核未变。
+Release run `38114383738` 成功，完整日志
+`/tmp/dsh-connect-shell1-ci-fourth-full.log`；前三轮失败及修复证据保留。
+
+| 命令/门禁 | 结果 | 退出码 |
+|---|---|---:|
+| `gh run watch 38114383738 --exit-status` | verify + Linux/macOS/Windows + publish 全绿；三平台各 15 packaged E2E；升级各保留 6 文件、Windows S1/S2/S3 与静默安装、真 sandbox/闭包/来源证明通过 | 0 |
+| `gh release download v0.2.1-alpha.2.shell.1`、`node scripts/check-release-assets.mjs <临时 assets> v0.2.1-alpha.2.shell.1` | 8 个实际下载文件严格匹配；三安装包 SHA-256 与 Windows 更新元数据通过 | 0 / 0 |
+| `gh attestation verify <deb/dmg/exe> -R citrusli2026/dsh-desktop` | 三安装包来源证明分别复验通过 | 0 / 0 / 0 |
+| 浏览器 v2 helper upload / create / verify | 6 资产上传、POST release id 56569，commit 正确；6 匿名 GET 通过 | 0 |
+| 匿名内容检查、`node scripts/mirror-gitcode-v2.mjs v0.2.1-alpha.2.shell.1 --check-only` | 六份 206 的总尺寸/首字节与本地一致，非 HTML；6/6 可下 | 0 / 0 |
+| DEB 全量稳定链接回读、`cmp`、`shasum -a 256` | 229,986,800 字节与 GitHub 逐字节一致；SHA `f0b6cf5238974bbb6d717759b1cbaec9576029416902fead5db7fda1a6d4e9e2` | 0 / 0 / 0 |
+| `GH_CLI=1 node scripts/gen-site-data.mjs`、`node scripts/gen-site-changelog.mjs`、`pnpm run site:check` | 6 镜像为 true、双语变更页和站点契约通过；站点提交 `938fe40301cb56e593b9d6a5f75a91fea1aeabda` | 0 / 0 / 0 |
+| `gh run watch 38116456051 --exit-status` | 官网重跑成功，attempt 1；bot `e08fc5461459c2df1acf99c85fc6d639079eb5e7` | 0 |
+| 线上 release JSON / downloads API / changelog / 浏览器下载区 | shell.1，6/6 mirror true，API HTTP 200，三平台 GitCode/GitHub 双源按钮可见 | 0 |
+
+首轮自动 Refresh `38115781815` 在 attempt 3 已确认镜像，提交时与本地 JSON 更新
+发生 rebase 冲突，退出 1，不计通过；从最新 main 手动重跑，等待完成再推后续记录。
+两份 skill 已记录在途 bot 的串行顺序、完整匿名内容/全量回读规则、缓存 Actions UI
+不能替代完成日志。内容/日志规则提交 `4d3b90d6f95e970bc0023617d2f468471c04bdb9`，
+后续冲突规则随最终文档提交。没有改 release gate、弱化断言、强推 main 或移动已发布 tag。
+
+TR/MSG/FS/QA 和 shell 发布均完成。未覆盖/风险：本轮未重新人工手机扫码；既有 Linux
+worker teardown 45s warning 保留；macOS ad-hoc/未公证和 Windows 未商业签名；GitHub
+4 项既有 Dependabot 告警未作为无关依赖升级处理，现有双树审计通过且没有新增 ignore。
+真实飞书与模型凭据不存在外部阻塞；原配置/凭据未修改，未替换用户当前安装。
+下一任务：无；最终交付记录验证与提交 SHA 见末尾补记。
+
+最终文档门禁：`pnpm run verify` 397 单测 + 1 ACP、0 failed/skipped，覆盖率
+89.99/82.88/86.41%，退出 0（`/tmp/dsh-connect-shell1-published-final-verify.log`）；
+文档/资产/形状专项 7 passed，退出 0；两份 skill quick_validate、release-notes check、
+23 个本地文档链接目标与 `git diff --check` 全部退出 0。允许改动仅发布/HANDOFF、两份
+skill 和相关计划/架构状态，不改产品、测试或依赖；失败历史保留，未覆盖项不变。
+
+最终交付文档/skills 提交：`40da09431f18866334287441cf6cd7017549e805`。
+站点 bot 以 `54661258068599e5fdb233396c834b9282fe0c4b` merge 保留；合并后
+`pnpm run site:check`、文档/资产/形状 7 项专项均退出 0，父工作树干净，gitlink 仍为
+`dc8132ef5f6a30056b2b69036458156edbbfb25d`。本补记只记录既有完成提交，不新增实施
+任务；精确暂存并正常推送两个父分支/两个远端，已发布 tag 不变。下一任务：无。
+
+续办核对：交付记录提交 `a504eee3b88d30c6f77dd24135ee9df262cd3959` 首次推 origin
+main 返回非快进（退出 1），集成分支及 GitCode 正常。只读核对新 bot
+`6e8b4b3535b423088861cefc601af2535d32b4a2`，仅 7 行下载计数/生成时间更新，版本、
+资产、校验与镜像状态未变，故保留并通过
+`240d7b9df564917ab4a86333947d82c784683523` 正常 merge。合并后 site:check / diff
+check 均退出 0，没有产品/凭据改动或强推；后续正常重试双远端同步，发布 tag 保持不变。

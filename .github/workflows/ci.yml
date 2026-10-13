@@ -34,8 +34,9 @@ jobs:
         run: pnpm run security:audit
       - name: Package mobile-shell Web artifact
         run: npm --prefix dsh-mobile-shell run package:web
+      - name: Bootstrap bundled DSH runtime
+        run: pnpm run bootstrap
       - run: pnpm run verify
-      - run: pnpm run bootstrap
       - name: Smoke test (headless X server)
         # No `-- --no-sandbox` here: pnpm inserts a literal `--` before extra
         # args, so the flag would reach Electron as a positional argument, not

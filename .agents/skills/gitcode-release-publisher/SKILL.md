@@ -14,6 +14,9 @@ Publish assets through GitCode's attachment reservation and signed-storage flow 
 3. Confirm that the user authorized release creation and asset upload. Treat publishing as an external write.
 4. Verify the local tag, peeled tag commit, filenames, byte sizes, and checksums before upload.
 5. Check the GitCode releases page for an existing release with the same tag. Never create a duplicate or move an existing tag silently.
+6. Immediately check the current tab's origin/login without exposing values.
+   If `find_tab` reports GitCode but evaluate still uses a previous page,
+   navigate the current task tab to the GitCode releases URL and verify again.
 
 For protocol details and failure diagnosis, read [references/gitcode-release-api.md](references/gitcode-release-api.md).
 
@@ -59,6 +62,10 @@ If the browser's native chooser works reliably, it may be used for small files. 
 
 ### 3. Create the release
 
+The repository's `mirror-gitcode-v2.mjs` repairs links on an existing release;
+it does not create a missing release. A new tag returning 404 needs this POST
+creation step after all six attachments upload; never assume PUT will upsert.
+
 Write the intended release description to a task-specific file, then call:
 
 ```bash
@@ -90,6 +97,13 @@ bash .agents/skills/gitcode-release-publisher/scripts/gitcode-release.sh verify 
 
 Do not use HEAD: GitCode commonly returns HTTP 401 for HEAD while anonymous range GET correctly returns 200 or 206.
 
+HTTP status alone is not content verification. Reject HTML responses; for 206,
+check `Content-Range: bytes 0-0/<expected size>` and compare the returned byte
+with the verified local file. For 200, compare the complete size and SHA-256.
+Also fully download at least one installer through the stable anonymous URL
+and compare it with the GitHub file; keep this readback outside the strict
+eight-file artifact directory. Record the checked size/hash in HANDOFF.
+
 ### 5. Refresh downstream delivery
 
 If the repository generates website data from release availability:
@@ -99,6 +113,12 @@ If the repository generates website data from release availability:
 3. Verify the live release JSON and visible download buttons in the browser.
 4. Update handoff records with the GitHub release run, GitCode tag commit, refresh run, hashes, and final asset policy.
 5. Commit and push only the intended repository changes. Preserve unrelated untracked files.
+
+Do not push locally generated release data while an automatic refresh is still
+re-probing mirrors: its later rebase can conflict on the same JSON. Wait for
+that run. If it has failed, dispatch a fresh refresh from current main once
+mirrors are verified, keep main unchanged until it finishes, then merge its
+bot commit normally. Website follow-ups never justify moving a published tag.
 
 ## Safety rules
 

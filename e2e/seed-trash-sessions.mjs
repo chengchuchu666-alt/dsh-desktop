@@ -1,10 +1,11 @@
 /** Real, validated kernel persistence fixtures, created only in the supplied temporary home. */
 import { createRequire } from 'node:module'
 import { resolve, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 const requireKernel = createRequire(resolve('resources/harness/node_modules/@deepseek-ai/dsh/package.json'))
-const { Context } = await import(requireKernel.resolve('@deepseek-ai/cordis'))
-const { default: Persistence } = await import(requireKernel.resolve('@deepseek-ai/dsh-session-persistence-jsonl'))
-const { SESSION_FORMAT_VERSION } = await import(requireKernel.resolve('@deepseek-ai/dsh-session'))
+const { Context } = await import(pathToFileURL(requireKernel.resolve('@deepseek-ai/cordis')).href)
+const { default: Persistence } = await import(pathToFileURL(requireKernel.resolve('@deepseek-ai/dsh-session-persistence-jsonl')).href)
+const { SESSION_FORMAT_VERSION } = await import(pathToFileURL(requireKernel.resolve('@deepseek-ai/dsh-session')).href)
 const [home, workspace] = process.argv.slice(2)
 if (!home || !workspace) throw new Error('temporary home and workspace required')
 const ctx = new Context()
