@@ -26,6 +26,10 @@ site/
 - 每日两次兜底同步(cron `17 2,14 * * *`,北京 10:17 / 22:17);
 - `workflow_dispatch` 支持手动触发;失败自动开 issue 告警。
 
+生成文件由 `scripts/push-site-refresh.mjs` 在最新 main 的一次性 worktree 中重新生成并提交。
+若 main 在生成期间前进，重新取最新主干再生成（最多三次），不 rebase 下载 JSON；
+单独更新中英文 changelog 也会提交。调用者 checkout 和非生成文件不被覆盖。
+
 提交推送 main 后,Vercel Git 集成自动完成部署。
 页面运行时还会读 `data/release.json`;若读取失败则直连 GitHub API 兜底。
 中文模式仅在逐资产 range GET 验证 GitCode 可用时使用国内镜像,否则回落

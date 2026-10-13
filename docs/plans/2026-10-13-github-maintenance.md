@@ -29,4 +29,10 @@
 - #104 根因：run 38035445807 `ERR_PNPM_UNUSED_PATCH`，旧 account patch 未随内核改 pin。
   当前 account patch 已 pin 0.2.1-alpha.2，shell.2 Release 38249871041 成功。
 - 两路初次审查因额度限制中断；没有借此执行合并或关闭，已重新审查。
-- 下一任务：官网同步提交的并发回归与修复。
+- 官网同步实现：`push-site-refresh.mjs` 用一次性 worktree 从最新 main 重新生成，
+  push 拒绝最多重试三次，不 rebase 生成文件；三份生成文件都进入变更判断。
+- 原子任务门禁：`node --test test/site-refresh-push.test.ts`（3 通过、exit 0）、
+  `pnpm run typecheck`（exit 0）、`git diff --check`（exit 0）。首轮类型声明缺失已补齐，
+  未跳过测试；临时 bare remote 验证竞争提交被保留、日志单独更新、重试耗尽失败及清理。
+- 未覆盖：线上 Actions worktree 继承认证仍需运行验证。实现提交 SHA 由下一条进度回填。
+- 下一任务：依赖 PR 处理与全量门禁。
