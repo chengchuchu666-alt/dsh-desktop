@@ -48,10 +48,19 @@ cd site && python3 -m http.server 8080
 # 或 npx serve site
 ```
 
+预览端口 4173 时可运行 `node scripts/check-site-ui.mjs`，检查中英、390/1280 宽度、
+明暗主题、飞书介绍/FAQ/已发布更新日志。也可通过 `SITE_CHECK_URL` 检查部署后的站点；
+使用隔离 Chrome context，不读取登录会话，截图保存在打印出的临时目录。
+
 `assets/` 的 css/js 带 `?v=N` 版本号,使用一年 immutable;图片类一小时
 可重新验证;`data/` 使用五分钟缓存。改动 css/js/data-model 后必须同步
 提升对应文件的 `?v=`(当前 style v=44、data-model v=43、app v=43、seo v=13),
-否则 immutable 会让用户锁在旧内容。
+否则 immutable 会让用户锁在旧内容。当前首页、下载页 app/data-model 为 `v=45`。
+
+首页 `#feishu` 独立介绍机器人创建、工作区、连接生命周期、降噪和安全边界；
+中英 FAQ 分开解释机器人 Secret、模型 Key 与 CLI OAuth，以及 Keychain 和 Windows profile 权限。
+「当前版本重点」必须与已发布说明对应，不拿历史垃圾桶功能冒充本轮新增内容。
+更新日志只由 `docs/release-notes/*.md` 经 `gen-site-changelog.mjs` 生成，不手改自动区块。
 
 ## 域名
 

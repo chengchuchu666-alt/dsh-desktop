@@ -209,6 +209,21 @@
     </div>
   </section>
 
+  <section class="section" id="feishu" aria-labelledby="feishu-title">
+    <div class="wrap">
+      <p class="sec-marker">FEISHU / CC-CONNECT</p>
+      <h2 class="sec-title sec-title--wide" id="feishu-title">在飞书里，把任务交给这台电脑</h2>
+      <p class="sec-lead">内置 cc-connect 将机器人消息交给本机 Harness，在选定工作区执行任务。电脑和 Desktop 需要保持运行；飞书使用长连接，不需要公网 IP，也不必开启局域网共享。</p>
+      <div class="workflow-grid">
+        <article><span>01</span><h3>扫码创建，保存应用</h3><p>打开「桌面工具 → 管理飞书连接」或「设置 → 桌面设置 → 飞书消息连接」。扫码授权后，等 Desktop 显示凭据已收到，再保存具名应用；已有应用也能手动添加。</p></article>
+        <article><span>02</span><h3>选工作区，显式开启</h3><p>可保存多份配置，但一次只连接一个应用。先在 Harness 模型设置中配置模型凭据，再开启连接；“服务已启动”“飞书在线”和“任务完成”是不同状态。</p></article>
+        <article><span>03</span><h3>少刷消息，随时关闭</h3><p>默认精简消息、3 秒流式预览；可选择完整/精简/静默、经典/富卡片和进度展示。在同一窗口关闭连接、设置启动时自动连接或移除本地配置。</p></article>
+      </div>
+      <p class="note">关闭窗口或收进托盘不会断连；进入安全模式会暂停连接。Secret 在本机安全存储，移除本地配置不会删除远端飞书应用。飞书权限审批、可用范围和版本发布仍由组织管理。</p>
+      <div class="cta-row"><a class="btn btn--primary btn--sm" href="https://github.com/citrusli2026/dsh-desktop/blob/main/docs/cc-connect.md" target="_blank" rel="noopener">飞书连接完整指南 →</a><a class="btn btn--ghost btn--sm" href="/docs/faq#feishu">连接与凭据常见问题 →</a></div>
+    </div>
+  </section>
+
   <!-- ══ 03 插件市场 ══ -->
   <section class="section" id="market">
     <div class="wrap">
@@ -268,10 +283,10 @@
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">这个版本：删掉的东西，都能找回</h3>
-          <p data-i18n="latest.lead">新增桌面垃圾桶：会话、预设和 Agent 删除的文件，都先进垃圾桶，随时还原。</p>
+          <h3 id="latest-title" data-i18n="latest.title">飞书设置更清晰，扫码状态更准确</h3>
+          <p data-i18n="latest.lead">shell.2 打磨飞书管理入口与健康说明，修复局域网二维码倒计时；内置 Harness 版本不变。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>首次成功：</b>主界面四步引导在首条任务完成后自动结束。</li><li><b>垃圾桶兜底：</b>误删的会话在「设置 → 垃圾桶」一键还原。</li><li><b>隐私可控：</b>联网检查需主动勾选，社区插件仍完全可选。</li></ul>
+        <ul data-i18n="latest.items"><li><b>飞书设置：</b>管理入口与状态说明分开，中英窄窗口更易读。</li><li><b>扫码配对：</b>剩余时间实时更新，一次性配对规则不变。</li><li><b>验证边界：</b>真实机器人往返与模拟手机扫码分别记账。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>
@@ -421,7 +436,7 @@
   </div>
 </footer>
 
-<script type="module" src="/assets/app.js?v=44"></script>
+<script type="module" src="/assets/app.js?v=45"></script>
 
 <!-- 下载后提示(校验方式 + 未签名处理 + GitHub Star 邀请),由 app.js 填充 -->
 <div class="download-toast" id="download-toast" role="status" aria-live="polite" hidden></div>

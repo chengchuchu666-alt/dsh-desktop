@@ -36,3 +36,21 @@
   未跳过测试；临时 bare remote 验证竞争提交被保留、日志单独更新、重试耗尽失败及清理。
 - 未覆盖：线上 Actions worktree 继承认证仍需运行验证。实现提交 SHA 由下一条进度回填。
 - 下一任务：依赖 PR 处理与全量门禁。
+
+### 2026-10-13 官网与告警
+
+- 同步修复提交 `c7a16e3641f6c5cdee742da99afb8eb1ae9e254d`；全量 `pnpm run verify`
+  exit 0（405 单测 + 1 ACP），双树 `pnpm security:audit` exit 0，未增忽略项。
+- 新同步流程线上 run `38327109918` success，证实 Actions worktree 继承认证可用；#106 已关闭。
+- #101/#105 用失败日志对应修复及成功 Release `38114383738` / `38249871041` 关闭；
+  #104 用 account patch pin 修复 `8c84333`、后续成功 dsh-watch 与三平台 Release 关闭。
+- Standards 审查：1 项（#103 Node 26 类型超前于 Node 24 运行时）；Spec 审查：
+  额外 transitive churn 与 #91 plist 降级需处理；#103 已按文档版本边界关闭，非合并。
+- #100 保留 needs-info：附件确认 profile 写 EPERM，不足以确认最初白屏根因。
+  已向 issue 回填具体证据、最小补充材料及安全排查路径，未自动更改 ACL 或删除数据。
+- 官网增加中英独立飞书介绍及 FAQ：机器人 Secret / 模型 Key / CLI OAuth 分开说明，
+  连接意图、降噪、组织权限、Keychain 和 Windows EPERM 边界均明确；当前重点对应已发布 shell.2。
+- `node scripts/gen-site-changelog.mjs` exit 0（8 个版本，中英）；`pnpm site:check` exit 0；
+  `node scripts/check-site-ui.mjs` exit 0（8 场景：中英 × 390/1280 × 明暗），锚点标题不被固定顶栏覆盖，
+  FAQ 可展开、无横向溢出或 pageerror。截图复核用 viewport，不把长元素截图里的固定栏重复当成产品缺陷。
+- 未覆盖：官网部署后复验及依赖更新后的发布门禁；下一任务为 #91 lock 修正与运行时安全维护。

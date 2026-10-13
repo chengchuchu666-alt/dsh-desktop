@@ -92,6 +92,16 @@ for (const { file, html: pageHtml } of pageDocs) {
     requireValue(/id="download-toast"/.test(pageHtml) && /assets\/app\.js\?v=\d+/.test(pageHtml), `${relative} shared download logic is missing`)
   }
 
+  if (relative === 'index.html' || relative === 'en/index.html') {
+    requireValue(/id="feishu"/.test(pageHtml), `${relative} Feishu introduction is missing`)
+    requireValue(pageHtml.includes('/blob/main/docs/cc-connect.md'), `${relative} Feishu guide link is missing`)
+    requireValue(pageHtml.includes('docs/faq#feishu'), `${relative} credential FAQ link is missing`)
+  }
+  if (relative === 'docs/faq/index.html' || relative === 'en/docs/faq/index.html') {
+    requireValue(/id="feishu"/.test(pageHtml) && /id="profile-permission"/.test(pageHtml), `${relative} connection or recovery guidance is missing`)
+    requireValue(pageHtml.includes('/issues/100'), `${relative} white-screen evidence path is missing`)
+  }
+
   const localReferences = [...pageHtml.matchAll(/(?:href|src)="(\/(?:assets|data)\/[^"?#]+)[^"]*"/g)].map(match => match[1])
   for (const reference of localReferences) await access(path.join(SITE, reference.slice(1)))
 }

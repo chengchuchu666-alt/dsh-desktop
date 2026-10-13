@@ -74,7 +74,19 @@
 
   <div class="seo-proof-grid" aria-label="Product baseline"><div><b>LOCAL</b><span>Loopback-only runtime</span></div><div><b>ISOLATED</b><span>Separate data by default</span></div><div><b>RECOVERABLE</b><span>Safe Mode and local diagnostics</span></div><div><b>VERIFIABLE</b><span>Public CI and real-app tests</span></div></div>
 
-  <p class="seo-callout"><strong>Feishu connections:</strong> open Extensions / Desktop tools → Manage Feishu connections, scan to save an application, then explicitly open cc-connect. Edit message preferences, close the connection or remove local settings in the same manager.</p>
+  <section id="feishu" aria-labelledby="feishu-title">
+    <h2 id="feishu-title">Send tasks to this computer from Feishu</h2>
+    <p>Bundled cc-connect passes bot messages to local Harness in your chosen workspace. Keep this computer and Desktop running. The Feishu long connection needs neither a public IP nor LAN sharing.</p>
+    <div class="seo-download-grid">
+      <article class="seo-card"><h3>1. Scan and save an application</h3><p>Open Desktop tools → Manage Feishu connections, or Settings → Desktop settings → Feishu message connection. Scan, wait until Desktop receives the credentials, then save a named application. Existing applications can be added manually.</p></article>
+      <article class="seo-card"><h3>2. Choose a workspace and open the connection</h3><p>Save multiple applications, but connect one at a time. Configure model credentials in Harness first. Service started, Feishu online and task completed are distinct states.</p></article>
+      <article class="seo-card"><h3>3. Reduce noise or close the connection</h3><p>Defaults are compact messages and a 3-second preview. Choose full/compact/quiet detail, classic/rich cards and progress styles. Close the connection, control auto-connect at startup or remove local settings in the same manager.</p></article>
+    </div>
+    <p class="seo-callout">Closing the window or hiding it in the tray does not disconnect; Safe Mode pauses the connection. Secrets stay in local secure storage. Removing local settings does not delete the remote Feishu application. Your organization still controls permissions, availability and application publishing.</p>
+    <div class="seo-button-row"><a class="btn btn--primary btn--sm" href="https://github.com/citrusli2026/dsh-desktop/blob/main/docs/cc-connect.md" target="_blank" rel="noopener">Connection guide →</a><a class="btn btn--ghost btn--sm" href="/en/docs/faq#feishu">Connection and credential FAQ →</a></div>
+  </section>
+
+  <section aria-labelledby="release-focus-title"><h2 id="release-focus-title">Current release: clearer settings and pairing status</h2><p>shell.2 refines the Feishu management entry and health text, and fixes the LAN QR countdown. The bundled Harness version is unchanged. Real bot round trips and simulated mobile scanning are recorded separately.</p><a href="/en/changelog">Read the full changelog →</a></section>
 
   <div id="scope" class="seo-callout"><p><strong>Product boundary:</strong> the shell owns the desktop window, tray, runtime, supervision, recovery, updates, and local entry points. What you see and use is the official Harness WebUI — agents, sessions, tools, models, and plugin behavior all come from Harness itself.</p></div>
 
