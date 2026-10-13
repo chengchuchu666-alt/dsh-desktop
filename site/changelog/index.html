@@ -42,6 +42,15 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.3 <small>（内核 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li><strong>运行时与安全维护</strong>：Electron 44.7.0、YAML 2.9.1；捆绑闭包更新 proxy-addr 2.0.8、 compression 1.8.2 与 MCP SDK 1.31.0。显式保留原有可选 SDK 功能，不用移除包来消除告警， 不升级 Harness 内核或无关 Web 栈。</li>
+    <li><strong>打包依赖审查</strong>：electron-builder 26.17.0，保留既有 macOS 工具的 plist 3.1.1 / xmldom 0.9.12，避免依赖 PR 的额外降级；Node 类型继续与 Node 24 运行时一致，不采用 Node 26 类型。</li>
+    <li><strong>官网与飞书指南</strong>：中英首页新增独立飞书连接流程，说明工作区、精简消息、卡片、连接意图、 安全模式与组织权限。FAQ 区分机器人 Secret、模型 Key 和 CLI OAuth，补充 Keychain 与 Windows profile 写入权限排查；不把最初白屏问题冒称为已修复。</li>
+    <li><strong>官网同步可靠性</strong>：生成文件 push 冲突时基于最新主干重新生成并限次重试；只变更新日志时 也会提交。官网日志以已发布 tag 为上界，不提前展示未来版本草稿。</li>
+    <li><strong>测试收尾可靠性</strong>：cc-connect 文件附件 CUJ 等到最终回复且任务锁释放后才结束， 修复后台持久化与临时目录清理的竞争；不改变 Agent 或飞书生产行为。</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.2 <small>（内核 0.2.1-alpha.2）</small></h2>
   <ul>
     <li><strong>飞书设置布局</strong>：管理应用/扫码创建入口复用桌面设置按钮样式，健康说明独立成块； 窄卡片与中英文界面不再将入口和状态文字混排。不改变 Secret 存储、连接意图或 Safe Mode。</li>
@@ -97,15 +106,6 @@
     <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
     <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
     <li><strong>Windows 发布门禁</strong>：NSIS 残留矩阵在场景之间清理 dsh-desktop 进程族，避免后续静默安装被交互式关闭提示阻塞。</li>
-    <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.1 <small>（内核 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：从 0.2.0-rc.2 升级到 0.2.1-alpha.1，同步桌面壳的插件兼容版本与随包依赖。</li>
-    <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
-    <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
-    <li><strong>Windows 发布门禁</strong>：NSIS 残留矩阵在场景之间清理由静默安装器启动的桌面进程，避免后续静默安装被交互式关闭提示阻塞。</li>
     <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
   </ul>
   <!-- changelog:auto:end -->

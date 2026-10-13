@@ -42,6 +42,16 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.3 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li>Updates Electron to 44.7.0 and YAML to 2.9.1; applies reviewed proxy-addr, compression and MCP SDK repairs while keeping Harness 0.2.1-alpha.2 and preserving the optional SDK functionality.</li>
+    <li>Updates electron-builder to 26.17.0 without downgrading the reviewed plist/xmldom resolutions. Node declarations remain on 24, aligned with runtime rather than accepting a Node 26 major bump.</li>
+    <li>Adds bilingual Feishu setup, noise/card settings, connection lifecycle and credential boundaries to the website, with Keychain and Windows profile-permission guidance. Issue #100 is not claimed fixed.</li>
+    <li>Regenerates site commits from latest main on push races, handles changelog-only changes, and keeps future drafts out of the published changelog. Isolated regressions and eight website UI scenarios pass.</li>
+    <li>Waits for final reply and turn-lock release in the file-attachment CUJ before temporary-directory cleanup; 200 race repetitions pass without changing the production Agent or Feishu behavior.</li>
+    <li>Existing sprintf-js and ad-hoc-signing limitations remain documented. SDK updates do not silently migrate or revoke old OAuth credentials; follow issuer/re-authentication guidance where applicable.</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.2 <small>（kernel 0.2.1-alpha.2）</small></h2>
   <ul>
     <li>Styles the Feishu management entry consistently and separates connection health text from the button, preserving Secret storage, connection intent and Safe Mode behavior.</li>
@@ -102,15 +112,6 @@
     <li>Persist the chosen LAN address and validate pairing URLs on multi-interface hosts.</li>
     <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
     <li>Clean up the dsh-desktop process family between Windows NSIS residue scenarios so the next installer cannot block on an interactive close prompt.</li>
-    <li>No new permissions or user-data changes. The release includes the downstream <code>http-cache-semantics</code> security patch and passed both dependency audits.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.1 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Upgrade the bundled kernel from 0.2.0-rc.2 to 0.2.1-alpha.1 and sync the packaged dependency closure.</li>
-    <li>Persist the chosen LAN address and validate pairing URLs on multi-interface hosts.</li>
-    <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
-    <li>Clean up a silently launched desktop process between Windows NSIS residue scenarios so the next installer cannot block on an interactive close prompt.</li>
     <li>No new permissions or user-data changes. The release includes the downstream <code>http-cache-semantics</code> security patch and passed both dependency audits.</li>
   </ul>
   <!-- changelog:auto:end -->
