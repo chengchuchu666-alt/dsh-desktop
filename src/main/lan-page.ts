@@ -34,7 +34,7 @@ export function pairingPageMarkup(pairing: LanPairing, qrSvgs: readonly PairingQ
     const expiresAt = ${pairing.expiresAt};
     const countdown = document.getElementById('countdown');
     const close = document.getElementById('close');
-    const expiry = ${JSON.stringify(expiry)};
+    const expiry = ${JSON.stringify(shellText(locale, 'lan.expiresSeconds', { seconds: '{seconds}' }))};
     const expired = ${JSON.stringify(expired)};
     function updateCountdown() {
       const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));

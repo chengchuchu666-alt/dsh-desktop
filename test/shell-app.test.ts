@@ -42,7 +42,7 @@ interface Harness {
   confirmResult: boolean
 }
 
-function makeHarness(): Harness {
+function makeHarness(hooks: Pick<ShellAppServices, 'beforeHarnessRestart' | 'afterHarnessRestart'> = {}): Harness {
   FakeSupervisor.instances = []
   FakeSupervisor.nextStartResult = {}
   const harness: Harness = {
@@ -59,6 +59,7 @@ function makeHarness(): Harness {
     onRestartBusyChanged: () => { harness.busyChanges += 1 },
     restartLanProxy: async () => { harness.lanRestarts += 1 },
     confirmRestart: async () => { harness.confirmations += 1; return harness.confirmResult },
+    ...hooks,
   }
   harness.app = new ShellApp(services)
   return harness
@@ -112,6 +113,30 @@ test('runHarnessRestart reports crashed state and false on start failure', async
   FakeSupervisor.nextStartResult = { error: new Error('boom') }
   assert.equal(await harness.app.runHarnessRestart(), false)
   assert.deepEqual(harness.applied.at(-1), { phase: 'crashed', attempts: 0, logTail: 'boom' })
+})
+
+test('dependent Sidecar stop completes before kernel replacement; failed stop blocks replacement and resume', async () => {
+  const order: string[] = []
+  let refuse = false
+  const harness = makeHarness({ beforeHarnessRestart: async () => {
+    order.push('pause')
+    assert.equal(FakeSupervisor.instances.length, 1)
+    assert.equal(FakeSupervisor.instances[0]!.stopCalls, 0)
+    if (refuse) throw new Error('dependent-stop-failed')
+  }, afterHarnessRestart: async () => {
+    order.push('resume')
+    assert.equal(harness.app.state?.phase, 'ready')
+    assert.equal(FakeSupervisor.instances[0]!.stopCalls, 1)
+  } })
+  await harness.app.startHarness()
+  refuse = true
+  await assert.rejects(harness.app.runHarnessRestart(), /dependent-stop-failed/)
+  assert.deepEqual(order, ['pause'])
+  assert.equal(FakeSupervisor.instances.length, 1)
+  assert.equal(harness.app.restartInFlight, false)
+  refuse = false
+  assert.equal(await harness.app.runHarnessRestart(), true)
+  assert.deepEqual(order, ['pause', 'pause', 'resume'])
 })
 
 test('requestRestart from a crashed state restarts without a dialog', async () => {

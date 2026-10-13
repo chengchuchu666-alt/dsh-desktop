@@ -1,6 +1,6 @@
 {
   "name": "dsh-desktop",
-  "version": "0.2.1-alpha.1.shell.4",
+  "version": "0.2.1-alpha.2.shell.2",
   "description": "Unofficial DeepSeek Harness Electron desktop shell: download and use; identical to `dsh web`",
   "author": "dsh-desktop contributors <citrusli@126.com>",
   "license": "MIT",
@@ -25,7 +25,7 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"test/**/*.test.ts\"",
-    "test:coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=75 --test-coverage-functions=70 \"test/**/*.test.ts\"",
+    "test:coverage": "node scripts/run-test-coverage.mjs",
     "test:e2e": "pnpm run build && playwright test",
     "test:e2e:android": "pnpm run build && playwright test -g @android-simulator",
     "test:e2e:packaged": "node scripts/e2e-packaged.mjs",
@@ -50,8 +50,10 @@
     "rebuild-harness-native": "node scripts/rebuild-harness-native.mjs",
     "bootstrap": "pnpm run deploy-harness && pnpm run fetch-node && pnpm run rebuild-harness-native",
     "postinstall": "node scripts/install-electron.mjs",
-    "dist": "pnpm run build && electron-builder",
-    "dist:dir": "pnpm run build && electron-builder --dir"
+    "cc-connect:build": "node scripts/build-cc-connect.mjs",
+    "feishu:setup": "node scripts/setup-feishu-cli.mjs",
+    "dist": "pnpm run build && pnpm run cc-connect:build && electron-builder",
+    "dist:dir": "pnpm run build && pnpm run cc-connect:build && electron-builder --dir"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

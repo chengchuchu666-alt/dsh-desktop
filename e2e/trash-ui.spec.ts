@@ -4,8 +4,11 @@ import { existsSync } from 'node:fs'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { execFileSync, spawn } from 'node:child_process'
+import { once } from 'node:events'
 import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
+import { launchTrashHarness } from './trash-harness.ts'
 
 /**
  * Trash UI journey on the packaged build (the trash settings section renders
@@ -38,17 +41,17 @@ const trashTest = test.extend<{ electronApp: ElectronApplication; window: Page; 
       { id: freshId, kind: 'preset', name: 'old-workspace.dshpreset', originPath: freshOrigin, deletedAt: now - 2 * day, source: 'seed' },
       { id: expiredId, kind: 'file', name: 'stale.log', originPath: join(root, 'gone', 'stale.log'), deletedAt: now - 40 * day },
     ], null, 2))
-    // Two sessions: one archived, one live.
-    await mkdir(join(dshHome, 'sessions', 'proj-a', 'session-livesession1'), { recursive: true })
-    await writeFile(join(dshHome, 'sessions', 'proj-a', 'session-livesession1', 'data'), 'x')
-    await mkdir(join(dshHome, 'sessions', 'proj-a', 'session-archivedsess'), { recursive: true })
-    await writeFile(join(dshHome, 'sessions', 'proj-a', 'session-archivedsess', 'data'), 'x')
+    // Valid kernel sessions, not empty directories that bypass writer checks.
+    const workspace = join(root, 'workspace')
+    await mkdir(workspace)
+    execFileSync(join(process.cwd(), 'resources/harness/node/bin', process.platform === 'win32' ? 'node.exe' : 'node'),
+      ['e2e/seed-trash-sessions.mjs', dshHome, workspace], { timeout: 30_000 })
     await mkdir(join(dshHome, 'storages'), { recursive: true })
     // Kernel-shaped workspace registry: the workspace plugin validates the
     // unit header and refuses bare objects (missing or foreign unit header).
     await writeFile(join(dshHome, 'storages', 'workspace.json'), JSON.stringify({
       unit: { name: 'workspace', version: 2 },
-      global: { initialized: true, workspaceIds: [], archivedSessionIds: ['archivedsess'] },
+      global: { initialized: true, workspaceIds: [], archivedSessionIds: ['session-archivedsess'] },
       tables: { workspaces: {} },
     }))
     await writeFile(join(dshHome, 'settings.yaml'), 'locale:\n  preference: zh\nui-theme:\n  preference: dark\n' + WELCOME_ACKNOWLEDGED_YAML)
@@ -86,8 +89,6 @@ const trashTest = test.extend<{ electronApp: ElectronApplication; window: Page; 
     await use(await electronApp.evaluate(() => process.env.DSH_HOME ?? ''))
   },
 })
-
-trashTest.skip(process.env.DSH_E2E_PACKAGED !== '1' && process.env.DSH_E2E_TRASH !== '1', 'runs in the packaged suite (DSH_E2E_PACKAGED=1) or via DSH_E2E_TRASH=1')
 
 async function openTrashSection(window: Page): Promise<ReturnType<Page['locator']>> {
   await dismissOnboardingModals(window)
@@ -137,6 +138,8 @@ async function openTrashSection(window: Page): Promise<ReturnType<Page['locator'
   return trash
 }
 
+trashTest.describe('packaged trash resources', () => {
+trashTest.skip(process.env.DSH_E2E_PACKAGED !== '1' && process.env.DSH_E2E_TRASH !== '1', 'runs in the packaged suite (DSH_E2E_PACKAGED=1) or via DSH_E2E_TRASH=1')
 trashTest('trash UI restores and purges through the design system @smoke', async ({ window, dshHome }) => {
   const trash = await openTrashSection(window)
 
@@ -169,11 +172,11 @@ trashTest('trash UI restores and purges through the design system @smoke', async
   await trash.getByRole('tab', { name: /^会话 \(\d+\)$/ }).click()
   await expect(trash.getByText(/此处列出本机全部会话/)).toBeVisible()
   await expect(trash.getByText(/已归档 \(\d+\)/)).toBeVisible()
-  const archivedRow = trash.locator('[data-dsh-desktop-setting-label]').filter({ hasText: 'archivedsess' })
-  const liveRow = trash.locator('[data-dsh-desktop-setting-label]').filter({ hasText: 'livesession1' })
+  const archivedRow = trash.locator('[data-dsh-session-id="session-archivedsess"]')
+  const liveRow = trash.locator('[data-dsh-session-id="session-livesession1"]')
   await expect(archivedRow).toBeVisible()
   await expect(liveRow).toBeVisible()
-  await trash.getByRole('button', { name: '删除（入桶）', exact: true }).last().click()
+  await liveRow.getByRole('button', { name: '删除（入桶）', exact: true }).click()
   await expect(liveRow).toHaveCount(0, { timeout: 15_000 })
   const indexAfterSession = await readFile(join(dshHome, 'trash', 'index.json'), 'utf8')
   expect(indexAfterSession).toContain('session-livesession1')
@@ -190,4 +193,187 @@ trashTest('trash UI restores and purges through the design system @smoke', async
   await expect(trash.getByText('垃圾桶是空的')).toBeVisible()
   const items = await readdir(join(dshHome, 'trash', 'items'))
   expect(items.filter(name => name.startsWith('seed-'))).toEqual([])
+})
+})
+
+const realTrashTest = test.extend<{ harness: Awaited<ReturnType<typeof launchTrashHarness>> }>({
+  harness: async ({}, use, testInfo) => {
+    testInfo.setTimeout(150_000)
+    const harness = await launchTrashHarness(process.env.DSH_E2E_PACKAGED === '1')
+    try { await use(harness) }
+    finally {
+      if (testInfo.status !== testInfo.expectedStatus) await harness.page.screenshot({ path: testInfo.outputPath('real-trash.png') })
+      await harness.close()
+    }
+  },
+})
+
+async function createRealSession(harness: Awaited<ReturnType<typeof launchTrashHarness>>) {
+  const { page } = harness
+  await page.getByRole('textbox', { name: /描述你想要构建/ }).fill('TRASH-REAL-SESSION')
+  await page.getByRole('button', { name: '发送消息', exact: true }).click()
+  await expect(page.getByRole('paragraph').filter({ hasText: 'TRASH-REAL-ANSWER' })).toBeVisible({ timeout: 30_000 })
+  await expect.poll(() => harness.requests).toBe(2) // answer + completed title generation
+  const sessions = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrashSessions(): Promise<Array<{ sessionId: string; projectKey: string }> | null> } }).dshDesktop.listTrashSessions())
+  expect(sessions).toHaveLength(1)
+  expect(sessions![0]!.sessionId).toMatch(/^session-/)
+  const node = join(process.cwd(), 'resources/harness/node/bin', process.platform === 'win32' ? 'node.exe' : 'node')
+  const durable = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, sessions![0]!.sessionId], { encoding: 'utf8', timeout: 30_000 }))
+  expect(durable.cwd).toBe(harness.workspace)
+  return sessions![0]!
+}
+
+realTrashTest('real idle session delete, restore and unarchive refresh sidebar without restart @smoke', async ({ harness }, testInfo) => {
+  const { page } = harness
+  const session = await createRealSession(harness)
+  const row = page.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })
+  await expect(row).toHaveCount(1)
+  await row.hover()
+  await row.getByRole('button', { name: '置顶会话', exact: true }).click()
+  await expect(row.getByRole('button', { name: '取消置顶', exact: true })).toHaveCount(1)
+  const peerOpening = harness.app.waitForEvent('window')
+  await harness.app.evaluate(({ BrowserWindow }, url) => {
+    // Exercise responsive sidebar collapse on every platform, not only on
+    // Windows runners whose work area can constrain a nominally wide window.
+    const peer = new BrowserWindow({ width: 800, height: 900, show: true, webPreferences: { backgroundThrottling: false } })
+    void peer.loadURL(url)
+  }, page.url())
+  const peer = await peerOpening
+  await peer.waitForLoadState('domcontentloaded')
+  const expandPeerSidebar = peer.getByRole('button', { name: '打开侧边栏', exact: true })
+  await expect(expandPeerSidebar).toBeVisible({ timeout: 30_000 })
+  await expandPeerSidebar.click()
+  await expect(peer.getByRole('tree', { name: '会话', exact: true })).toBeVisible()
+  const peerRow = peer.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })
+  try { await expect(peerRow).toHaveCount(1, { timeout: 30_000 }) }
+  catch (error) {
+    const snapshot = await peer.locator('body').ariaSnapshot()
+    await testInfo.attach('peer-ui', { body: snapshot, contentType: 'text/plain' })
+    throw error
+  }
+  let trash = await openTrashSection(page)
+  await trash.getByRole('tab', { name: /^会话 / }).click()
+  const diskRow = trash.locator(`[data-dsh-session-id="${session.sessionId}"]`)
+  await diskRow.getByRole('button', { name: '删除（入桶）', exact: true }).click()
+  await expect(diskRow).toHaveCount(0, { timeout: 5_000 })
+  await page.keyboard.press('Escape')
+  await expect(row).toHaveCount(0, { timeout: 5_000 })
+  await expect(peerRow).toHaveCount(0, { timeout: 5_000 })
+  await expect(page.getByRole('paragraph').filter({ hasText: 'TRASH-REAL-ANSWER' })).toHaveCount(0, { timeout: 5_000 })
+
+  trash = await openTrashSection(page)
+  await trash.getByRole('tab', { name: /^资源 / }).click()
+  const savedRow = trash.locator('[data-dsh-trash-row]').filter({ hasText: session.sessionId })
+  const [saved] = await page.evaluate(() => (window as unknown as { dshDesktop: { listTrash(): Promise<Array<{ id: string; originPath: string }>> } }).dshDesktop.listTrash())
+  expect(saved!.originPath).toBe(join(harness.home, 'sessions', session.projectKey, session.sessionId))
+  await mkdir(saved!.originPath)
+  await writeFile(join(saved!.originPath, 'new-data'), 'do not overwrite')
+  await savedRow.getByRole('button', { name: '还原', exact: true }).click()
+  await expect(trash.getByRole('status')).toHaveText('同名会话已存在，未覆盖新数据；原会话仍在垃圾桶中。')
+  await expect(savedRow).toHaveCount(1)
+  expect(await page.evaluate(id => (window as unknown as { dshDesktop: { restoreTrash(id: string): Promise<unknown> } }).dshDesktop.restoreTrash(id), saved!.id)).toBeNull()
+  expect(await readFile(join(saved!.originPath, 'new-data'), 'utf8')).toBe('do not overwrite')
+  await rm(saved!.originPath, { recursive: true }) // only the conflict directory created by this test
+  await savedRow.getByRole('button', { name: '还原', exact: true }).click()
+  await expect(savedRow).toHaveCount(0, { timeout: 5_000 })
+  await page.keyboard.press('Escape')
+  await expect(row).toHaveCount(1, { timeout: 5_000 })
+  await expect(peerRow).toHaveCount(1, { timeout: 5_000 })
+  await row.hover()
+  await row.getByRole('button', { name: '归档会话', exact: true }).click()
+  await expect(row).toHaveCount(0, { timeout: 5_000 })
+  await expect(peerRow).toHaveCount(0, { timeout: 5_000 })
+
+  trash = await openTrashSection(page)
+  await trash.getByRole('tab', { name: /^会话 / }).click()
+  await expect(trash.locator(`[data-dsh-session-id="${session.sessionId}"]`).getByText('已归档', { exact: true })).toBeVisible()
+  await trash.locator(`[data-dsh-session-id="${session.sessionId}"]`).getByRole('button', { name: '删除（入桶）', exact: true }).click()
+  await expect(trash.locator(`[data-dsh-session-id="${session.sessionId}"]`)).toHaveCount(0, { timeout: 5_000 })
+  await trash.getByRole('tab', { name: /^资源 / }).click()
+  await savedRow.getByRole('button', { name: '还原', exact: true }).click()
+  await expect(savedRow).toHaveCount(0, { timeout: 5_000 })
+  await page.keyboard.press('Escape')
+  await expect(row).toHaveCount(1, { timeout: 5_000 })
+  await expect(peerRow).toHaveCount(1, { timeout: 5_000 })
+  await row.hover()
+  await row.getByRole('button', { name: '归档会话', exact: true }).click()
+  await expect(row).toHaveCount(0, { timeout: 5_000 })
+  trash = await openTrashSection(page)
+  await trash.getByRole('tab', { name: /^会话 / }).click()
+  await trash.locator(`[data-dsh-session-id="${session.sessionId}"]`).getByRole('button', { name: '取消归档', exact: true }).click()
+  await expect(trash.getByRole('status')).toHaveText('已完成')
+  await page.keyboard.press('Escape')
+  await expect(row).toHaveCount(1, { timeout: 5_000 })
+  await expect(peerRow).toHaveCount(1, { timeout: 5_000 })
+  const restarted = await harness.restart()
+  await expect(restarted.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })).toHaveCount(1, { timeout: 5_000 })
+  expect(await restarted.evaluate(() => (window as unknown as { dshDesktop: { listTrash(): Promise<unknown[]> } }).dshDesktop.listTrash())).toEqual([])
+  expect(harness.requests).toBe(2) // restarting does not rerun the model turn
+})
+
+realTrashTest('Host refuses deletion during a real active turn without stopping it @smoke', async ({ harness }) => {
+  const { page } = harness
+  const session = await createRealSession(harness)
+  harness.pause()
+  await page.getByRole('textbox', { name: /发消息或创建任务/ }).fill('TRASH-ACTIVE-SESSION')
+  await page.getByRole('button', { name: '发送消息', exact: true }).click()
+  await expect.poll(() => harness.requests).toBe(3)
+  const trash = await openTrashSection(page)
+  await trash.getByRole('tab', { name: /^会话 / }).click()
+  const row = trash.locator(`[data-dsh-session-id="${session.sessionId}"]`)
+  await row.getByRole('button', { name: '删除（入桶）', exact: true }).click()
+  await expect(trash.getByRole('status')).toHaveText('会话正在运行，不能删除')
+  await expect(row).toHaveCount(1)
+  expect(await page.evaluate(() => (window as unknown as { dshDesktop: { listTrash(): Promise<unknown[]> } }).dshDesktop.listTrash())).toEqual([])
+  harness.resume()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('paragraph').filter({ hasText: 'TRASH-REAL-ANSWER' })).toHaveCount(2, { timeout: 30_000 })
+})
+
+realTrashTest('external kernel writer lease prevents cold session deletion @smoke', async ({ harness }) => {
+  const current = await createRealSession(harness)
+  const node = join(process.cwd(), 'resources/harness/node/bin', process.platform === 'win32' ? 'node.exe' : 'node')
+  execFileSync(node, ['e2e/seed-trash-sessions.mjs', harness.home, harness.workspace], { timeout: 30_000 })
+  const holder = spawn(node, ['e2e/hold-trash-session.mjs', harness.home, 'session-livesession1'], { stdio: ['pipe', 'pipe', 'pipe'] })
+  try {
+    await expect.poll(() => holder.stdout.read()?.toString() ?? '', { timeout: 15_000 }).toBe('writer-ready\n')
+    const trash = await openTrashSection(harness.page)
+    await trash.getByRole('tab', { name: /^会话 / }).click()
+    const row = trash.locator('[data-dsh-session-id="session-livesession1"]')
+    await row.getByRole('button', { name: '删除（入桶）', exact: true }).click()
+    await expect(trash.getByRole('status')).toHaveText('会话正在运行，不能删除')
+    await expect(row).toHaveCount(1)
+    const released = once(holder, 'exit')
+    holder.stdin.end()
+    await released
+    await row.getByRole('button', { name: '删除（入桶）', exact: true }).click()
+    await expect(row).toHaveCount(0, { timeout: 5_000 })
+    await expect(harness.page.getByRole('treeitem').filter({ hasText: 'TRASH-REAL-ANSWER' })).toHaveAttribute('aria-selected', 'true')
+    await trash.getByRole('tab', { name: /^资源 / }).click()
+    const item = trash.locator('[data-dsh-trash-row]').filter({ hasText: 'session-livesession1' })
+    await item.getByRole('button', { name: '彻底删除', exact: true }).click()
+    await item.getByRole('button', { name: '确认', exact: true }).click()
+    await expect(item).toHaveCount(0, { timeout: 5_000 })
+    let durableIds: string[] = []
+    const restarted = await harness.restart(async () => {
+      // Capture the full durable baseline before the new client opens a draft.
+      const root = join(harness.home, 'sessions')
+      for (const project of await readdir(root, { withFileTypes: true })) {
+        if (project.isDirectory()) durableIds.push(...(await readdir(join(root, project.name))).filter(id => id.startsWith('session-')))
+      }
+      durableIds.sort()
+      expect(durableIds).not.toContain('session-livesession1')
+      expect(durableIds).toContain(current.sessionId)
+      expect(durableIds).toContain('session-archivedsess')
+    })
+    const sessions = await restarted.evaluate(() => (window as unknown as { dshDesktop: { listTrashSessions(): Promise<Array<{ sessionId: string }>> } }).dshDesktop.listTrashSessions())
+    const ids = sessions!.map(session => session.sessionId)
+    expect(ids).not.toContain('session-livesession1')
+    expect(ids.filter(id => durableIds.includes(id)).sort()).toEqual(durableIds)
+    const newDrafts = ids.filter(id => !durableIds.includes(id))
+    expect(newDrafts).toHaveLength(1) // the kernel's new blank selected session
+    const draft = JSON.parse(execFileSync(node, ['e2e/inspect-trash-session.mjs', harness.home, newDrafts[0]!], { encoding: 'utf8', timeout: 30_000 }))
+    expect(draft).toEqual({ id: newDrafts[0], cwd: harness.workspace, eventTypes: ['permission/preset', 'sandbox/mode', 'approval/policy'], parentSession: null })
+    expect(harness.requests).toBe(2)
+  } finally { if (holder.exitCode === null) holder.kill('SIGKILL') }
 })

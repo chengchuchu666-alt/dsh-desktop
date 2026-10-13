@@ -5,6 +5,7 @@ import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { runInNewContext } from 'node:vm'
 import { filterPairingUrls, isLanPairingExpired, isPrivateLanIPv4, LanService, listPrivateLanIPv4, loadOrCreateLanMasterToken, qrSvgFromCode } from '../src/main/lan.ts'
 import { pairingPageMarkup } from '../src/main/lan-page.ts'
 
@@ -24,6 +25,40 @@ test('pairing expiry is based on an absolute timestamp', () => {
   assert.match(markup, /setInterval\(updateCountdown, 1000\)/)
   assert.match(markup, /has expired/)
 })
+
+for (const locale of ['zh', 'en'] as const) {
+  test(`pairing countdown decreases and expires in ${locale}`, () => {
+    const markup = pairingPageMarkup({ baseUrl: 'http://192.168.1.2:3081/', pairingUrl: 'http://192.168.1.2:3081/pair', pairingUrls: ['http://192.168.1.2:3081/pair'], code: '123456', expiresInSeconds: 600, expiresAt: 1_600_000, lanAddress: '192.168.1.2', listenPort: 3081 }, [], locale)
+    const script = /<script>([\s\S]*?)<\/script>/.exec(markup)?.[1]
+    assert.ok(script)
+    let now = 1_000_000
+    let tick: (() => void) | undefined
+    const countdown = { textContent: '' }
+    const close = { disabled: false, addEventListener: () => {} }
+    runInNewContext(script, {
+      Date: { now: () => now },
+      document: { getElementById: (id: string) => id === 'countdown' ? countdown : close },
+      setInterval: (callback: () => void, interval: number) => {
+        assert.equal(interval, 1000)
+        tick = callback
+      },
+    })
+    assert.ok(tick)
+    const expected = (seconds: number) => locale === 'zh'
+      ? `配对码剩余 ${seconds} 秒，且只能使用一次。`
+      : `Pairing code expires in ${seconds} seconds and can be used once.`
+    assert.equal(countdown.textContent, expected(600))
+    now += 1001
+    tick()
+    assert.equal(countdown.textContent, expected(599))
+    now = 1_599_999
+    tick()
+    assert.equal(countdown.textContent, expected(1))
+    now = 1_600_000
+    tick()
+    assert.match(countdown.textContent, locale === 'zh' ? /已过期/ : /has expired/)
+  })
+}
 
 test('LAN interface selection keeps private non-internal IPv4 addresses', () => {
   const result = listPrivateLanIPv4({

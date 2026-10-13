@@ -20,6 +20,9 @@ export interface ShellAppServices {
   restartLanProxy(): Promise<unknown>
   /** Ask the user to confirm a manual restart; false cancels. */
   confirmRestart(): Promise<boolean>
+  /** Dependent processes must pause before replacing their owning kernel. */
+  beforeHarnessRestart?(): Promise<void>
+  afterHarnessRestart?(): Promise<unknown>
 }
 
 /** A shell-owned frame is one of our data:-URL pages, never the harness UI. */
@@ -121,10 +124,12 @@ export class ShellApp {
   runHarnessRestart(): Promise<boolean> {
     if (this.restartTask !== undefined) return this.restartTask
     const task = Promise.resolve().then(async () => {
+      await this.services.beforeHarnessRestart?.()
       await this.supervisor?.stop()
       this.supervisor = this.services.createSupervisor(state => this.applyState(state))
       try {
         await this.supervisor.start()
+        await this.services.afterHarnessRestart?.()
         return true
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

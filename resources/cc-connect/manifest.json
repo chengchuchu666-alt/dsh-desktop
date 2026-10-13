@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "commit": "5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb",
+  "platform": "darwin",
+  "arch": "arm64",
+  "binary": "bin/cc-connect",
+  "sha256": "eacf764fe14f3825ea84c7e7e02d77084f5ca4cae618a8b0b4f88c080491ab8e"
+}
