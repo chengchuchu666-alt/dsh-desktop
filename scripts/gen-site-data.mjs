@@ -15,6 +15,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { classifyPublicAsset, SHA256_LINE } from './release-shape.mjs'
+import { verifyGitCodeAvailability } from './gitcode-availability.mjs'
 
 export { classifyPublicAsset } from './release-shape.mjs'
 
@@ -88,18 +89,6 @@ async function readChecksum(asset) {
   return match[1]
 }
 
-/** GitCode redirects to a time-limited signed CDN URL; HEAD is rejected (401),
- *  so verify with a 1-byte range GET and treat 200/206 as available. */
-async function verifyGitCode(url) {
-  try {
-    const res = await fetch(url, { headers: { Range: 'bytes=0-0' }, redirect: 'follow' })
-    await res.body?.cancel()
-    return res.status === 200 || res.status === 206
-  } catch {
-    return false
-  }
-}
-
 const [releases, repo] = await Promise.all([
   api(`https://api.github.com/repos/${REPO}/releases?per_page=100`),
   api(`https://api.github.com/repos/${REPO}`),
@@ -164,7 +153,7 @@ const data = {
         kind,
         sha256: kind === 'checksum' ? await readChecksum(a) : null,
         gitcode_url: gitcodeUrl,
-        gitcode_ok: await verifyGitCode(gitcodeUrl),
+        gitcode_ok: await verifyGitCodeAvailability(gitcodeUrl, a.size),
       }
     })),
   },

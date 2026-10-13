@@ -113,3 +113,6 @@
   断言，保留发布上界/旧版本/手工 scaffold 原断言。此为网站生成改进，不另发 shell.4。
 - 网站生成修正 `c6a4e33`：本地单用例/site check/UI 8 场景 exit 0，main CI `38330659104` success。
   更新本轮实际改动页面的 sitemap lastmod；未改动的安装/产品定位页面不伪造新日期。
+- 官网每日镜像探测曾只看 200/206，可把 WAF HTML 当成安装包；现在用独立可测试的 availability
+  probe 拒绝 HTML、核对已知资产尺寸、取消 body 并设置 20 秒超时。交付完整性仍由六文件内容校验
+  和完整安装包回读负责，不把 availability 冒称为哈希证明。
