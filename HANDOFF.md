@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-12。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-13。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,7 +9,7 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | ✅ main/集成分支 `0.2.1-alpha.2.shell.2`；内核 `0.2.1-alpha.2` 未变，CI-only 后续见 §78 |
+| 最新代码基线 | 🚧 `0.2.1-alpha.2.shell.3` 候选；内核 `0.2.1-alpha.2` 未变，GitHub/官网/安全维护见 §79，已发布 shell.2 见 §78 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.2`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ verify 402 单测 + 1 ACP、完整 Go test/race/build/vet、packaged E2E 15/15、管理/降噪五轮 20/20、LAN 2/2、市场 offline 1/1 + real 2/2、当前包/两个 smoke、双树审计通过 |
 | 核心发布 | ✅ Release `38249871041` 三平台安装/升级/来源证明及 publish 通过，tag `8038553`；mac/Linux 各 15，Windows 14 + 1 重试通过。CI 告警不隐瞒，见 §78 |
@@ -2014,3 +2014,37 @@ GitCode：<https://gitcode.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alph
 本轮真实飞书、自动扫码、视觉/录像及授权边界详见安装验收 progress。残余迭代：P1 稳定发行
 签名/CI 密钥配置（外部身份前置；不能靠明文 Secret 或自动批准系统认证解决）；P2 测试收尾/
 Windows 首次偏好持久化等待稳定性。物理手机相机/异机 Wi-Fi 不在无头模拟证明中。
+
+## 79. GitHub 待办、官网维护与 shell.3 候选（2026-10-13，未发布）
+
+1. **待办盘点**：原开放 issue #100/#101/#104/#105/#106、PR #55/#91/#99/#102/#103。
+   历史发布/同步告警 #101/#104/#105/#106 已按失败日志、对应修复及后续成功 CI 关闭；
+   #100 保留 needs-info，附件证实 Windows profile 根文件 EPERM，不足以解释初始白屏。
+   不删除用户 profile 或改 ACL，不把 macOS 未复现当成 Windows 修复。
+2. **两轴依赖审查**：Standards 发现 #103 Node 26 类型违反 Node 24 运行时边界，已关闭非合并。
+   Spec 发现额外 transitive churn 与 builder 的 plist 降级；#91 已补保留 plist 3.1.1 / xmldom 0.9.12，
+   并修复并发合并生成的重复 YAML；修正头 CI `38328176497` 成功后合并。
+   #55/#99/#102 各自新头 CI 通过后合并，当前开放 PR 为零。
+3. **原子提交**：`c7a16e3` 官网生成提交限次重试（临时 worktree、不 rebase JSON）；
+   `1db39e6` 中英飞书独立介绍/FAQ 与 UI 检查，`351b1d9` 已发布 changelog 上界；
+   `8e54782` 补回英文显式开启说明，保留原文档断言；`728e112` 高危安全闭包维护。
+   子模块仍 `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb`，无新修改。
+4. **官网**：同步新流程 live run `38327109918` success；本地及正式站点 UI 各 8 场景通过
+   （中英 × 390/1280 × 明暗），检查飞书介绍、FAQ、锚点、无溢出、已发布日志，无 pageerror。
+   公共页面截图为无登录的隔离 Chrome，不借用真实账户，不复用私人飞书截图作营销图。
+5. **安全**：明确应用 proxy-addr 2.0.8、compression 1.8.2、MCP SDK 1.31.0；SDK 显式保留，
+   避免可选 peer 在 override 后被裁掉，SDK 的 Web 栈继续用原审查版本。
+   双树审计通过；GitHub open alert 当前只剩 sprintf-js medium（无官方修复，原有单一例外）。
+   SDK 升级不自动迁移/撤销历史 OAuth 凭据；按官方 GHSA 核对旧 issuer 与重登/撤销要求。
+6. **候选与发布理由**：运行时安全内容会进入安装包，值得发 `v0.2.1-alpha.2.shell.3`；
+   Harness 保持 `0.2.1-alpha.2`，当前仍未打 tag、未发布。最终版本重新跑 verify、打包、
+   两项 smoke、packaged E2E、市场/LAN、三平台 Release，之后镜像和官网按实际结果回填。
+   不用 shell.2 旧 dist 的结果代替新候选，不覆盖 `/Applications` 或反复请求系统钥匙串。
+7. **最终 pin 与候选门禁**：额外 race 回归发现附件 CUJ 提前结束（100 轮旧代码失败 8 次）；
+   仅修测试完成边界，子模块 `a9a936c5102ffa24f8165d74d5199206ba6d724a` 先推后父 pin `a594e04`。
+   200 轮 race、全量 test/race/build/vet/CUJ 均 exit 0。最终 pin 新打包 verify 410 + 1 ACP、
+   两项 smoke、packaged 15、飞书五轮 35、市场 offline 1 / real 2、LAN 2 均 exit 0；开发态 26
+   通过 / 9 个既有环境用例未启用。最终本地 sidecar SHA `35fba99bb6d13683022661af3d361b330e942ac219c543390fac3dbd82efb89f`。
+8. **后续可复用检查**：`3ce65f2` 新增 `check-gitcode-assets.mjs` 匿名内容验证（两项 mock 回归），
+   取代按 shell.2 硬编码的私人 helper；一次性 worktree 处理网站竞争，changelog 以实际发布 tag 为上界。
+   README/CONTEXT 已纠正实际随包 Node 24，并补飞书入口；未改开发主机 Node 22/24 engine 契约。

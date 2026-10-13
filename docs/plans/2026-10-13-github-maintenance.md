@@ -103,3 +103,7 @@
 - 将镜像内容校验从私人硬编码 helper 变成 `scripts/check-gitcode-assets.mjs`：匿名验证六文件
   Content-Range/首字节/完整 200 哈希并拒绝 HTML；两项 mock 回归和 typecheck exit 0，先完成全部检查
   再报告失败，避免关闭中的文件句柄与测试临时目录清理竞争。不读取任何浏览器凭据。
+- 最终候选门禁 exit 0：`pnpm verify` 410 + 1 ACP、`pnpm security:audit`、`pnpm dist:dir`、
+  两项 packaged smoke、packaged E2E 15、飞书五轮 35、市场 offline 1 / real 2、LAN 2。
+  dev E2E 26 / 9 个既有环境用例未启用；没有新增跳过或降低断言。
+- 同步中英 README 飞书能力与 Node 24 事实、文档入口；下一任务是从干净提交切不可变 shell.3 tag。
