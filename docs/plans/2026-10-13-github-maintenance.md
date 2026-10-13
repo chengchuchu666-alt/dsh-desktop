@@ -66,3 +66,16 @@
 - 整合后发现旧官网文档断言失败（英文必须说明 `explicitly open cc-connect`），补回说明，
   不删除或放宽断言。#91 与其它依赖 PR 并发合并还产生重复 YAML 条目；`0aa9c7c` 去重后
   frozen install / lock regression / full verify 再次 exit 0，失败合并头未合入 main。
+
+### 安全闭包与上线
+
+- #55 merge `cfc8b4c`、#99 merge `61e8739`、#102 merge `7211acd`，各自更新头 CI 全绿后合并。
+  critical proxy-addr 告警已自动关闭。#91 等待修正头 CI，不因旧头绿灯提前合并。
+- 官网与发布日志边界已上线；`SITE_CHECK_URL=https://dsh-desktop.com node scripts/check-site-ui.mjs`
+  exit 0（8 场景），与本地同样检查真实页面、FAQ、锚点和已发布 changelog。
+- 另两项可修复 high 告警核对官方 GHSA 后精确更新：MCP SDK 1.31.0、compression 1.8.2；
+  proxy-addr 2.0.8 固定为 floor。SDK 原为可选 peer，单加 override 会裁掉 SDK，回归测试阻止；
+  现显式保留 SDK，保持已审查的 express/Hono server/jose 版本，不借机刷新 Web 栈或内核。
+- 门禁：锁解析/版本回归、frozen install、bootstrap、双树 audit、full verify 均 exit 0；
+  未增加安全忽略项。sdk 包更新不等于清理历史 OAuth 凭据，旧凭据 issuer/撤销要求按公告单列风险，
+  不触碰真实账号凭据。sprintf-js 尚无官方修复版本，原有单一例外保留。
