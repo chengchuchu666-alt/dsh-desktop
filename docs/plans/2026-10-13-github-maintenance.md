@@ -98,3 +98,8 @@
   首轮编译时 helper API 名称/返回类型使用不符，已按真实定义修正后重跑全部门禁。
 - `pnpm cc-connect:build` exit 0：版本 shell.3、目标 darwin/arm64、最终 pin a9a936c5。
   Sidecar manifest SHA-256 `47c092e40d73edd59758413d69560c64719563ccbdc136a52864120af1a2ddc6`。
+- 父 gitlink 提交 `a594e04`；最终 pin 第一次完整候选 packaged 15 / smoke 两项均 exit 0。
+  sidecar buildTime 导致再次打包的哈希变化正常，最终候选 manifest 使用 `35fba99b…`；不是再次改 pin。
+- 将镜像内容校验从私人硬编码 helper 变成 `scripts/check-gitcode-assets.mjs`：匿名验证六文件
+  Content-Range/首字节/完整 200 哈希并拒绝 HTML；两项 mock 回归和 typecheck exit 0，先完成全部检查
+  再报告失败，避免关闭中的文件句柄与测试临时目录清理竞争。不读取任何浏览器凭据。

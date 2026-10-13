@@ -35,6 +35,10 @@ site/
 中文模式仅在逐资产 range GET 验证 GitCode 可用时使用国内镜像,否则回落
 GitHub。CI 通过 `pnpm run site:check` 校验数据、资产、双语键和 tab 目标。
 
+镜像交付另运行 `node scripts/check-gitcode-assets.mjs <八文件产物目录> <v-tag>`：
+对六个公开文件拒绝 HTML，核对 Range 总尺寸和首字节（完整 200 响应则核对尺寸/哈希）。
+安装包还需至少一个完整匿名回读与 GitHub SHA-256 对照，不能仅用上传消息或状态码验收。
+
 手动同步数据:
 
 ```sh
@@ -54,7 +58,7 @@ cd site && python3 -m http.server 8080
 
 `assets/` 的 css/js 带 `?v=N` 版本号,使用一年 immutable;图片类一小时
 可重新验证;`data/` 使用五分钟缓存。改动 css/js/data-model 后必须同步
-提升对应文件的 `?v=`(当前 style v=44、data-model v=43、app v=43、seo v=13),
+提升对应文件的 `?v=`(当前 style v=44、data-model v=45、app v=45、seo v=13),
 否则 immutable 会让用户锁在旧内容。当前首页、下载页 app/data-model 为 `v=45`。
 
 首页 `#feishu` 独立介绍机器人创建、工作区、连接生命周期、降噪和安全边界；
