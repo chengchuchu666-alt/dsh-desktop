@@ -63,3 +63,6 @@
   临时目录回归验证中英已发布/历史条目存在、草稿排除及手工 scaffold 保留。
 - #91 修正提交 `04f3717` 保留两处 plist 3.1.1 / xmldom 0.9.12，精确 frozen install 和
   full verify exit 0（406 单测 + 1 ACP），PR head 重跑 CI 后再合并。
+- 整合后发现旧官网文档断言失败（英文必须说明 `explicitly open cc-connect`），补回说明，
+  不删除或放宽断言。#91 与其它依赖 PR 并发合并还产生重复 YAML 条目；`0aa9c7c` 去重后
+  frozen install / lock regression / full verify 再次 exit 0，失败合并头未合入 main。
