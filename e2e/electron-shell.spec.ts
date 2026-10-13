@@ -1,18 +1,21 @@
 import { test, expect, _electron as electron, chromium, webkit, type ElectronApplication, type Page } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { execFile, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { homedir, tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
+import type { ConnectSaveResult, ConnectSettingsInput, ConnectState } from '../src/main/cc-connect-types.ts'
+import { launchTrashHarness } from './trash-harness.ts'
 
 // Packaged mode runs the real bundled Harness (the dev web-URL override is
 // dev-only, src/main/index.ts boot()), so stub-only page assertions are
 // skipped and the boot-overlay wait doubles as the real-render check.
 const PACKAGED = process.env.DSH_E2E_PACKAGED === '1'
+const FAKE_QR_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
 const require = createRequire(import.meta.url)
 const electronPath = require('electron') as string
 const execFileAsync = promisify(execFile)
@@ -34,14 +37,18 @@ interface Fixture {
   settingsPath: string
   dshHome: string
   userData: string
+  connectModePath: string | undefined
+  feishuSetupModePath: string | undefined
   relaunch: () => Promise<ElectronApplication>
 }
 
-const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettings: boolean; mockAccountPlatform: boolean }>({
+const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettings: boolean; mockAccountPlatform: boolean; connectSidecar: boolean; feishuSetupSidecar: boolean }>({
   pathStyle: ['normal', { option: true }],
   seedLegacySettings: [false, { option: true }],
   mockAccountPlatform: [false, { option: true }],
-  electronApp: async ({ pathStyle, seedLegacySettings, mockAccountPlatform }, use, testInfo) => {
+  connectSidecar: [false, { option: true }],
+  feishuSetupSidecar: [false, { option: true }],
+  electronApp: async ({ pathStyle, seedLegacySettings, mockAccountPlatform, connectSidecar, feishuSetupSidecar }, use, testInfo) => {
     if (PACKAGED) testInfo.setTimeout(240_000) // 真实 Harness 首次渲染可达 120s
     const root = await mkdtemp(join(tmpdir(), 'dsh-electron-e2e-'))
     // 特殊路径变体:中文/空格目录(真实用户环境)与只读 DSH_HOME。
@@ -62,6 +69,45 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
     await writeFile(join(dshHome, 'settings.yaml'), initialSettings)
     await writeFile(join(userData, 'shell-preferences.json'), '{"closeToTrayExplained":true}\n')
     if (pathStyle === 'readonly') await chmod(dshHome, 0o555)
+
+    let connectModePath: string | undefined
+    let connectBinPath: string | undefined
+    let feishuSetupBinPath: string | undefined
+    let feishuSetupModePath: string | undefined
+    if (connectSidecar) {
+      connectModePath = join(root, 'fake-cc-connect.mode')
+      connectBinPath = join(root, 'fake-cc-connect.mjs')
+      await writeFile(connectModePath, 'ready\n')
+      await writeFile(connectBinPath, [
+        '#!/usr/bin/env node',
+        "import { readFileSync, appendFileSync } from 'node:fs'",
+        "const mode = readFileSync(process.env.DSH_CC_CONNECT_TEST_MODE, 'utf8').trim()",
+        "appendFileSync(process.env.DSH_CC_CONNECT_TEST_MODE + '.starts', String(process.pid) + '\\n')",
+        "console.error('fake cc-connect ready projects=1')",
+        "if (mode === 'health') setTimeout(() => { for (const event of [{version:1,component:'channel',state:'online'},{version:1,component:'agent',state:'unavailable',errorCode:'model-key-missing'}]) console.error('level=INFO msg=\"cc-connect health\" event=' + JSON.stringify(JSON.stringify(event))) }, 30)",
+        "if (mode === 'crash') setTimeout(() => { console.error('fake sidecar crash'); process.exit(23) }, 40)",
+        'setInterval(() => {}, 1000)',
+        '',
+      ].join('\n'))
+      await chmod(connectBinPath, 0o755)
+    }
+    if (feishuSetupSidecar) {
+      feishuSetupModePath = join(root, 'fake-feishu-setup.mode')
+      await writeFile(feishuSetupModePath, 'ready\n')
+      feishuSetupBinPath = join(root, 'fake-feishu-setup.mjs')
+      await writeFile(feishuSetupBinPath, [
+        '#!/usr/bin/env node',
+        "import { writeFileSync, readFileSync, appendFileSync } from 'node:fs'",
+        "const arg = name => process.argv[process.argv.indexOf(name) + 1]",
+        "const mode = readFileSync(process.env.DSH_CC_CONNECT_SETUP_TEST_MODE, 'utf8').trim()",
+        "appendFileSync(process.env.DSH_CC_CONNECT_SETUP_TEST_MODE + '.runs', JSON.stringify({ pid: process.pid, config: arg('--config') }) + '\\n')",
+        `writeFileSync(arg('--qr-image'), Buffer.from(${JSON.stringify(FAKE_QR_PNG_BASE64)}, 'base64'))`,
+        "if (mode === 'wait') { process.on('SIGTERM', () => {}); setInterval(() => {}, 1000) }",
+        "else setTimeout(() => writeFileSync(arg('--config'), '[[' + 'projects]]\\nname = \\\"dsh-desktop\\\"\\n\\n[[projects.platforms]]\\ntype = \\\"feishu\\\"\\n\\n[projects.platforms.options]\\napp_id = \\\"cli_fake_id\\\"\\napp_secret = \\\"fake-secret-value\\\"\\n'), 1500)",
+        '',
+      ].join('\n'))
+      await chmod(feishuSetupBinPath, 0o755)
+    }
 
     let accountServer: Server | undefined
     if (PACKAGED && mockAccountPlatform) {
@@ -107,11 +153,47 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       let launchArgs: string[] = [`--user-data-dir=${userData}`]
       if (process.platform === 'linux') launchArgs.push('--no-sandbox')
       const launchEnv: Record<string, string> = { ...process.env, DSH_HOME: dshHome }
+      if (connectModePath !== undefined && connectBinPath !== undefined) {
+        launchEnv.DSH_CC_CONNECT_TEST_BIN = connectBinPath
+        launchEnv.DSH_CC_CONNECT_TEST_MODE = connectModePath
+      }
+      if (feishuSetupBinPath !== undefined) {
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_BIN = feishuSetupBinPath
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_WORKSPACE = dshHome
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_MODE = feishuSetupModePath!
+        launchEnv.DSH_CC_CONNECT_SETUP_TEST_TIMEOUT_MS = '3000'
+      }
       let executablePath: string | undefined
       if (PACKAGED) {
         // Unpacked build from dist/ — no stub server, the real Harness renders.
         executablePath = await locatePackagedExecutable()
         currentApp = await electron.launch({ executablePath, args: launchArgs, cwd: process.cwd(), env: launchEnv })
+        // Fake secrets belong only to this temporary profile, never the user's
+        // OS keychain (ad-hoc local builds can block on a system prompt).
+        await currentApp.evaluate(({ safeStorage }) => { safeStorage.isEncryptionAvailable = () => false })
+        if (connectSidecar || feishuSetupSidecar) {
+          // The production app ignores test-bin overrides. Replace only the
+          // child-process dependency in this isolated test main process instead.
+          await currentApp.evaluate(() => {
+            const childProcess = process.getBuiltinModule('node:child_process')!
+            const path = process.getBuiltinModule('node:path')!
+            const spawn = childProcess.spawn
+            childProcess.spawn = ((command: string, args: string[], options: unknown) => {
+              if (/[\\/]cc-connect[\\/]bin[\\/]cc-connect(?:\.exe)?$/.test(command)) {
+                const fake = args[0] === 'feishu' ? process.env.DSH_CC_CONNECT_SETUP_TEST_BIN : process.env.DSH_CC_CONNECT_TEST_BIN
+                if (!fake) throw new Error('missing isolated fake sidecar')
+                const node = path.join(process.resourcesPath, 'harness', 'node', 'bin', process.platform === 'win32' ? 'node.exe' : 'node')
+                return spawn(node, [fake, ...args], options as any)
+              }
+              return spawn(command, args, options as any)
+            }) as typeof childProcess.spawn
+            if (process.env.DSH_CC_CONNECT_SETUP_TEST_BIN) {
+              const timeout = globalThis.setTimeout
+              globalThis.setTimeout = ((callback: (...args: any[]) => void, delay?: number, ...args: any[]) =>
+                timeout(callback, delay === 600_000 ? 3000 : delay, ...args)) as typeof globalThis.setTimeout
+            }
+          })
+        }
         return currentApp
       }
       server = createServer((request, response) => {
@@ -157,6 +239,7 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       launchArgs = ['.', ...launchArgs]
       launchEnv.DSH_DESKTOP_DEV_WEB_URL = `http://127.0.0.1:${address.port}`
       currentApp = await electron.launch({ executablePath, args: launchArgs, cwd: process.cwd(), env: launchEnv })
+      await currentApp.evaluate(({ safeStorage }) => { safeStorage.isEncryptionAvailable = () => false })
       return currentApp
     }
     activeLaunch = { launch, current: () => currentApp }
@@ -201,10 +284,14 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
       await expect.poll(
         () => window.evaluate(() => ({
           boot: document.querySelector('[data-dsh-boot]') !== null,
-          failed: document.body.innerText.includes('Failed to load plugins'),
-        })),
+          failed: document.body?.innerText.includes('Failed to load plugins') ?? false,
+          mounted: document.querySelector('[data-dsh-desktop-controls]') !== null,
+        })).catch(error => {
+          if (!String(error).includes('Execution context was destroyed')) throw error
+          return { boot: true, failed: false, mounted: false }
+        }),
         { timeout: 120_000 },
-      ).toEqual({ boot: false, failed: false })
+      ).toEqual({ boot: false, failed: false, mounted: true })
     }
     await use(window)
   },
@@ -226,11 +313,21 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
     await use(data)
   },
 
+  connectModePath: async ({ connectSidecar, electronApp }, use) => {
+    const mode = connectSidecar
+      ? await electronApp.evaluate(() => process.env.DSH_CC_CONNECT_TEST_MODE ?? '')
+      : undefined
+    await use(mode === '' ? undefined : mode)
+  },
+  feishuSetupModePath: async ({ feishuSetupSidecar, electronApp }, use) => {
+    await use(feishuSetupSidecar ? await electronApp.evaluate(() => process.env.DSH_CC_CONNECT_SETUP_TEST_MODE) : undefined)
+  },
+
   relaunch: async ({ electronApp }, use) => {
     await use(async () => {
       const handle = activeLaunch
       if (handle === undefined) throw new Error('relaunch: no active launch handle')
-      await electronApp.close().catch(() => {})
+      await handle.current()?.close().catch(() => {})
       const next = await handle.launch()
       // The fixture tracks the latest app so teardown closes it as well.
       return next
@@ -807,6 +904,462 @@ test.describe('environment edge paths', () => {
   })
 })
 
+shellTest.describe('cc-connect desktop sidecar', () => {
+  shellTest.use({ connectSidecar: true })
+
+  shellTest('close persists across Desktop restart and Safe Mode; autoConnect is startup-only and health is layered @critical', async ({ window, dshHome, userData, connectModePath, relaunch }) => {
+    type Bridge = { getConnectState(): Promise<ConnectState | null>; saveConnectSettings(input: ConnectSettingsInput): Promise<ConnectSaveResult | null>;
+      startConnect(): Promise<boolean>; stopConnect(): Promise<boolean>; restartConnect(): Promise<boolean>; desktopAction(action: string): Promise<boolean> }
+    let page = window
+    const state = () => page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState()).catch(error => {
+      if (String(error).includes('Execution context was destroyed')) return null
+      throw error
+    })
+    const action = (name: 'startConnect' | 'stopConnect' | 'restartConnect') => page.evaluate(name => (window as unknown as { dshDesktop: Bridge }).dshDesktop[name](), name)
+    const starts = async () => (await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n').length
+    const reopen = async () => { const next = await relaunch(); page = await next.firstWindow(); await packagedOrStubHeadline(page) }
+    await writeFile(connectModePath!, 'health\n')
+    expect(await page.evaluate(workspace => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings({ enabled: true, appId: 'cli_persistence_fake', workspace, appSecret: 'fake-persistence-secret' }), dshHome)).toMatchObject({ ok: true })
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready', health: { channel: 'online', dsh: 'unavailable', errorCode: 'model-key-missing' } })
+    expect((await state())?.health?.verifiedAt).toBeUndefined()
+    expect((await state())?.secretConfigured).toBe(true)
+    const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
+    const initial = (await state())!
+    expect(config).toContain(`data_dir = ${JSON.stringify(join(userData, 'cc-connect', 'applications', initial.applicationId!, 'data'))}`)
+    expect(await starts()).toBe(1)
+    expect(await action('stopConnect')).toBe(true)
+    await reopen()
+    await expect.poll(state).toMatchObject({ phase: 'disabled', enabled: false })
+    expect(await action('restartConnect')).toBe(false)
+    for (const mode of ['enterSafeMode', 'exitSafeMode']) {
+      await page.evaluate(mode => (window as unknown as { dshDesktop: Bridge }).dshDesktop.desktopAction(mode), mode).catch(error => {
+        if (!String(error).includes('Execution context was destroyed')) throw error
+      })
+      await expect.poll(state).toMatchObject({ enabled: false, phase: 'disabled' })
+    }
+    expect(await starts(), 'close cannot resurrect on restart, reconnect or Safe Mode exit').toBe(1)
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ enabled: true, phase: 'ready' })
+    const manifestPath = join(userData, 'cc-connect', 'applications.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    expect(manifest.autoConnect).toBe(true)
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, autoConnect: false })) // isolated preference fixture; manager UI is FS-04
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: false, phase: 'stopped' })
+    expect(await starts()).toBe(2)
+    expect(await action('startConnect')).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready' })
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: false, phase: 'stopped' })
+    expect(await starts()).toBe(3)
+    const saved = JSON.parse(await readFile(manifestPath, 'utf8'))
+    await writeFile(manifestPath, JSON.stringify({ ...saved, autoConnect: true }))
+    await reopen()
+    await expect.poll(state).toMatchObject({ enabled: true, autoConnect: true, phase: 'ready', health: { channel: 'online', dsh: 'unavailable' } })
+    expect(await starts()).toBe(4)
+    expect(JSON.stringify(await state())).not.toContain('fake-persistence-secret')
+    expect(await action('stopConnect')).toBe(true)
+  })
+
+  shellTest('display settings IPC validates, persists and rerenders without breaking Safe Mode @smoke', async ({ window, dshHome, userData }) => {
+    type Bridge = {
+      saveConnectSettings(input: unknown): Promise<ConnectSaveResult | null>
+      getConnectState(): Promise<ConnectState | null>
+      startConnect(): Promise<boolean>
+      desktopAction(action: string): Promise<boolean>
+    }
+    const state = () => window.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState()).catch(error => {
+      if (String(error).includes('Execution context was destroyed')) return null
+      throw error
+    })
+    const save = (input: unknown) => window.evaluate(input => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings(input), input)
+    const base: ConnectSettingsInput = { enabled: true, appId: 'cli_display_fake', workspace: dshHome, appSecret: 'fake-display-secret' }
+    await expect.poll(state).toMatchObject({ detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'legacy', progressStyle: 'legacy' })
+    expect(await save(base)).toMatchObject({ ok: true, state: { phase: 'stopped', secretConfigured: true } })
+    expect(await window.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.startConnect())).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready' })
+    const changed = { ...base, appSecret: '', detail: 'quiet', showStreamPreview: false, streamPreviewIntervalMs: 90000, cardMode: 'rich', progressStyle: 'card' }
+    expect(await save(changed)).toMatchObject({ ok: true, state: { detail: 'quiet', showStreamPreview: false, streamPreviewIntervalMs: 30000, cardMode: 'rich', progressStyle: 'card' } })
+    await expect.poll(state).toMatchObject({ phase: 'ready' })
+    const configPath = join(userData, 'cc-connect', 'config.toml')
+    const config = await readFile(configPath, 'utf8')
+    expect(config).toContain('mode = "quiet"')
+    expect(config).toContain('interval_ms = 30000')
+    expect(config).toContain('progress_style = "card"')
+    expect(config).not.toContain('fake-display-secret')
+    const settingsPath = join(userData, 'cc-connect', 'applications.json')
+    const before = await readFile(settingsPath, 'utf8')
+    const manifest = JSON.parse(before)
+    const secretPath = join(userData, 'cc-connect', 'credentials', `${manifest.credentials[manifest.activeApplicationId]}.json`)
+    const secretBefore = await readFile(secretPath, 'utf8')
+    for (const fields of [{ detail: 'invalid' }, { cardMode: 'invalid' }, { progressStyle: 'invalid' }, { showStreamPreview: 'true' }, { streamPreviewIntervalMs: 1.5 }, { streamPreviewIntervalMs: '3000' }]) {
+      expect(await save({ ...base, ...fields })).toMatchObject({ ok: false, reason: 'invalid-input' })
+      expect(await readFile(settingsPath, 'utf8')).toBe(before)
+      expect(await readFile(secretPath, 'utf8')).toBe(secretBefore)
+    }
+    expect(await save({ enabled: true, appId: base.appId, workspace: base.workspace, appSecret: '' })).toMatchObject({ ok: true, state: { detail: 'quiet', cardMode: 'rich', progressStyle: 'card', streamPreviewIntervalMs: 30000 } })
+    const safe = await window.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.desktopAction('enterSafeMode')).catch(error => {
+      if (!String(error).includes('Execution context was destroyed')) throw error
+      return true
+    })
+    expect(safe).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'stopped', enabled: true })
+    expect(await save({ ...base, appSecret: '', detail: 'full', streamPreviewIntervalMs: 8000 })).toMatchObject({ ok: true, state: { phase: 'stopped', detail: 'full', streamPreviewIntervalMs: 8000 } })
+    expect(await readFile(configPath, 'utf8')).toBe(config) // no hidden start while paused
+    expect(await save({ enabled: false, appId: base.appId, workspace: base.workspace })).toMatchObject({ ok: true, state: { phase: 'disabled', detail: 'full', streamPreviewIntervalMs: 8000 } })
+    expect(JSON.stringify(await state())).not.toContain('fake-display-secret')
+  })
+
+  shellTest('renderer bridge drives a fake sidecar through ready, crash, stop, and Safe Mode', async ({ window, dshHome, userData, connectModePath }) => {
+    type ConnectState = { enabled: boolean; phase: string; appId: string; secretConfigured: boolean; workspace: string; lastError?: string }
+    type ConnectBridge = {
+      getConnectState(): Promise<ConnectState | null>
+      saveConnectSettings(input: { enabled: boolean; appId: string; workspace: string; appSecret?: string }): Promise<{ ok: boolean; state: ConnectState } | null>
+      startConnect(): Promise<boolean>
+      stopConnect(): Promise<boolean>
+      restartConnect(): Promise<boolean>
+      desktopAction(action: 'enterSafeMode' | 'exitSafeMode'): Promise<boolean>
+    }
+    const state = () => window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: Pick<ConnectBridge, 'getConnectState'> }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.getConnectState()
+    }).catch(error => {
+      if (String(error).includes('Execution context was destroyed')) return null
+      throw error
+    })
+
+    await expect.poll(state).toMatchObject({ enabled: false, phase: 'disabled', secretConfigured: false })
+    expect(connectModePath).toBeTruthy()
+    const saved = await window.evaluate(async ({ workspace }) => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.saveConnectSettings({ enabled: true, appId: 'fake_app_id', appSecret: 'fake_app_secret', workspace })
+    }, { workspace: dshHome })
+    expect(saved).toMatchObject({ ok: true, state: { enabled: true, phase: 'stopped', appId: 'fake_app_id', secretConfigured: true, workspace: dshHome } })
+
+    expect(await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.startConnect()
+    })).toBe(true)
+    const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
+    expect(config).toContain('app_id = "fake_app_id"')
+    expect(config).not.toContain('fake_app_secret')
+    await expect.poll(state).toMatchObject({ enabled: true, phase: 'ready', secretConfigured: true })
+
+    await writeFile(connectModePath!, 'crash\n')
+    expect(await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.restartConnect()
+    })).toBe(true)
+    await expect.poll(async () => {
+      const current = await state()
+      return current?.phase === 'degraded' || current?.phase === 'starting' ? current : null
+    }, { timeout: 10_000 }).not.toBeNull()
+    const crashed = await state()
+    expect(['degraded', 'starting']).toContain(crashed?.phase)
+    expect(crashed?.lastError).toMatch(/cc-connect exited/)
+
+    expect(await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.stopConnect()
+    })).toBe(true)
+    await expect.poll(state).toMatchObject({ enabled: false, phase: 'disabled' })
+
+    await writeFile(connectModePath!, 'ready\n')
+    expect(await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.startConnect()
+    })).toBe(true)
+    await expect.poll(state).toMatchObject({ phase: 'ready' })
+    const safeModeEntered = await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.desktopAction('enterSafeMode')
+    }).catch(error => {
+      if (!String(error).includes('Execution context was destroyed')) throw error
+      return true
+    })
+    expect(safeModeEntered).toBe(true)
+    await expect.poll(state).toMatchObject({ enabled: true, phase: 'stopped' })
+    const safeModeExited = await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.desktopAction('exitSafeMode')
+    }).catch(error => {
+      if (!String(error).includes('Execution context was destroyed')) throw error
+      return true
+    })
+    expect(safeModeExited).toBe(true)
+    await expect.poll(state).toMatchObject({ enabled: true, phase: 'ready' })
+    await window.evaluate(() => {
+      const value = (window as unknown as { dshDesktop?: ConnectBridge }).dshDesktop
+      if (value === undefined) throw new Error('desktop bridge missing')
+      return value.stopConnect()
+    })
+  })
+})
+
+test('real Desktop display controls save, reopen, preserve edits and show both locales @smoke', async ({}, testInfo) => {
+  testInfo.setTimeout(150_000)
+  const harness = await launchTrashHarness(PACKAGED)
+  const { page } = harness
+  type Bridge = { saveConnectSettings(input: ConnectSettingsInput): Promise<ConnectSaveResult | null>; getConnectState(): Promise<ConnectState | null> }
+  const save = (input: ConnectSettingsInput) => page.evaluate(input => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings(input), input)
+  async function openSettings() {
+    await page.getByRole('button', { name: /账号菜单|Account menu/ }).click()
+    await page.getByText(/^(设置|Settings)$/, { exact: true }).first().click()
+    const dialog = page.getByRole('dialog', { name: /^(设置|Settings)$/ })
+    await dialog.getByText(/^(桌面设置|Desktop settings)$/, { exact: true }).click()
+    await expect(page.locator('[data-dsh-desktop-connect]')).toBeVisible()
+    await page.locator('[data-dsh-connect-advanced] > summary').click()
+  }
+  try {
+    const base = { enabled: false, appId: 'cli_ui_fake', workspace: harness.workspace }
+    expect(await save({ ...base, appSecret: 'fake-ui-secret' })).toMatchObject({ ok: true })
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState()))
+      .toMatchObject({ secretConfigured: true, credentialProtection: 'file' })
+    await openSettings()
+    const connect = page.locator('[data-dsh-desktop-connect]')
+    async function expectManagementLayout() {
+      const entry = connect.locator('[data-dsh-connect-manager]')
+      const health = connect.locator('[data-dsh-connect-health]')
+      await expect(entry).toHaveCSS('border-radius', '999px')
+      await expect(health).toHaveCSS('display', 'block')
+      const [buttonBox, healthBox, cardBox] = await Promise.all([entry.boundingBox(), health.boundingBox(), connect.boundingBox()])
+      expect(buttonBox).not.toBeNull()
+      expect(healthBox).not.toBeNull()
+      expect(cardBox).not.toBeNull()
+      expect(healthBox!.y).toBeGreaterThanOrEqual(buttonBox!.y + buttonBox!.height)
+      expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width)
+    }
+    await expectManagementLayout()
+    await expect(connect.getByLabel('App ID', { exact: true })).toHaveValue(base.appId)
+    await expect(connect.locator('select')).toHaveCount(4)
+    const detail = connect.getByRole('combobox', { name: '消息详细度', exact: true })
+    const interval = connect.getByRole('combobox', { name: '刷新间隔', exact: true })
+    const preview = connect.getByRole('checkbox', { name: '流式预览', exact: true })
+    await expect(detail).toHaveValue('compact')
+    await expect(interval).toHaveValue('3000')
+    await expect(preview).toBeChecked()
+    await expect(connect.getByRole('combobox', { name: '卡片样式', exact: true })).toHaveValue('legacy')
+    await expect(connect.getByRole('combobox', { name: '进度展示', exact: true })).toHaveValue('legacy')
+    await expect(connect.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await detail.selectOption('quiet')
+    await interval.selectOption('5000')
+    await preview.uncheck()
+    await expect(interval).toBeDisabled()
+    await expect(interval).toHaveValue('5000')
+    await connect.getByRole('combobox', { name: '卡片样式', exact: true }).selectOption('rich')
+    await connect.getByRole('combobox', { name: '进度展示', exact: true }).selectOption('card')
+    // Runtime status changes prove the poll ran; unsaved fields must stay put.
+    expect(await save({ ...base, enabled: true, detail: 'full', streamPreviewIntervalMs: 8000 })).toMatchObject({ ok: true, state: { phase: 'stopped' } })
+    await expect(connect.locator('[data-dsh-connect-status]')).toHaveAttribute('data-state', 'stopped')
+    await expect(detail).toHaveValue('quiet')
+    await expect(interval).toHaveValue('5000')
+    await expect(preview).not.toBeChecked()
+    await connect.getByRole('button', { name: '保存连接', exact: true }).click()
+    await expect(connect.getByRole('status')).toHaveText('连接设置已保存。')
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState())).toMatchObject({ enabled: false, detail: 'quiet', showStreamPreview: false, streamPreviewIntervalMs: 5000, cardMode: 'rich', progressStyle: 'card', secretConfigured: true })
+    await page.keyboard.press('Escape')
+    await openSettings()
+    await expect(detail).toHaveValue('quiet')
+    await expect(interval).toHaveValue('5000')
+    await expect(preview).not.toBeChecked()
+    await expect(connect.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    expect(await save({ ...base, streamPreviewIntervalMs: 8000, showStreamPreview: true })).toMatchObject({ ok: true })
+    await page.keyboard.press('Escape')
+    await openSettings()
+    await expect(interval).toHaveValue('8000')
+    await expect(interval.locator('option:checked')).toHaveText('当前：8s')
+    await expect(interval).toBeEnabled()
+    const managerPromise = harness.app.waitForEvent('window')
+    await connect.getByRole('button', { name: '管理应用／扫码创建', exact: true }).click()
+    const manager = await managerPromise
+    await expect(manager.getByRole('heading', { name: '飞书连接管理', exact: true })).toBeVisible()
+    await manager.locator('article').filter({ hasText: base.appId }).getByRole('button', { name: '编辑', exact: true }).click()
+    await expect(manager.getByRole('combobox', { name: '消息详细度', exact: true })).toHaveValue('quiet')
+    await expect(manager.getByRole('combobox', { name: '刷新间隔', exact: true })).toHaveValue('8000')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await expect(manager.locator('#channel')).toHaveText('尚未确认')
+    await expect(manager.locator('#dsh')).toHaveText('尚未通过任务验证')
+    await manager.screenshot({ path: testInfo.outputPath('feishu-manager-zh.png') })
+    await manager.close()
+    await page.evaluate(() => { document.documentElement.lang = 'en' })
+    await expect(connect.getByRole('combobox', { name: 'Message detail', exact: true })).toHaveValue('quiet')
+    await expect(connect.getByRole('combobox', { name: 'Refresh interval', exact: true }).locator('option:checked')).toHaveText('Current: 8s')
+    await expect(connect.getByRole('combobox', { name: 'Card style', exact: true })).toHaveValue('rich')
+    await expect(connect.getByRole('combobox', { name: 'Progress display', exact: true })).toHaveValue('card')
+    const mainWindow = await harness.app.browserWindow(page)
+    // The native shell minimum is 960px. Lower it only in this isolated fixture
+    // to exercise an 800px responsive content viewport, not the user window.
+    await mainWindow.evaluate(window => { window.setMinimumSize(800, 600); window.setContentSize(800, 700) })
+    await expect.poll(() => page.evaluate(() => window.innerWidth)).toBe(800)
+    await expectManagementLayout()
+    await expect(connect).toContainText('Quiet still sends the final answer')
+    await connect.getByRole('button', { name: 'Save connection', exact: true }).click()
+    await expect(connect.getByRole('status')).toHaveText('Connection settings saved.')
+    expect(await page.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.getConnectState())).toMatchObject({ streamPreviewIntervalMs: 8000, secretConfigured: true, phase: 'disabled' })
+    await connect.screenshot({ path: testInfo.outputPath('message-preferences-en.png') })
+    expect(harness.requests).toBe(0)
+    expect(await connect.innerText()).not.toContain('fake-ui-secret')
+  } finally { await harness.close() }
+})
+
+shellTest.describe('Feishu extension setup', () => {
+  shellTest.use({ connectSidecar: true, feishuSetupSidecar: true })
+
+  shellTest('manager edits, switches, closes and removes local applications; forged same-page window is rejected @smoke @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
+    const managerPromise = electronApp.waitForEvent('window')
+    await clickMenuItem(electronApp, 'Manage Feishu connections…')
+    const manager = await managerPromise
+    await expect(manager.getByRole('heading', { name: 'Feishu connections', exact: true })).toBeVisible()
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByLabel('Local name', { exact: true }).fill('First robot')
+    await manager.getByText('Existing application (advanced)', { exact: true }).click()
+    await manager.getByLabel('App ID', { exact: true }).fill('cli_manager_first')
+    await manager.getByLabel('App Secret', { exact: true }).fill('fake-manager-first')
+    await manager.getByRole('button', { name: 'Save and open connection', exact: true }).click()
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    const first = manager.locator('article').filter({ hasText: 'cli_manager_first' })
+    await expect(first).toHaveCount(1)
+    await manager.getByRole('checkbox', { name: 'Connect automatically when Desktop starts', exact: true }).check()
+    await expect.poll(async () => JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8')).autoConnect).toBe(true)
+    await manager.getByRole('button', { name: 'Add application', exact: true }).click()
+    await manager.getByLabel('Local name', { exact: true }).fill('Second robot')
+    await manager.getByText('Existing application (advanced)', { exact: true }).click()
+    await manager.getByLabel('App ID', { exact: true }).fill('cli_manager_second')
+    await manager.getByLabel('App Secret', { exact: true }).fill('fake-manager-second')
+    await manager.getByRole('combobox', { name: 'Message detail', exact: true }).selectOption('quiet')
+    await manager.getByRole('combobox', { name: 'Refresh interval', exact: true }).selectOption('5000')
+    await manager.getByRole('checkbox', { name: 'Streaming preview', exact: true }).uncheck()
+    await expect(manager.getByRole('combobox', { name: 'Refresh interval', exact: true })).toBeDisabled()
+    await manager.getByRole('combobox', { name: 'Card style', exact: true }).selectOption('rich')
+    await manager.getByRole('combobox', { name: 'Progress display', exact: true }).selectOption('card')
+    await manager.getByRole('button', { name: 'Save application', exact: true }).click()
+    const second = manager.locator('article').filter({ hasText: 'cli_manager_second' })
+    await expect(second).toHaveCount(1)
+    await expect(manager.locator('#selected')).toHaveText('First robot')
+    expect((await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n')).toHaveLength(1)
+    await second.getByRole('button', { name: 'Open connection', exact: true }).click()
+    await expect(manager.locator('#selected')).toHaveText('Second robot')
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
+    expect(config).toContain('app_id = "cli_manager_second"'); expect(config).toContain('mode = "quiet"')
+    expect(config).toContain('enabled = false'); expect(config).toContain('interval_ms = 5000'); expect(config).toContain('card_mode = "rich"'); expect(config).toContain('progress_style = "card"')
+    expect(config).not.toContain('fake-manager')
+    await second.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(manager.getByRole('combobox', { name: 'Message detail', exact: true })).toHaveValue('quiet')
+    await manager.getByLabel('Local name', { exact: true }).fill('Renamed robot')
+    // A confirmed poll changes QR state while unsaved form edits stay intact.
+    expect(await manager.evaluate(() => (window as any).dshFeishu.execute('qr-cancel'))).toMatchObject({ ok: true })
+    await expect(manager.locator('#qr-status')).toHaveText('Setup cancelled; temporary credentials removed.')
+    await expect(manager.getByLabel('Local name', { exact: true })).toHaveValue('Renamed robot')
+    await manager.getByRole('button', { name: 'Save application', exact: true }).click()
+    await expect(manager.locator('#selected')).toHaveText('Renamed robot')
+    await expect(manager.getByLabel('App Secret', { exact: true })).toHaveValue('')
+    await manager.screenshot({ path: testInfo.outputPath('feishu-manager-en.png') })
+    const forgedPromise = electronApp.waitForEvent('window')
+    await electronApp.evaluate(async ({ app, BrowserWindow }, url) => {
+      const forged = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false,
+        preload: app.getAppPath() + '/lib/preload/feishu.cjs' } })
+      await forged.loadURL(url)
+    }, manager.url())
+    const forged = await forgedPromise
+    await expect.poll(() => forged.evaluate(() => typeof (window as any).dshFeishu)).toBe('object')
+    expect(await forged.evaluate(() => (window as any).dshFeishu.execute('state'))).toBeNull()
+    expect(await forged.evaluate(() => (window as any).dshFeishu.execute('close'))).toBeNull()
+    await forged.close()
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    await manager.getByRole('button', { name: 'Close connection', exact: true }).click()
+    await expect(manager.locator('#process')).toHaveText('Closed')
+    manager.once('dialog', dialog => dialog.accept())
+    await second.getByRole('button', { name: 'Remove locally', exact: true }).click()
+    await expect(second).toHaveCount(0)
+    await expect(first).toHaveCount(1)
+    await expect(manager.locator('#selected')).toHaveText('None')
+    expect(JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8'))).toMatchObject({ enabled: false, applications: [{ appId: 'cli_manager_first' }] })
+    expect(await manager.locator('body').innerText()).not.toContain('fake-manager')
+    expect((await stat(dshHome)).isDirectory()).toBe(true)
+  })
+
+  shellTest('manager cancels, expires and retries QR setup; closing during creation removes temporary credentials @smoke @critical', async ({ electronApp, window, dshHome, userData, feishuSetupModePath }) => {
+    await writeFile(feishuSetupModePath!, 'wait\n')
+    const open = async () => {
+      const pending = electronApp.waitForEvent('window')
+      await window.evaluate(() => (window as any).dshDesktop.openConnectManager())
+      const page = await pending
+      await expect(page.getByRole('heading', { name: 'Feishu connections', exact: true })).toBeVisible()
+      return page
+    }
+    let manager = await open()
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByRole('button', { name: 'Generate QR code', exact: true }).click()
+    await expect(manager.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await manager.getByRole('button', { name: 'Cancel setup', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Setup cancelled; temporary credentials removed.')
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Authorization timed out. Generate a new QR code.', { timeout: 8000 })
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await manager.close()
+    const runs = async () => (await readFile(feishuSetupModePath! + '.runs', 'utf8')).trim().split('\n').map(line => JSON.parse(line) as { pid: number; config: string })
+    await expect.poll(async () => {
+      const entries = await runs()
+      return Promise.all(entries.map(async entry => stat(dirname(entry.config)).then(() => false, error => (error as NodeJS.ErrnoException).code === 'ENOENT')))
+    }).toEqual([true, true, true])
+    await expect.poll(async () => (await runs()).map(entry => { try { process.kill(entry.pid, 0); return false } catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH' } })).toEqual([true, true, true])
+    expect(JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8')).applications).toHaveLength(0)
+    await writeFile(feishuSetupModePath!, 'ready\n')
+    manager = await open()
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByRole('button', { name: 'Generate a new QR code', exact: true }).click()
+    await expect(manager.locator('#qr-status')).toHaveText('Application saved. Select it below to open the connection.', { timeout: 8000 })
+    await expect(manager.locator('article')).toHaveCount(1)
+    await expect(manager.locator('#process')).toHaveText('Closed')
+  })
+
+  shellTest('the Extensions menu and settings share QR application management with explicit open @smoke @critical', async ({ electronApp, window, dshHome, userData }) => {
+    await packagedOrStubHeadline(window)
+    await expect.poll(() => menuLabels(electronApp)).toContain('Manage Feishu connections…')
+
+    const setupWindowPromise = electronApp.waitForEvent('window')
+    await clickMenuItem(electronApp, 'Manage Feishu connections…')
+    const setupWindow = await setupWindowPromise
+    await setupWindow.waitForLoadState('domcontentloaded')
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await setupWindow.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await expect(setupWindow.getByLabel('Workspace', { exact: true })).toHaveValue(dshHome)
+    await setupWindow.getByRole('button', { name: 'Generate QR code', exact: true }).click()
+    await expect(setupWindow.getByRole('img', { name: 'Create with QR', exact: true })).toBeVisible()
+    await expect(setupWindow.getByText('Application saved. Select it below to open the connection.', { exact: true })).toBeVisible({ timeout: 10_000 })
+
+    const settings = JSON.parse(await readFile(join(userData, 'cc-connect', 'applications.json'), 'utf8'))
+    expect(settings).toMatchObject({ enabled: false, applications: [{ appId: 'cli_fake_id', workspace: dshHome }] })
+    await setupWindow.getByRole('button', { name: 'Open connection', exact: true }).click()
+    await expect.poll(() => window.evaluate(async () => {
+      const bridge = (window as unknown as { dshDesktop?: { getConnectState(): Promise<{ phase: string } | null> } }).dshDesktop
+      return bridge?.getConnectState().then(state => state?.phase)
+    })).toBe('ready')
+    await expect(setupWindow.locator('#process')).toHaveText('Service started')
+    await expect(setupWindow.locator('#channel')).toHaveText('Not confirmed')
+    await expect(setupWindow.locator('#dsh')).toHaveText('Not verified by a task')
+    expect(await setupWindow.evaluate(() => ({ generalBridge: typeof (window as any).dshDesktop, node: typeof (window as any).require }))).toEqual({ generalBridge: 'undefined', node: 'undefined' })
+    expect(await window.evaluate(() => (window as any).dshDesktop.openConnectManager())).toBe(true)
+    expect(electronApp.windows()).toHaveLength(2)
+    await setupWindow.close()
+    await expect.poll(() => window.evaluate(() => (window as any).dshDesktop.getConnectState())).toMatchObject({ enabled: true, phase: 'ready' })
+  })
+})
+
 shellTest('a plugin crash auto-quarantines the suspect and boots again', async ({ electronApp, window, dshHome, relaunch }) => {
   await expect(window.getByRole('heading', { name: 'Harness test workspace' })).toBeVisible()
   // Seed a profile as if dshmarket had been installed: the boot bundle list
@@ -902,6 +1455,12 @@ shellTest('LAN pairing shows a scannable QR link for the private address', async
   for (const address of addresses) {
     expect(address).toMatch(/http:\/\/\d+\.\d+\.\d+\.\d+:\d+\//)
   }
+  const countdown = pairingPage!.locator('#countdown')
+  await expect(countdown).toBeVisible()
+  const remainingSeconds = async () => Number(/\d+/.exec(await countdown.innerText())?.[0])
+  const initialSeconds = await remainingSeconds()
+  expect(initialSeconds).toBeGreaterThan(0)
+  await expect.poll(remainingSeconds, { timeout: 4000 }).toBeLessThan(initialSeconds)
   await pairingPage!.close().catch(() => {})
   await expect.poll(() => electronApp.windows().some(candidate => candidate !== window
     && candidate.url().startsWith('data:') && !candidate.isClosed()))

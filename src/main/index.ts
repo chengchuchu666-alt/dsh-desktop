@@ -1,13 +1,13 @@
 /** Electron lifecycle assembly for the bundled DeepSeek Harness runtime. */
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, nativeTheme, net, Notification, session, shell, systemPreferences, type MessageBoxOptions } from 'electron'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, stat, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { homedir, networkInterfaces } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { HarnessSupervisor, type HarnessState } from './supervisor.ts'
 import { resolveDshHome } from './dsh-home.ts'
-import { dshBin, harnessRoot, mobileShellRoot, nodeBin, resourcesRoot } from './paths.ts'
+import { ccConnectBin, dshBin, harnessRoot, mobileShellRoot, nodeBin, resourcesRoot } from './paths.ts'
 import { readProfileStatus } from './profile.ts'
 import { readProfileManifest, writeProfileManifest, withoutBundle, withoutBundles, pickQuarantinable } from './plugin-recovery.ts'
 import { supportIssueUrl, type SupportContext } from './support.ts'
@@ -27,6 +27,8 @@ import {
   type KernelLaunchGuard,
   writeActiveOverlay,
 } from './kernel-manager.ts'
+import { RuntimeManager, runtimeEnvironmentsDir } from './runtime-manager.ts'
+import { builtinEdition, builtinEditionCatalog } from './edition-catalog.ts'
 import { missingVcRuntimeDlls, vcRuntimeDismissedPath, VC_REDIST_URL } from './win-runtime.ts'
 import { ensureInstallShims, prependPath, proxyEnvFromResolveProxy } from './install-env.ts'
 import { installAppMenu, showAboutDialog, type AboutMaintenanceActions } from './menu.ts'
@@ -45,12 +47,12 @@ import { createTray, destroyTray, refreshTray, type TrayActions } from './tray.t
 import { statusLabelWithMode } from './tray-status.ts'
 import { checkForUpdatesInteractively, checkMacUpdate, configureAutoUpdates } from './update-prompt.ts'
 import { armSmokeTimeout, quitGracefully, SMOKE_TEST, SMOKE_UI_TEST, smokeUiRender, smokeVerify, smokeVerifyClosure, verifySmokeFailureRecovery } from './smoke.ts'
-import { DEV_WEB_URL_ENV, SMOKE_CLOSURE_FLAG, SMOKE_EXIT_FAIL, TEST_FAIL_HARNESS_ENV, TEST_RETRY_FAIL_ENV } from './smoke-protocol.ts'
+import { DEV_WEB_URL_ENV, isSmokeVersionMismatch, SMOKE_CLOSURE_FLAG, SMOKE_EXPECTED_VERSION_ENV, SMOKE_EXIT_FAIL, TEST_FAIL_HARNESS_ENV, TEST_RETRY_FAIL_ENV } from './smoke-protocol.ts'
 import { exportDiagnosticReport, redactDiagnosticsLog } from './diagnostics.ts'
 import { clearPersistedPluginSuspects, loadPersistedPluginSuspects, persistPluginSuspects, updatePluginFailureMemory, writeSafeModeOverlay, WEB_PROFILE, OFFICIAL_BUNDLES, classifyPluginFailureCause, type ComposedRow } from './safe-mode.ts'
 import { listTrash, moveToTrash, purgeExpiredTrash, purgeFromTrash, restoreFromTrash } from './trash.ts'
 import { writeTrashHookFiles } from './trash-hook.ts'
-import { deleteSessionToTrash, listSessions, restoreSessionFromTrash, unarchiveSession, ActiveSessionError } from './trash-sessions.ts'
+import { SessionTrashClient } from './trash-client.ts'
 import { buildPresetPackage, importPresetPackage, listUserPresets, parsePresetPackage, removeUserPreset } from './presets.ts'
 import { ShellLocaleController, shellText, type ShellLocale } from './locale.ts'
 import type { LanMenuActions, LanMenuState, MenuActions } from './menu-template.ts'
@@ -64,6 +66,15 @@ import { createShellPreferences } from './shell-preferences.ts'
 import { conversationSucceeded, focusWindowOnNotificationClick, normalizePublicStatusSnapshot, notificationsForPublicStatus, type PublicStatusSnapshot } from './desktop-notifications.ts'
 import { completeMarketInstall, type MarketInstallCommandResult, type MarketInstallProgress, type MarketInstallResult } from './market-install.ts'
 import { runDesktopHealthCheck } from './health-check.ts'
+import { normalizeConnectSettings, writeConnectToml } from './cc-connect-config.ts'
+import { ConnectApplicationStore } from './cc-connect-applications.ts'
+import { ConnectController, ConnectOperationError } from './cc-connect-controller.ts'
+import type { ConnectStartReason } from './cc-connect-policy.ts'
+import { ConnectSupervisor, type ConnectSupervisorEvents } from './cc-connect-supervisor.ts'
+import type { ConnectApplication, ConnectSaveResult, ConnectSettingsInput, ConnectState } from './cc-connect-types.ts'
+import { FeishuSetupRun } from './feishu-setup.ts'
+import { FeishuManager } from './feishu-manager.ts'
+import { closeFeishuSetupWindow, showFeishuSetupWindow, type FeishuSetupWindowController } from './feishu-window.ts'
 
 const DEV_WEB_URL = process.env[DEV_WEB_URL_ENV]
 const MAC_UPDATE_CHECK_DELAY_MS = 15_000
@@ -74,6 +85,10 @@ let closeNoticeClaimed = false
 let desktopPreferencesController: DesktopPreferencesController | undefined
 let lastPublicStatus: PublicStatusSnapshot | undefined
 let lastHarnessPhase: HarnessState['phase'] | undefined
+const sessionTrashClient = new SessionTrashClient()
+let connectController: ConnectController | undefined
+let feishuManager: FeishuManager | undefined
+let feishuSetupWindow: FeishuSetupWindowController | undefined
 /** Decision 0026: one healthy boot is guaranteed for the overlay selected at
  *  launch; its failure rolls the shell back to the bundled kernel. */
 let kernelLaunchGuard: KernelLaunchGuard | undefined
@@ -132,6 +147,7 @@ function safeModeActive(): boolean {
 /** Enter or exit Safe Mode: persist the flag, then restart the harness. */
 async function applySafeMode(enabled: boolean): Promise<boolean> {
   if (SMOKE_TEST || desktopPreferencesController === undefined) return false
+  if (enabled) await stopConnectSupervisor()
   if (!enabled) {
     lastPluginFailures = []
     void clearPersistedPluginSuspects(app.getPath('userData'))
@@ -139,7 +155,9 @@ async function applySafeMode(enabled: boolean): Promise<boolean> {
   const result = desktopPreferencesController.update({ safeMode: enabled })
   if (!result.ok) return false
   refreshNativeSurfaces()
-  return shellApp.runHarnessRestart()
+  const restarted = await shellApp.runHarnessRestart()
+  if (restarted && !enabled) await startConnectAfterHarness('resume')
+  return restarted
 }
 
 const DSHMARKET_PACKAGE = 'dshmarket'
@@ -149,6 +167,8 @@ const DSHMARKET_INSTALL_TIMEOUT_MS = 300_000
 let lastBalanceText: string | undefined
 let latestKernelVersion: string | undefined
 let lastKernelOperation: KernelOperationResult | undefined
+let runtimeManager: RuntimeManager | undefined
+const runtimeWindows = new Map<string, BrowserWindow>()
 // Chromium's fetch follows the system proxy; Node's does not. Every
 // main-process network call goes through it so real machines behind a
 // system-level proxy keep working (GUI launches carry no proxy env vars).
@@ -157,6 +177,72 @@ const balanceService = new BalanceService(async () => readDeepSeekApiKey(resolve
 
 function kernelDir(): string {
   return kernelsDir(app.getPath('userData'))
+}
+
+function getRuntimeManager(): RuntimeManager {
+  if (runtimeManager === undefined) {
+    runtimeManager = new RuntimeManager({
+      runtimeRoot: kernelDir(),
+      dataRoot: runtimeEnvironmentsDir(app.getPath('userData')),
+      nodeBin: nodeBin(),
+      env: harnessChildEnv,
+    })
+  }
+  return runtimeManager
+}
+
+async function openRuntimeEnvironment(id: string): Promise<boolean> {
+  const manager = getRuntimeManager()
+  const environment = await manager.startEnvironment(id)
+  if (environment.url === undefined) return false
+  const previous = runtimeWindows.get(id)
+  if (previous !== undefined && !previous.isDestroyed()) {
+    previous.show()
+    previous.focus()
+    return true
+  }
+  const window = new BrowserWindow({
+    title: `dsh · ${environment.name} · ${environment.runtimeVersion}`,
+    width: 1280,
+    height: 860,
+    show: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+  runtimeWindows.set(id, window)
+  window.once('ready-to-show', () => window.show())
+  window.once('closed', () => {
+    if (runtimeWindows.get(id) === window) runtimeWindows.delete(id)
+    void manager.stopEnvironment(id)
+  })
+  try {
+    await window.loadURL(environment.url)
+    return true
+  } catch {
+    if (!window.isDestroyed()) window.close()
+    return false
+  }
+}
+
+async function stopRuntimeEnvironment(id: string): Promise<boolean> {
+  const window = runtimeWindows.get(id)
+  if (window !== undefined && !window.isDestroyed()) window.close()
+  await getRuntimeManager().stopEnvironment(id)
+  return true
+}
+
+async function installRuntime(version: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (SMOKE_TEST) return { ok: false, reason: 'unavailable' }
+  return installKernel({
+    dir: kernelDir(),
+    version,
+    nodeBin: nodeBin(),
+    pnpmBin: pnpmBinPath(),
+    env: await installChildEnv(),
+  })
 }
 
 function pnpmBinPath(): string {
@@ -196,7 +282,7 @@ function rollbackKernel(version: string): void {
   console.warn(`dsh-desktop: kernel ${version} failed its health boot; rolling back to the bundled kernel`)
   markKernelFailed(kernelDir(), version)
   writeActiveOverlay(kernelDir(), undefined)
-  void shellApp.runHarnessRestart()
+  void shellApp.runHarnessRestart().then(() => restartConnectForCurrentKernel())
 }
 
 /** Switch to an installed overlay kernel and health-check the boot; any
@@ -213,6 +299,7 @@ async function switchKernel(version: string): Promise<KernelOperationResult> {
     rollbackKernel(version)
     return { status: 'rolled-back', version, reason: 'health-check-failed' }
   }
+  await restartConnectForCurrentKernel()
   return { status: 'ready', version }
 }
 
@@ -243,6 +330,160 @@ async function installChildEnv(): Promise<NodeJS.ProcessEnv> {
   }
   harnessChildEnv = env
   return env
+}
+
+async function readConnectState(): Promise<ConnectState> {
+  try {
+    return (await getConnectController().state()).connection
+  } catch {
+    return { ...normalizeConnectSettings(undefined), phase: 'degraded', secretConfigured: false,
+      credentialProtection: 'none', lastError: 'connection storage unavailable', health: { channel: 'unknown', dsh: 'unknown', errorCode: 'storage' } }
+  }
+}
+
+function parseConnectSettingsInput(raw: unknown): ConnectSettingsInput | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined
+  const value = raw as Record<string, unknown>
+  if (typeof value.enabled !== 'boolean' || typeof value.appId !== 'string' || typeof value.workspace !== 'string') return undefined
+  if (value.appSecret !== undefined && typeof value.appSecret !== 'string') return undefined
+  const input: ConnectSettingsInput = value.appSecret === undefined
+    ? { enabled: value.enabled, appId: value.appId, workspace: value.workspace }
+    : { enabled: value.enabled, appId: value.appId, workspace: value.workspace, appSecret: value.appSecret }
+  if (value.detail !== undefined) {
+    if (value.detail !== 'full' && value.detail !== 'compact' && value.detail !== 'quiet') return undefined
+    input.detail = value.detail
+  }
+  if (value.showStreamPreview !== undefined) {
+    if (typeof value.showStreamPreview !== 'boolean') return undefined
+    input.showStreamPreview = value.showStreamPreview
+  }
+  if (value.streamPreviewIntervalMs !== undefined) {
+    if (typeof value.streamPreviewIntervalMs !== 'number' || !Number.isFinite(value.streamPreviewIntervalMs) || !Number.isInteger(value.streamPreviewIntervalMs)) return undefined
+    input.streamPreviewIntervalMs = value.streamPreviewIntervalMs
+  }
+  if (value.cardMode !== undefined) {
+    if (value.cardMode !== 'legacy' && value.cardMode !== 'rich') return undefined
+    input.cardMode = value.cardMode
+  }
+  if (value.progressStyle !== undefined) {
+    if (value.progressStyle !== 'legacy' && value.progressStyle !== 'compact' && value.progressStyle !== 'card') return undefined
+    input.progressStyle = value.progressStyle
+  }
+  return input
+}
+
+async function validConnectWorkspace(workspace: string): Promise<boolean> {
+  if (!isAbsolute(workspace)) return false
+  try {
+    return (await stat(workspace)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+async function saveConnectSettings(raw: unknown): Promise<ConnectSaveResult> {
+  const current = await readConnectState()
+  const input = parseConnectSettingsInput(raw)
+  if (input === undefined) return { ok: false, reason: 'invalid-input', state: current }
+  if (input.enabled && input.appId.trim() === '') return { ok: false, reason: 'invalid-input', state: current }
+  if (input.workspace !== '' && !(await validConnectWorkspace(input.workspace))) return { ok: false, reason: 'invalid-workspace', state: current }
+  if (input.enabled && input.workspace === '') return { ok: false, reason: 'invalid-workspace', state: current }
+
+  try {
+    await getConnectController().saveLegacy(input)
+    return { ok: true, state: await readConnectState() }
+  } catch (error) {
+    const reason = error instanceof ConnectOperationError ? error.reason : 'storage'
+    console.warn(`dsh-desktop: cc-connect settings unavailable: ${reason}`)
+    return { ok: false, reason, state: await readConnectState() }
+  }
+}
+
+function getConnectController(): ConnectController {
+  if (connectController === undefined) {
+    connectController = new ConnectController({
+      store: new ConnectApplicationStore(app.getPath('userData')),
+      environment: () => ({ safeMode: SMOKE_TEST || safeModeActive(), harnessReady: shellApp.state?.phase === 'ready' && !windowContext.quitInProgress }),
+      validWorkspace: validConnectWorkspace,
+      createProcess: createConnectSupervisor,
+    })
+  }
+  return connectController
+}
+
+async function createConnectSupervisor(application: ConnectApplication, secret: string, events: ConnectSupervisorEvents): Promise<ConnectSupervisor> {
+  const userData = app.getPath('userData')
+  const dshHome = desktopDshHome()
+  const configPath = await writeConnectToml(userData, {
+    settings: { ...application, enabled: true },
+    paths: {
+      dataDir: await new ConnectApplicationStore(userData).dataDirectory(application.id),
+      nodeCommand: nodeBin(),
+      dshEntry: activeKernelBin(harnessRoot(), kernelDir()),
+      dshHome,
+      workspace: application.workspace,
+    },
+  })
+  return new ConnectSupervisor(events, {
+    command: !app.isPackaged && process.env.DSH_CC_CONNECT_TEST_BIN !== undefined
+      ? process.env.DSH_CC_CONNECT_TEST_BIN
+      : ccConnectBin(),
+    configPath,
+    cwd: application.workspace,
+    env: {
+      ...harnessChildEnv,
+      DSH_HOME: dshHome,
+      DSH_CC_CONNECT_HEALTH: '1',
+      DSH_CC_CONNECT_FEISHU_SECRET: secret,
+    },
+    redactValues: () => [secret],
+  })
+}
+
+async function stopConnectSupervisor(): Promise<void> {
+  await connectController?.pause()
+}
+
+async function startConnectAfterHarness(reason: ConnectStartReason = 'manual', id?: string): Promise<boolean> {
+  try {
+    return await getConnectController().start(reason, id)
+  } catch {
+    console.warn('dsh-desktop: cc-connect unavailable; inspect connection status')
+    return false
+  }
+}
+
+function getFeishuManager(): FeishuManager {
+  const testTimeout = Number(process.env.DSH_CC_CONNECT_SETUP_TEST_TIMEOUT_MS)
+  const timeoutMs = !app.isPackaged && process.env.DSH_CC_CONNECT_SETUP_TEST_BIN !== undefined
+    && Number.isInteger(testTimeout) && testTimeout >= 1000 && testTimeout <= 600_000 ? testTimeout : 600_000
+  if (feishuManager === undefined) feishuManager = new FeishuManager({
+    controller: getConnectController(),
+    environment: () => ({ safeMode: safeModeActive(), harnessReady: shellApp.state?.phase === 'ready' && !windowContext.quitInProgress }),
+    validWorkspace: validConnectWorkspace,
+    timeoutMs,
+    createRun: options => new FeishuSetupRun({ ...options,
+      timeoutMs,
+      command: !app.isPackaged && process.env.DSH_CC_CONNECT_SETUP_TEST_BIN !== undefined
+        ? process.env.DSH_CC_CONNECT_SETUP_TEST_BIN : ccConnectBin(),
+    }),
+  })
+  return feishuManager
+}
+
+async function showFeishuSetup(): Promise<void> {
+  if (feishuSetupWindow?.isOpen() === true) {
+    feishuSetupWindow.show()
+    return
+  }
+  feishuSetupWindow = showFeishuSetupWindow(windowContext.mainWindow, currentLocale, () => {
+    feishuSetupWindow = undefined
+    void feishuManager?.cancelQr().catch(() => console.warn('dsh-desktop: Feishu temporary setup cleanup failed'))
+  })
+}
+
+async function restartConnectForCurrentKernel(): Promise<boolean> {
+  return startConnectAfterHarness('resume')
 }
 
 /**
@@ -362,7 +603,7 @@ async function safeModeOverlayPath(): Promise<string | undefined> {
 /** The shell state machine, wired to the Electron surfaces it drives. */
 const shellApp = new ShellApp({
   createSupervisor: onState => new HarnessSupervisor(
-    { onState },
+    { onState, onTrashEndpoint: port => sessionTrashClient.bind(port) },
     {
       safeMode: { enabled: safeModeActive, overlayFactory: safeModeOverlayPath },
       trashHook: {
@@ -376,6 +617,7 @@ const shellApp = new ShellApp({
       env: {
         ...harnessChildEnv,
         DSH_HOME: resolveDshHome(process.env, homedir()),
+        DSH_DESKTOP_TRASH_TOKEN: sessionTrashClient.token,
         // Screen capture model tool (decision 0027): opt-in; re-evaluated per
         // supervisor creation, i.e. per restart.
         DSH_DESKTOP_SCREEN_CAPTURE: desktopPreferencesController?.snapshot.screenCapture === true ? '1' : '0',
@@ -418,6 +660,8 @@ const shellApp = new ShellApp({
     refreshTray()
   },
   onRestartBusyChanged: refreshNativeSurfaces,
+  beforeHarnessRestart: stopConnectSupervisor,
+  afterHarnessRestart: restartConnectForCurrentKernel,
   restartLanProxy: () => lanService.restart(),
   confirmRestart: async () => {
     const options: MessageBoxOptions = {
@@ -625,6 +869,7 @@ const menuActions: MenuActions = {
   checkForUpdates: () => { void checkForUpdatesInteractively(currentLocale) },
   showAbout: () => { void showAboutDialog(currentLocale, aboutMaintenance()) },
   openExternal: url => { void shell.openExternal(url) },
+  showFeishuSetup: () => { void showFeishuSetup() },
   startLanLink: () => { void startLanLink() },
   showLanQr: () => { void showLanQr() },
   stopLanLink,
@@ -765,6 +1010,7 @@ ipcMain.handle('desktop:action', async (event, action: unknown) => {
     const previous = readActiveOverlay(kernelDir())?.version
     writeActiveOverlay(kernelDir(), undefined)
     const restarted = await shellApp.runHarnessRestart()
+    if (restarted) await restartConnectForCurrentKernel()
     if (restarted && previous !== undefined) {
       // The switched-away overlay moves to the trash (30-day restore window)
       // instead of lingering on disk; a failed move keeps it installed.
@@ -781,6 +1027,75 @@ ipcMain.handle('desktop:action', async (event, action: unknown) => {
   if (action === 'enterSafeMode') return applySafeMode(true)
   if (action === 'exitSafeMode') return applySafeMode(false)
   return false
+})
+
+ipcMain.handle('desktop:connect:get-state', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  return readConnectState()
+})
+
+ipcMain.handle('desktop:connect:open-manager', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  await showFeishuSetup()
+  return true
+})
+
+ipcMain.handle('desktop:connect:manager', async (event, action: unknown, input: unknown) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return null
+  return getFeishuManager().execute(action, input)
+})
+
+ipcMain.handle('desktop:connect:manager:pick-workspace', async (event) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return null
+  const owner = BrowserWindow.fromWebContents(event.sender)
+  if (owner === null) return null
+  const result = await dialog.showOpenDialog(owner, { properties: ['openDirectory', 'createDirectory'] })
+  const workspace = result.filePaths[0]
+  return result.canceled || workspace === undefined || !await validConnectWorkspace(workspace) ? null : workspace
+})
+
+ipcMain.handle('desktop:connect:manager:open-platform', async (event) => {
+  if (feishuSetupWindow?.accepts(event) !== true) return false
+  await shell.openExternal('https://open.feishu.cn/app')
+  return true
+})
+
+ipcMain.handle('desktop:connect:save-settings', async (event, raw: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  return saveConnectSettings(raw)
+})
+
+ipcMain.handle('desktop:connect:pick-workspace', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  const window = windowContext.mainWindow
+  if (window === undefined || window.isDestroyed()) return null
+  const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] })
+  const workspace = result.filePaths[0]
+  return result.canceled || workspace === undefined || !(await validConnectWorkspace(workspace)) ? null : workspace
+})
+
+ipcMain.handle('desktop:connect:start', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  return startConnectAfterHarness()
+})
+
+ipcMain.handle('desktop:connect:stop', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  try {
+    await getConnectController().close()
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('desktop:connect:restart', async (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  try {
+    return startConnectAfterHarness('restart')
+  } catch {
+    return false
+  }
 })
 
 ipcMain.handle('desktop:bundled-plugins', async (event) => {
@@ -816,6 +1131,72 @@ ipcMain.handle('desktop:balance', async (event) => {
 ipcMain.handle('desktop:kernel:state', (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
   return { ...kernelState(harnessRoot(), kernelDir()), latestVersion: latestKernelVersion, lastOperation: lastKernelOperation }
+})
+
+ipcMain.handle('desktop:runtime:state', (event) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  return { ...getRuntimeManager().state(), editions: builtinEditionCatalog() }
+})
+
+ipcMain.handle('desktop:runtime:install', async (event, rawVersion: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  if (typeof rawVersion !== 'string') return { ok: false, reason: 'invalid-version' as const }
+  return installRuntime(rawVersion)
+})
+
+ipcMain.handle('desktop:runtime:create', async (event, raw: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, reason: 'invalid-input' as const }
+  const candidate = raw as Record<string, unknown>
+  if (typeof candidate.name !== 'string' || typeof candidate.runtimeVersion !== 'string') return { ok: false, reason: 'invalid-input' as const }
+  try {
+    const environment = await getRuntimeManager().createEnvironment({ name: candidate.name, runtimeVersion: candidate.runtimeVersion })
+    return { ok: true as const, environment, state: getRuntimeManager().state() }
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : 'create-failed' }
+  }
+})
+
+ipcMain.handle('desktop:runtime:start', async (event, rawId: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  if (typeof rawId !== 'string') return { ok: false, reason: 'invalid-environment-id' as const }
+  try {
+    const opened = await openRuntimeEnvironment(rawId)
+    return opened ? { ok: true as const, state: getRuntimeManager().state() } : { ok: false as const, reason: 'window-load-failed' }
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : 'start-failed' }
+  }
+})
+
+ipcMain.handle('desktop:runtime:stop', async (event, rawId: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  if (typeof rawId !== 'string') return { ok: false, reason: 'invalid-environment-id' as const }
+  try {
+    await stopRuntimeEnvironment(rawId)
+    return { ok: true as const, state: getRuntimeManager().state() }
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : 'stop-failed' }
+  }
+})
+
+ipcMain.handle('desktop:runtime:uninstall', async (event, rawVersion: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+  if (typeof rawVersion !== 'string') return { ok: false, reason: 'invalid-version' as const }
+  try {
+    await getRuntimeManager().uninstallRuntime(rawVersion)
+    return { ok: true as const, state: getRuntimeManager().state() }
+  } catch (error) {
+    return { ok: false as const, reason: error instanceof Error ? error.message : 'uninstall-failed' }
+  }
+})
+
+ipcMain.handle('desktop:edition:open-source', async (event, rawId: unknown) => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  if (typeof rawId !== 'string') return false
+  const edition = builtinEdition(rawId)
+  if (edition === undefined) return false
+  await shell.openExternal(edition.source)
+  return true
 })
 
 ipcMain.handle('desktop:lan:state', (event) => {
@@ -1139,19 +1520,31 @@ ipcMain.handle('desktop:trash:list', (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
   return listTrash(desktopDshHome())
 })
-ipcMain.handle('desktop:trash:restore', (event, rawId: unknown) => {
+ipcMain.handle('desktop:trash:restore', async (event, rawId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
   if (typeof rawId !== 'string' || rawId === '') return null
-  return restoreFromTrash(desktopDshHome(), rawId)
+  const entry = (await listTrash(desktopDshHome())).find(item => item.id === rawId)
+  if (entry?.kind === 'session') {
+    const result = await sessionTrashClient.run({ action: 'restore', trashId: rawId })
+    notifyTrashChanged('restore', rawId)
+    return result === true ? entry : null
+  }
+  const restored = await restoreFromTrash(desktopDshHome(), rawId)
+  notifyTrashChanged('restore', rawId)
+  return restored
 })
-ipcMain.handle('desktop:trash:purge', (event, rawId: unknown) => {
+ipcMain.handle('desktop:trash:purge', async (event, rawId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
   if (typeof rawId !== 'string' || rawId === '') return false
-  return purgeFromTrash(desktopDshHome(), rawId)
+  const result = await purgeFromTrash(desktopDshHome(), rawId)
+  notifyTrashChanged('purge', rawId)
+  return result
 })
-ipcMain.handle('desktop:trash:purge-expired', (event) => {
+ipcMain.handle('desktop:trash:purge-expired', async (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return 0
-  return purgeExpiredTrash(desktopDshHome()).then(entries => entries.length)
+  const result = await purgeExpiredTrash(desktopDshHome())
+  notifyTrashChanged('purge-expired', '')
+  return result.length
 })
 ipcMain.handle('desktop:presets:delete', (event, rawId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
@@ -1159,33 +1552,39 @@ ipcMain.handle('desktop:presets:delete', (event, rawId: unknown) => {
   return removeUserPreset(desktopDshHome(), rawId).then(() => true).catch(() => false)
 })
 
-// Session trash: list on-disk sessions with their archive flag, delete one
-// into the trash (live sessions are refused via the WebUI-reported ids),
-// restore a trashed session, and clear a phantom archive entry.
+function notifyTrashChanged(action: string, id: string): void {
+  if (windowContext.mainWindow && !windowContext.mainWindow.isDestroyed()) {
+    windowContext.mainWindow.webContents.send('desktop:trash:changed', { home: desktopDshHome(), action, id })
+  }
+}
+
+// Session lifecycle and archive mutations belong to the authoritative Host.
+// No stale WebUI running snapshot or raw workspace.json write can authorize removal.
 ipcMain.handle('desktop:trash:sessions', (event) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
-  return listSessions(desktopDshHome())
+  return sessionTrashClient.list()
 })
-ipcMain.handle('desktop:trash:session-delete', (event, rawProjectKey: unknown, rawSessionId: unknown) => {
+ipcMain.handle('desktop:trash:session-delete', async (event, rawProjectKey: unknown, rawSessionId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
   if (typeof rawProjectKey !== 'string' || typeof rawSessionId !== 'string' || rawSessionId === '') return false
-  if (rawProjectKey.includes('..') || rawProjectKey.includes('/') || rawProjectKey.includes('\\')) return false
-  const live = new Set((lastPublicStatus?.sessions ?? []).filter(session => session.running).map(session => session.id))
-  return deleteSessionToTrash(desktopDshHome(), rawProjectKey, rawSessionId, [...live]).then(() => true).catch((error) => {
-    if (error instanceof ActiveSessionError) return 'active'
-    console.warn(`dsh-desktop: session delete failed: ${error instanceof Error ? error.message : String(error)}`)
-    return false
-  })
+  if (rawProjectKey === '.' || rawProjectKey === '..' || rawProjectKey.includes('/') || rawProjectKey.includes('\\')) return false
+  const result = await sessionTrashClient.run({ action: 'delete', projectKey: rawProjectKey, sessionId: rawSessionId })
+  notifyTrashChanged('delete', rawSessionId)
+  return result
 })
-ipcMain.handle('desktop:trash:session-restore', (event, rawTrashId: unknown) => {
+ipcMain.handle('desktop:trash:session-restore', async (event, rawTrashId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
   if (typeof rawTrashId !== 'string' || rawTrashId === '') return null
-  return restoreSessionFromTrash(desktopDshHome(), rawTrashId).then(() => true).catch(() => false)
+  const result = await sessionTrashClient.run({ action: 'restore', trashId: rawTrashId })
+  notifyTrashChanged('restore', rawTrashId)
+  return result
 })
-ipcMain.handle('desktop:trash:session-unarchive', (event, rawSessionId: unknown) => {
+ipcMain.handle('desktop:trash:session-unarchive', async (event, rawSessionId: unknown) => {
   if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
   if (typeof rawSessionId !== 'string' || rawSessionId === '') return false
-  return unarchiveSession(desktopDshHome(), rawSessionId)
+  const result = await sessionTrashClient.run({ action: 'unarchive', sessionId: rawSessionId })
+  notifyTrashChanged('unarchive', rawSessionId)
+  return result
 })
 
 function verifyHarness(root: string): void {
@@ -1227,16 +1626,22 @@ app.on('before-quit', (event) => {
   windowContext.quitInProgress = true
   releaseDesktopShortcut()
   closeLanPairingWindow()
+  closeFeishuSetupWindow()
   localeController?.dispose()
   destroyTray()
-  if (shellApp.supervisorInstance !== undefined || lanService.isRunning) {
+  if (shellApp.supervisorInstance !== undefined || connectController?.hasProcess === true || lanService.isRunning || runtimeManager?.hasRunningProcesses() === true) {
     event.preventDefault()
     // Absolute quit guard: each stop() already has a SIGKILL fallback, but if
     // something unexpected leaves a promise pending we still force-quit
     // within 8s instead of hanging the app on exit.
     const forceQuitTimer = setTimeout(() => app.quit(), 8_000)
     forceQuitTimer.unref()
-    void Promise.all([shellApp.stopHarness(), lanService.stop()]).finally(() => {
+    for (const runtimeWindow of runtimeWindows.values()) {
+      if (!runtimeWindow.isDestroyed()) runtimeWindow.close()
+    }
+    void Promise.all([stopConnectSupervisor().then(() => shellApp.stopHarness()), feishuManager?.cancelQr(), lanService.stop()]).then(() => runtimeManager?.stopAll()).catch(() => {
+      console.warn('dsh-desktop: shutdown incomplete; quitting with process stop errors')
+    }).finally(() => {
       clearTimeout(forceQuitTimer)
       app.quit()
     })
@@ -1255,6 +1660,12 @@ if (!gotLock) {
 } else {
   app.on('second-instance', () => showWindow(windowContext))
   void app.whenReady().then(async () => {
+    const expectedSmokeVersion = process.env[SMOKE_EXPECTED_VERSION_ENV]
+    if (SMOKE_TEST && isSmokeVersionMismatch(expectedSmokeVersion, app.getVersion())) {
+      console.error(`dsh-desktop: packaged version mismatch: expected ${expectedSmokeVersion}, got ${app.getVersion()}`)
+      quitGracefully(SMOKE_EXIT_FAIL)
+      return
+    }
     // Windows toasts only display when the AUMID matches the Start Menu
     // shortcut (electron-builder uses the appId); without it desktop
     // notifications silently never show.
@@ -1324,6 +1735,7 @@ if (!gotLock) {
     try {
       const url = await boot()
       if (!SMOKE_TEST) {
+        await startConnectAfterHarness('startup')
         if (app.isPackaged && process.platform === 'darwin') {
           const timer = setTimeout(() => { void checkMacUpdate(false, currentLocale) }, MAC_UPDATE_CHECK_DELAY_MS)
           timer.unref()

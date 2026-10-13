@@ -4,9 +4,9 @@
 > 本文记录产品架构、源码职责与 CI/Release 验证契约。
 > 运维事实（发布流程、镜像操作、版本记录）见根 `HANDOFF.md`。
 
-最后更新: 2026-10-04 · 当前代码基线 `0.2.1-alpha.1.shell.0`（未发布）
+最后更新: 2026-10-12 · 当前代码基线 `0.2.1-alpha.2.shell.2`（已发布；tag 与 CI-only 后续见 HANDOFF §78）
 （主界面提供一次性首次成功引导；桌面设置提供本地优先、只读且脱敏的运行体检；
-发布门禁覆盖真实 Harness、插件市场、安全模式、移动设备连接和跨版本升级；内核 `0.2.1-alpha.1`）
+发布门禁覆盖真实 Harness、插件市场、安全模式、移动设备连接和跨版本升级；内核 `0.2.1-alpha.2`）
 
 ## 1. 产品概述
 
@@ -43,6 +43,8 @@ src/main/update-prompt.ts   跨平台更新与 macOS check-only 提示
 src/main/smoke.ts           CI 冒烟断言与退出约定
 src/main/supervisor.ts      Harness 子进程生命周期与退避重启
 src/main/kernel-manager.ts  内核 overlay(0026):选择/安装/健康守卫与失败回滚
+src/main/runtime-manager.ts  多版本 Dashboard:官方 runtime、独立 Environment 与并行进程
+src/main/edition-catalog.ts  Edition 来源、信任等级与隔离元数据的只读目录
 src/main/desktop-controls.ts  shell-owned Web 插件挂载与降级
 src/main/global-shortcut.ts  桌面全局快捷键注册、校验与平台文案
 src/main/desktop-preferences.ts  快捷键、启动/通知与首次成功引导状态及原生副作用

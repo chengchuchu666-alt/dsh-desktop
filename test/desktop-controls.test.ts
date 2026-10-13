@@ -60,10 +60,39 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   assert.match(client, /getBalance/)
   assert.match(client, /getKernelState/)
   assert.match(client, /kernelInstall/)
+  // Feishu/cc-connect settings stay in the existing settings.section surface.
+  assert.match(client, /dsh-desktop-connect/)
+  assert.match(client, /getConnectState/)
+  assert.match(client, /saveConnectSettings/)
+  assert.match(client, /pickConnectWorkspace/)
+  assert.match(client, /startConnect/)
+  assert.match(client, /stopConnect/)
+  assert.match(client, /restartConnect/)
+  assert.match(client, /connectAppSecret/)
+  assert.match(client, /connectProtected/)
+  for (const key of ['connectDetailTitle', 'connectDetailFull', 'connectDetailCompact', 'connectDetailQuiet', 'connectStreamPreview', 'connectStreamPreviewInterval', 'connectCardModeTitle', 'connectCardModeLegacy', 'connectCardModeRich', 'connectProgressStyleTitle', 'connectProgressStyleLegacy', 'connectProgressStyleCompact', 'connectProgressStyleCard', 'connectQuietHint']) {
+    assert.equal((client.match(new RegExp(key + ':', 'g')) ?? []).length, 2, `${key} has Chinese and English translations`)
+  }
+  assert.match(client, /select:focus-visible/)
+  assert.match(client, /select:disabled/)
+  assert.match(client, /disabled: !connectForm\.showStreamPreview/)
+  assert.match(client, /\[1500, 3000, 5000\]/)
+  assert.match(client, /connectRevision\.current/)
+  assert.match(client, /setConnectForm\(\{[\s\S]*appSecret: ""/)
   // A successful check with no newer kernel must still answer the user.
   assert.match(client, /kernelUpToDate/)
   assert.match(client, /kernelRolledBack/)
   assert.match(client, /kernelCheckFailed/)
+  // Multi-version dashboard: exact official installs, isolated environments,
+  // concurrent start/stop, and runtime-only uninstall.
+  assert.match(client, /getRuntimeState/)
+  assert.match(client, /installRuntime/)
+  assert.match(client, /createRuntimeEnvironment/)
+  assert.match(client, /startRuntimeEnvironment/)
+  assert.match(client, /uninstallRuntime/)
+  assert.match(client, /runtimeMissing/)
+  assert.match(client, /runtimeCatalog/)
+  assert.match(client, /openEditionSource/)
   assert.match(client, /dshDesktop/)
 
   // Host half: opt-in screen capture model tool (decision 0027, route C).
@@ -131,7 +160,12 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   const preload = await readFile(resolve('src/preload/index.ts'), 'utf8')
   const main = await readFile(resolve('src/main/index.ts'), 'utf8')
   assert.match(preload, /desktop:health-check/)
+  assert.match(preload, /desktop:runtime:state/)
+  assert.match(preload, /desktop:runtime:create/)
+  assert.match(preload, /desktop:runtime:uninstall/)
+  assert.match(preload, /desktop:edition:open-source/)
   assert.match(main, /runDesktopHealthCheck/)
+  assert.match(main, /builtinEditionCatalog/)
   assert.match(main, /conversationSucceeded/)
   assert.match(main, /firstRunGuideDismissed/)
   assert.doesNotMatch(main, /typeof candidate\.firstTaskCompleted/)
@@ -176,6 +210,16 @@ test('desktop controls expose the agent deletion interception preference', async
   assert.match(client, /deletionInterception/)
   assert.match(client, /agentDeletionInterception/)
   assert.match(main, /candidate\.agentDeletionInterception/)
+})
+
+test('Feishu management entry and health text share the settings design system', async () => {
+  const client = await readFile(join(pluginRoot, 'lib/client.js'), 'utf8')
+  const css = client.match(/const css = `([\s\S]*?)`;/)?.[1]
+  assert.ok(css)
+  assert.match(css, /\[data-dsh-connect-manager\] \{[^}]*border-radius: 999px;/)
+  assert.match(css, /\[data-dsh-connect-manager\]\[data-primary\] \{[^}]*background: var\(--dsh-controls-accent\);/)
+  assert.match(css, /\[data-dsh-connect-manager\] \{[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere;[^}]*white-space: normal;/)
+  assert.match(css, /\[data-dsh-connect-health\],[^}]*display: block;/)
 })
 
 test('trash section uses the settings design system with guarded destructive actions', async () => {

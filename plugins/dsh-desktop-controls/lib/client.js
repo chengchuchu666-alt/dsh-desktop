@@ -411,6 +411,29 @@ window.__ModuleLoader__.load({
         flex-wrap: wrap;
         justify-content: flex-end;
       }
+      [data-dsh-runtime-panel] {
+        background: var(--dsh-controls-panel-muted);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 10px;
+        display: grid;
+        gap: 8px;
+        margin: 10px 0 2px;
+        padding: 10px 12px;
+      }
+      [data-dsh-runtime-form] { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+      [data-dsh-runtime-form] input,
+      [data-dsh-runtime-form] select {
+        background: var(--dsh-controls-panel);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 7px;
+        color: var(--dsh-controls-text);
+        font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        min-width: 130px;
+        padding: 6px 8px;
+      }
+      [data-dsh-runtime-row] { align-items: center; border-top: 1px solid var(--dsh-controls-border); display: flex; gap: 10px; justify-content: space-between; padding-top: 8px; }
+      [data-dsh-runtime-row] small { color: var(--dsh-controls-muted); display: block; font-size: 11px; }
+      [data-dsh-runtime-status] { color: var(--dsh-controls-muted); font-size: 11px; white-space: nowrap; }
       [data-dsh-desktop-settings] [data-dsh-market-risk] {
         align-items: flex-end;
         display: inline-flex;
@@ -461,6 +484,144 @@ window.__ModuleLoader__.load({
         padding: 7px;
         text-align: left;
         white-space: pre-wrap;
+      }
+      [data-dsh-desktop-settings] [data-dsh-desktop-connect] {
+        background: var(--dsh-controls-panel-muted);
+        border: 1px solid color-mix(in srgb, var(--dsh-controls-accent) 18%, var(--dsh-controls-border));
+        border-radius: 11px;
+        margin: 0 0 12px;
+        padding: 11px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-head] {
+        align-items: flex-start;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-status] {
+        align-items: center;
+        background: var(--dsh-controls-panel);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 999px;
+        color: var(--dsh-controls-muted);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 10px;
+        gap: 5px;
+        line-height: 1;
+        padding: 5px 7px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-status]::before {
+        background: var(--dsh-controls-muted);
+        border-radius: 999px;
+        content: "";
+        height: 6px;
+        width: 6px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="ready"]::before { background: #128b5c; }
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="starting"],
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="degraded"] { color: var(--dsw-alias-state-warning-primary, #9a6700); }
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="starting"]::before,
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="degraded"]::before { background: #9a6700; }
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="crashed"] { color: var(--dsw-alias-state-error-primary, #c33); }
+      [data-dsh-desktop-settings] [data-dsh-connect-status][data-state="crashed"]::before { background: #c33; }
+      [data-dsh-desktop-settings] [data-dsh-connect-copy] {
+        color: var(--dsh-controls-muted);
+        display: block;
+        font-size: 11px;
+        line-height: 1.45;
+        margin-top: 3px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-fields] {
+        border: 0;
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        min-width: 0;
+        padding: 0;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: minmax(88px, .42fr) minmax(0, 1fr);
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] > span {
+        color: var(--dsh-controls-muted);
+        font-size: 11px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] input,
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select {
+        background: var(--dsh-controls-panel);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 7px;
+        color: var(--dsh-controls-text);
+        min-width: 0;
+        padding: 6px 8px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select { font: inherit; width: 100%; }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select:focus-visible {
+        outline: 2px solid var(--dsh-controls-accent);
+        outline-offset: 2px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-field] select:disabled { cursor: not-allowed; opacity: .5; }
+      [data-dsh-desktop-settings] [data-dsh-connect-workspace] {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+        min-width: 0;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-workspace] input { flex: 1; min-width: 0; }
+      [data-dsh-desktop-settings] [data-dsh-connect-workspace] button { flex: 0 0 auto; }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+        margin-top: 10px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button,
+      [data-dsh-desktop-settings] [data-dsh-connect-manager] {
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 5px 9px;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[data-primary],
+      [data-dsh-desktop-settings] [data-dsh-connect-manager][data-primary] {
+        background: var(--dsh-controls-accent);
+        border-color: var(--dsh-controls-accent);
+        color: #fff;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button:not([data-primary]) {
+        background: var(--dsh-controls-panel);
+        color: var(--dsh-controls-text);
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-actions] button[disabled],
+      [data-dsh-desktop-settings] [data-dsh-connect-manager][disabled] { cursor: wait; opacity: .6; }
+      [data-dsh-desktop-settings] [data-dsh-connect-manager] {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-meta],
+      [data-dsh-desktop-settings] [data-dsh-connect-health],
+      [data-dsh-desktop-settings] [data-dsh-connect-message] {
+        color: var(--dsh-controls-muted);
+        display: block;
+        font-size: 10.5px;
+        line-height: 1.45;
+        margin: 8px 0 0;
+      }
+      [data-dsh-desktop-settings] [data-dsh-connect-message][data-state="error"] { color: var(--dsw-alias-state-error-primary, #c33); }
+      [data-dsh-desktop-settings] [data-dsh-connect-unavailable] {
+        color: var(--dsh-controls-muted);
+        font-size: 11px;
+        line-height: 1.45;
+        margin: 0 0 12px;
       }
       [data-dsh-desktop-settings] [data-dsh-desktop-checkbox] { height: 16px; width: 16px; }
       [data-dsh-desktop-settings] [data-dsh-desktop-status] {
@@ -766,7 +927,13 @@ window.__ModuleLoader__.load({
         guideRuntime: "运行环境就绪", guideWorkspace: "选择工作区", guideModel: "配置模型", guideTask: "完成第一条任务", guideDone: "完成", guidePending: "待完成", guideMarketOptional: "插件市场是可选项，不影响你先完成第一条任务。",
         healthTitle: "运行体检", healthCopy: "检查运行环境、数据目录、Harness、本地连接、Profile 和插件状态。结果仅保留在本机并已脱敏，不上传，也不会自动修复文件。", healthRun: "开始体检", healthAgain: "重新体检", healthRunning: "检查中…", healthNetwork: "额外检查代理、registry 和更新源连通性（会发起网络请求）", healthOk: "正常", healthWarning: "警告", healthFailed: "失败", healthRepairGet: "获取重装包", healthRepairAlt: "备用线路", healthRepairSteps: "① 完全退出 dsh-desktop（含托盘）→ ② 运行下载的安装包覆盖安装 → ③ 完成后重新体检",
         groupHabits: "桌面习惯", groupServices: "账户与插件", groupRecovery: "恢复", groupPlugins: "插件", groupOptional: "维护与迁移",
+        connectTitle: "飞书消息连接", connectCopy: "从飞书发起 DSH 任务；Secret 只保存在本机主进程。", connectEnabled: "启用连接", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "留空以保留已保存的 Secret", connectWorkspace: "默认工作区", connectChoose: "选择", connectSave: "保存连接", connectStart: "启动", connectStop: "停止", connectRestart: "重连", connectStatus: "状态", connectDisabled: "未启用", connectStopped: "已停止", connectStarting: "启动中", connectReady: "已连接", connectDegraded: "连接不稳定", connectCrashed: "连接已崩溃", connectSecretStored: "Secret 已保存", connectSecretMissing: "尚未保存 Secret", connectProtected: "系统安全存储", connectFileFallback: "本机受限存储", connectSaved: "连接设置已保存。", connectInvalidWorkspace: "请选择存在的绝对工作区目录。", connectInvalid: "请填写 App ID 并选择工作区。", connectStorage: "设置或凭证保存失败，请重试。", connectUnavailable: "连接桥不可用；请使用系统托盘或重新打开桌面设置。", connectLastError: "最近错误",
         lanSettings: "连接移动设备", lanSettingsDetail: "手机与电脑连接同一局域网，扫码即可进入 Harness Web 界面。",
+        connectDetailTitle: "消息详细度", connectDetailFull: "完整", connectDetailCompact: "精简", connectDetailQuiet: "静默", connectQuietHint: "静默仍会回复最终结果，并保留必要错误与权限交互。",
+        connectManage: "管理应用／扫码创建", connectAdvanced: "高级：当前应用配置", connectServiceReady: "服务已启动", connectChannel: "飞书通道", connectDsh: "DSH 任务", connectUnknown: "尚未确认", connectOnline: "在线", connectOffline: "离线", connectModelUnknown: "尚未通过任务验证", connectModelAvailable: "任务已完成", connectModelUnavailable: "任务失败", connectModelKeyMissing: "请在主窗口 Models 页面配置模型 API key，不要填入机器人 Secret。",
+        connectStreamPreview: "流式预览", connectStreamPreviewInterval: "刷新间隔", connectPreviewCurrent: "当前：{seconds}s",
+        connectCardModeTitle: "卡片样式", connectCardModeLegacy: "经典", connectCardModeRich: "富卡片（Card 2.0）",
+        connectProgressStyleTitle: "进度展示", connectProgressStyleLegacy: "逐条", connectProgressStyleCompact: "单消息更新", connectProgressStyleCard: "结构化卡片",
         lanStart: "开始配对", lanShowQr: "显示二维码", lanStop: "停止共享", lanPanelDetail: "同一局域网 · 扫码进入 Harness", lanActiveDetail: "局域网入口已开启", lanStopDetail: "关闭当前局域网入口",
         shortcut: "唤起快捷键", record: "重新设置", recording: "请按下快捷键…",
         shortcutHelp: "至少包含一个修饰键，例如 Ctrl + Alt + K。",
@@ -786,6 +953,7 @@ window.__ModuleLoader__.load({
         marketTechnical: "查看脱敏技术详情", marketCopy: "复制技术详情", marketCopied: "已复制",
         balance: "余额", recharge: "充值",
         kernel: "内核版本", kernelBundled: "内置", kernelOverlay: "已切换",
+        runtimeManager: "多版本运行环境", runtimeManagerDetail: "安装多个官方 dsh 版本；每个环境拥有独立数据目录，可同时运行。", runtimeCatalog: "版本目录", runtimeSource: "来源", runtimeOfficial: "官方", runtimeCommunity: "社区", runtimeOpen: "查看发布页", runtimeVersionPlaceholder: "版本号，例如 0.1.1-rc.3", runtimeInstall: "安装版本", runtimeNamePlaceholder: "环境名称", runtimeCreate: "创建环境", runtimeEmpty: "先安装一个官方版本", runtimeStart: "启动", runtimeStop: "停止", runtimeUninstall: "卸载 runtime", runtimeMissing: "runtime 已卸载，环境数据仍保留", runtimeStopped: "已停止", runtimeStarting: "启动中", runtimeRunning: "运行中", runtimeFailed: "启动失败", runtimeUninstallConfirm: "卸载 runtime {version}？该环境的数据会保留。",
         kernelCheck: "检查新版", kernelInstall: "安装最新", kernelRestore: "恢复内置",
         kernelUpToDate: "已是最新版本。",
         kernelAvailable: "发现内核新版 {version}，可点击安装。", kernelInstalling: "正在安装并切换，可能需要几分钟…", kernelReady: "内核 {version} 已安装并运行。", kernelCheckFailed: "无法检查内核更新，请检查网络后重试。", kernelInstallFailed: "内核安装失败，尚未切换；请检查网络后重试。", kernelSwitchFailed: "内核已安装，但 Harness 重启失败。", kernelRolledBack: "新版内核健康检查失败，已恢复内置内核。", kernelRestored: "已恢复内置内核。", kernelRestoreFailed: "恢复内置内核后重启失败。", kernelUnavailable: "当前构建暂不可用内核更新。", kernelFailed: "操作未完成，请重试。",
@@ -819,7 +987,13 @@ window.__ModuleLoader__.load({
         guideRuntime: "Runtime ready", guideWorkspace: "Choose a workspace", guideModel: "Configure a model", guideTask: "Complete your first task", guideDone: "Done", guidePending: "To do", guideMarketOptional: "The plugin market is optional and never blocks your first task.",
         healthTitle: "Run health check", healthCopy: "Checks the runtime, data folders, Harness, loopback, profile, and plugin state. Results stay local and sanitized; nothing is uploaded or repaired automatically.", healthRun: "Run check", healthAgain: "Run again", healthRunning: "Checking…", healthNetwork: "Also check proxy, registry, and update-source connectivity (sends network requests)", healthOk: "OK", healthWarning: "Warning", healthFailed: "Failed", healthRepairGet: "Get the installer", healthRepairAlt: "Mirror link", healthRepairSteps: "① Quit dsh-desktop (also from the tray) → ② Run the downloaded installer over the existing install → ③ Run the health check again",
         groupHabits: "Desktop habits", groupServices: "Account & plugins", groupRecovery: "Recovery", groupPlugins: "Plugins", groupOptional: "Maintenance & migration",
+        connectTitle: "Feishu message connection", connectCopy: "Start DSH tasks from Feishu. The Secret stays in the local main process.", connectEnabled: "Enable connection", connectAppId: "App ID", connectAppSecret: "App Secret", connectAppSecretPlaceholder: "Leave blank to keep the saved Secret", connectWorkspace: "Default workspace", connectChoose: "Choose", connectSave: "Save connection", connectStart: "Start", connectStop: "Stop", connectRestart: "Reconnect", connectStatus: "Status", connectDisabled: "Disabled", connectStopped: "Stopped", connectStarting: "Starting", connectReady: "Connected", connectDegraded: "Unstable", connectCrashed: "Crashed", connectSecretStored: "Secret saved", connectSecretMissing: "Secret not saved", connectProtected: "System secure storage", connectFileFallback: "Protected local file", connectSaved: "Connection settings saved.", connectInvalidWorkspace: "Choose an existing absolute workspace directory.", connectInvalid: "Enter an App ID and choose a workspace.", connectStorage: "Settings or credential storage failed; retry.", connectUnavailable: "The connection bridge is unavailable; use the system tray or reopen Desktop settings.", connectLastError: "Last error",
         lanSettings: "Connect a mobile device", lanSettingsDetail: "Same LAN as the computer; scan the QR code to enter the Harness Web UI.",
+        connectDetailTitle: "Message detail", connectDetailFull: "Full", connectDetailCompact: "Compact", connectDetailQuiet: "Quiet", connectQuietHint: "Quiet still sends the final answer and essential errors and permission prompts.",
+        connectManage: "Manage applications / create with QR", connectAdvanced: "Advanced: selected application settings", connectServiceReady: "Service started", connectChannel: "Feishu channel", connectDsh: "DSH tasks", connectUnknown: "Not confirmed", connectOnline: "Online", connectOffline: "Offline", connectModelUnknown: "Not verified by a task", connectModelAvailable: "Task completed", connectModelUnavailable: "Task failed", connectModelKeyMissing: "Configure the model API key on the main window Models page, not in the robot Secret field.",
+        connectStreamPreview: "Stream preview", connectStreamPreviewInterval: "Refresh interval", connectPreviewCurrent: "Current: {seconds}s",
+        connectCardModeTitle: "Card style", connectCardModeLegacy: "Classic", connectCardModeRich: "Rich card (Card 2.0)",
+        connectProgressStyleTitle: "Progress display", connectProgressStyleLegacy: "Separate messages", connectProgressStyleCompact: "Single message updates", connectProgressStyleCard: "Structured card",
         lanStart: "Start pairing", lanShowQr: "Show QR code", lanStop: "Stop sharing", lanPanelDetail: "Same LAN · scan to enter Harness", lanActiveDetail: "LAN access is active", lanStopDetail: "Close the current LAN entry point",
         shortcut: "Summon shortcut", record: "Change", recording: "Press a shortcut…",
         shortcutHelp: "Include at least one modifier, such as Ctrl + Alt + K.",
@@ -839,6 +1013,7 @@ window.__ModuleLoader__.load({
         marketTechnical: "Show sanitized technical detail", marketCopy: "Copy technical detail", marketCopied: "Copied",
         balance: "Balance", recharge: "Recharge",
         kernel: "Kernel version", kernelBundled: "bundled", kernelOverlay: "switched",
+        runtimeManager: "Multi-version environments", runtimeManagerDetail: "Install official dsh versions side by side; each environment keeps isolated data and can run concurrently.", runtimeCatalog: "Edition catalog", runtimeSource: "Source", runtimeOfficial: "Official", runtimeCommunity: "Community", runtimeOpen: "Open release page", runtimeVersionPlaceholder: "Version, e.g. 0.1.1-rc.3", runtimeInstall: "Install version", runtimeNamePlaceholder: "Environment name", runtimeCreate: "Create environment", runtimeEmpty: "Install an official version first", runtimeStart: "Start", runtimeStop: "Stop", runtimeUninstall: "Uninstall runtime", runtimeMissing: "Runtime uninstalled; environment data is kept", runtimeStopped: "Stopped", runtimeStarting: "Starting", runtimeRunning: "Running", runtimeFailed: "Failed to start", runtimeUninstallConfirm: "Uninstall runtime {version}? The environment data will be kept.",
         kernelCheck: "Check for newer", kernelInstall: "Install latest", kernelRestore: "Restore bundled",
         kernelUpToDate: "You're on the latest version.",
         kernelAvailable: "Kernel {version} is available; install it when ready.", kernelInstalling: "Installing and switching — this can take a few minutes…", kernelReady: "Kernel {version} is installed and running.", kernelCheckFailed: "Couldn't check for kernel updates. Check your network and retry.", kernelInstallFailed: "Kernel install failed before switching. Check your network and retry.", kernelSwitchFailed: "The kernel installed, but Harness could not restart.", kernelRolledBack: "The new kernel failed its health check; the bundled kernel was restored.", kernelRestored: "The bundled kernel is restored.", kernelRestoreFailed: "Harness could not restart after restoring the bundled kernel.", kernelUnavailable: "Kernel updates are not available in this build.", kernelFailed: "The operation did not finish; please retry.",
@@ -929,7 +1104,7 @@ window.__ModuleLoader__.load({
     }
 
     /* 桌面垃圾桶：与设置页同款设计体系；还原 / 确认后清除 / 保留期倒计时。 */
-    function TrashSection() {
+    function TrashSection({ sessionsService } = {}) {
       const zh = useChinese();
       const bridge = typeof window !== "undefined" ? window.dshDesktop : undefined;
       const [tab, setTab] = react.useState("items");
@@ -939,45 +1114,62 @@ window.__ModuleLoader__.load({
       const [message, setMessage] = react.useState("");
       const [confirmId, setConfirmId] = react.useState(null);
       const [confirmExpired, setConfirmExpired] = react.useState(false);
+      const refreshVersion = react.useRef(0);
+      const mounted = react.useRef(true);
       const t = zh ? {
         title: "桌面垃圾桶",
-        copy: "删除的预设与会话先进入垃圾桶，保留 30 天后自动清除；还原遇到重名会另存副本，不会覆盖新数据。",
+        copy: "删除的预设与会话先进入垃圾桶，保留 30 天后自动清除；普通文件重名会另存副本，会话同名则拒绝还原并保留桶内原件。",
         items: "资源", sessions: "会话", restore: "还原", purge: "彻底删除",
         purgeConfirm: "确认永久删除？此操作不可恢复。", confirm: "确认", cancel: "取消",
         purgeExpired: "清除已过期", refresh: "刷新", deletedAt: "删除于",
         origin: "原位置", active: "会话正在运行，不能删除", unarchive: "取消归档",
-        done: "已完成", failed: "操作失败", archived: "已归档",
+        done: "已完成", failed: "操作失败", syncFailed: "磁盘操作已完成，但列表同步失败；请点击刷新重试。", archived: "已归档",
+        conflict: "同名会话已存在，未覆盖新数据；原会话仍在垃圾桶中。",
         emptyTitle: "垃圾桶是空的", emptyHint: "删除的预设与会话会出现在这里，30 天内可还原。",
         daysLeft: (n) => n > 0 ? `${n} 天后自动清除` : "今日自动清除",
         expiredBadge: "已过期",
-        sessionsNote: "此处列出本机全部会话：删除会话先移入垃圾桶（30 天内可还原），归档仅在列表中隐藏。",
+        sessionsNote: "此处列出本机全部会话：删除先移入垃圾桶，归档仅隐藏。运行、外部占用或仍有子会话时禁止删除；请先处理子会话。",
         archivedGroup: "已归档", liveGroup: "未归档", sessionDelete: "删除（入桶）",
       } : {
         title: "Desktop trash",
-        copy: "Deleted presets and sessions move to the trash first and clear automatically after 30 days; restoring never overwrites newer data — conflicts get a numbered copy.",
+        copy: "Deleted items stay recoverable for 30 days. File conflicts get a numbered copy; session conflicts refuse restore and keep the original in trash.",
         items: "Resources", sessions: "Sessions", restore: "Restore", purge: "Delete forever",
         purgeConfirm: "Permanently delete? This cannot be undone.", confirm: "Confirm", cancel: "Cancel",
         purgeExpired: "Clear expired", refresh: "Refresh", deletedAt: "Deleted",
         origin: "From", active: "Session is running and cannot be deleted", unarchive: "Unarchive",
-        done: "Done", failed: "Action failed", archived: "Archived",
+        done: "Done", failed: "Action failed", syncFailed: "Disk action completed, but list sync failed. Click Refresh to retry.", archived: "Archived",
+        conflict: "That session already exists. Nothing was overwritten; the original remains in trash.",
         emptyTitle: "The trash is empty", emptyHint: "Deleted presets and sessions appear here and stay recoverable for 30 days.",
         daysLeft: (n) => n > 0 ? `auto-clears in ${n}d` : "clears today",
         expiredBadge: "Expired",
-        sessionsNote: "This lists every session on disk: deleting moves one to the trash (recoverable for 30 days); archiving only hides it from the list.",
+        sessionsNote: "Sessions on disk: deletion moves to trash; archiving only hides. Running, externally owned or parent sessions with children cannot be deleted. Handle children first.",
         archivedGroup: "Archived", liveGroup: "Not archived", sessionDelete: "Delete to trash",
       };
       const refresh = async () => {
         if (typeof bridge?.listTrash !== "function") return;
-        setEntries(await bridge.listTrash() ?? []);
-        setSessions(await bridge.listTrashSessions() ?? []);
+        const version = ++refreshVersion.current;
+        const [nextEntries, nextSessions] = await Promise.all([bridge.listTrash(), bridge.listTrashSessions()]);
+        if (!mounted.current || version !== refreshVersion.current) return;
+        if (nextEntries === null || nextSessions === null) throw new Error("trash list unavailable");
+        setEntries(nextEntries);
+        setSessions(nextSessions);
       };
-      react.useEffect(() => { void refresh(); }, [bridge]);
+      const sync = async () => {
+        await sessionsService?.refresh();
+        await refresh();
+      };
+      react.useEffect(() => {
+        mounted.current = true;
+        void refresh().catch(() => { if (mounted.current) setMessage(t.failed); });
+        return () => { mounted.current = false; refreshVersion.current++; };
+      }, [bridge]);
       const act = async (action) => {
         setBusy(true);
         try {
           const outcome = await action();
-          await refresh();
-          setMessage(outcome === "active" ? t.active : outcome === false || outcome === null ? t.failed : t.done);
+          try { await sync(); }
+          catch { setMessage(outcome === true || (outcome && typeof outcome === "object") ? t.syncFailed : t.failed); return; }
+          setMessage(outcome === "active" ? t.active : outcome === "conflict" ? t.conflict : outcome === false || outcome === null ? t.failed : t.done);
         }
         catch { setMessage(t.failed); }
         finally { setBusy(false); }
@@ -1013,15 +1205,15 @@ window.__ModuleLoader__.load({
             onConfirm: () => { setConfirmId(null); void act(() => bridge.purgeTrash(entry.id)); },
             onCancel: () => setConfirmId(null),
             plain: react_jsx_runtime.jsxs(react.Fragment, { children: [
-              react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: busy, onClick: () => void act(() => bridge.restoreTrash(entry.id)), children: t.restore }),
+              react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: busy, onClick: () => void act(() => entry.kind === "session" ? bridge.restoreTrashSession(entry.id) : bridge.restoreTrash(entry.id)), children: t.restore }),
               react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: busy, onClick: () => setConfirmId(entry.id), children: t.purge }),
             ] }),
           }) }),
         ] }, entry.id);
       };
-      const sessionRow = (session) => react_jsx_runtime.jsxs("div", { "data-dsh-desktop-setting-row": true, "data-dsh-trash-row": true, children: [
+      const sessionRow = (session) => react_jsx_runtime.jsxs("div", { "data-dsh-desktop-setting-row": true, "data-dsh-trash-row": true, "data-dsh-session-id": session.sessionId, children: [
         react_jsx_runtime.jsxs("span", { "data-dsh-desktop-setting-label": true, children: [
-          react_jsx_runtime.jsxs("span", { children: [
+          react_jsx_runtime.jsxs("span", { title: session.sessionId, children: [
             shortId(session.sessionId),
             session.archived ? react_jsx_runtime.jsx("span", { "data-dsh-trash-badge": true, children: t.archived }) : null,
           ] }),
@@ -1048,7 +1240,7 @@ window.__ModuleLoader__.load({
           tabButton("items", t.items, (entries ?? []).length),
           tabButton("sessions", t.sessions, (sessions ?? []).length),
           react_jsx_runtime.jsx("span", { "data-dsh-trash-spacer": true }),
-          react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, onClick: () => void refresh(), children: t.refresh }),
+          react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: busy, onClick: () => void sync().then(() => setMessage(t.done), () => setMessage(t.syncFailed)), children: t.refresh }),
         ] }),
         tab === "items" ? react_jsx_runtime.jsxs(react.Fragment, { children: [
           loaded && (entries ?? []).length === 0 ? react_jsx_runtime.jsxs("div", { "data-dsh-trash-empty": true, children: [
@@ -1096,11 +1288,116 @@ window.__ModuleLoader__.load({
       const [healthReport, setHealthReport] = react.useState(null);
       const [healthBusy, setHealthBusy] = react.useState(false);
       const [healthNetwork, setHealthNetwork] = react.useState(false);
+      const [connectState, setConnectState] = react.useState(null);
+      const [connectForm, setConnectForm] = react.useState({ enabled: false, appId: "", appSecret: "", workspace: "", detail: "compact", showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: "legacy", progressStyle: "legacy" });
+      const connectRevision = react.useRef(0);
+      const editConnect = (patch) => {
+        connectRevision.current++;
+        setConnectForm((current) => ({ ...current, ...patch }));
+      };
+      const [connectBusy, setConnectBusy] = react.useState("");
+      const [connectMessage, setConnectMessage] = react.useState("");
 
       react.useEffect(() => {
         if (typeof bridge?.getDesktopPreferences !== "function") return;
         void bridge.getDesktopPreferences().then((value) => setPreferences(value));
       }, [bridge]);
+
+      const refreshConnect = async () => {
+        if (typeof bridge?.getConnectState !== "function") return null;
+        const value = await bridge.getConnectState();
+        if (value !== null) setConnectState(value);
+        return value;
+      };
+
+      react.useEffect(() => {
+        if (typeof bridge?.getConnectState !== "function") return undefined;
+        let mounted = true;
+        let initialized = false;
+        let refreshVersion = 0;
+        const refresh = async () => {
+          const version = ++refreshVersion;
+          const value = await bridge.getConnectState();
+          if (!mounted || version !== refreshVersion || value === null) return;
+          setConnectState(value);
+          if (!initialized) {
+            initialized = true;
+            if (connectRevision.current === 0) setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
+          }
+        };
+        const poll = () => void refresh().catch(() => { if (mounted) setConnectMessage(copy.connectUnavailable); });
+        poll();
+        const timer = setInterval(poll, 1000);
+        return () => { mounted = false; clearInterval(timer); };
+      }, [bridge]);
+
+      const saveConnect = async () => {
+        if (typeof bridge?.saveConnectSettings !== "function") {
+          setConnectMessage(copy.connectUnavailable);
+          return;
+        }
+        setConnectBusy("save");
+        setConnectMessage("");
+        const revision = connectRevision.current;
+        const submittedSecret = connectForm.appSecret;
+        try {
+          const result = await bridge.saveConnectSettings(connectForm);
+          if (result === null) return;
+          setConnectState(result.state);
+          if (result.ok) {
+            const value = result.state;
+            if (revision === connectRevision.current) {
+              setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
+            } else {
+              setConnectForm((current) => ({ ...current, appSecret: current.appSecret === submittedSecret ? "" : current.appSecret }));
+            }
+            setConnectMessage(copy.connectSaved);
+          } else {
+            setConnectMessage(result.reason === "invalid-workspace" ? copy.connectInvalidWorkspace
+              : result.reason === "invalid-input" ? copy.connectInvalid
+              : copy.connectStorage);
+          }
+        } catch {
+          setConnectMessage(copy.connectStorage);
+        } finally {
+          setConnectBusy("");
+        }
+      };
+
+      const chooseConnectWorkspace = async () => {
+        if (typeof bridge?.pickConnectWorkspace !== "function") {
+          setConnectMessage(copy.connectUnavailable);
+          return;
+        }
+        setConnectBusy("workspace");
+        try {
+          const workspace = await bridge.pickConnectWorkspace();
+          if (workspace !== null) editConnect({ workspace });
+        } catch {
+          setConnectMessage(copy.connectStorage);
+        } finally {
+          setConnectBusy("");
+        }
+      };
+
+      const connectAction = async (kind) => {
+        const action = kind === "start" ? bridge?.startConnect : kind === "stop" ? bridge?.stopConnect : bridge?.restartConnect;
+        if (typeof action !== "function") {
+          setConnectMessage(copy.connectUnavailable);
+          return;
+        }
+        setConnectBusy(kind);
+        setConnectMessage("");
+        try {
+          const ok = await action();
+          const value = await refreshConnect();
+          if (!ok) setConnectMessage(value?.lastError ?? copy.connectStorage);
+        } catch {
+          setConnectMessage(copy.connectStorage);
+        } finally {
+          setConnectBusy("");
+        }
+      };
 
       const refreshStartup = async () => {
         if (typeof bridge?.getStartupStatus !== "function") return;
@@ -1252,6 +1549,95 @@ window.__ModuleLoader__.load({
         }
       };
 
+      const [runtimeState, setRuntimeState] = react.useState(null);
+      const [runtimeVersionInput, setRuntimeVersionInput] = react.useState("");
+      const [runtimeNameInput, setRuntimeNameInput] = react.useState("");
+      const [runtimeCreateVersion, setRuntimeCreateVersion] = react.useState("");
+      const [runtimeBusy, setRuntimeBusy] = react.useState("");
+
+      const refreshRuntime = async () => {
+        if (typeof bridge?.getRuntimeState !== "function") return null;
+        const value = await bridge.getRuntimeState();
+        if (value !== null) {
+          setRuntimeState(value);
+          setRuntimeCreateVersion((current) => current || value.runtimes[0] || "");
+        }
+        return value;
+      };
+
+      react.useEffect(() => { void refreshRuntime(); }, [bridge]);
+
+      const runtimeInstall = async () => {
+        const version = runtimeVersionInput.trim();
+        if (version === "" || typeof bridge?.installRuntime !== "function") return;
+        setRuntimeBusy("install");
+        try {
+          const result = await bridge.installRuntime(version);
+          setMessage(result?.ok === true ? `${copy.runtimeManager} · ${version}` : copy.kernelInstallFailed);
+          if (result?.ok === true) {
+            setRuntimeCreateVersion(version);
+            setRuntimeVersionInput("");
+          }
+          await refreshRuntime();
+        } finally {
+          setRuntimeBusy("");
+        }
+      };
+
+      const runtimeCreate = async () => {
+        const name = runtimeNameInput.trim();
+        if (name === "" || runtimeCreateVersion === "" || typeof bridge?.createRuntimeEnvironment !== "function") return;
+        setRuntimeBusy("create");
+        try {
+          const result = await bridge.createRuntimeEnvironment(name, runtimeCreateVersion);
+          setMessage(result?.ok === true ? copy.saved : copy.kernelFailed);
+          if (result?.ok === true) setRuntimeNameInput("");
+          await refreshRuntime();
+        } finally {
+          setRuntimeBusy("");
+        }
+      };
+
+      const runtimeProcess = async (id, action) => {
+        const method = action === "start" ? bridge?.startRuntimeEnvironment : bridge?.stopRuntimeEnvironment;
+        if (typeof method !== "function") return;
+        setRuntimeBusy(`${action}:${id}`);
+        try {
+          const result = await method(id);
+          if (result?.ok !== true) setMessage(result?.reason ?? copy.kernelFailed);
+          await refreshRuntime();
+        } finally {
+          setRuntimeBusy("");
+        }
+      };
+
+      const runtimeUninstall = async (version) => {
+        if (typeof bridge?.uninstallRuntime !== "function") return;
+        if (!window.confirm(copy.runtimeUninstallConfirm.replace("{version}", version))) return;
+        setRuntimeBusy(`uninstall:${version}`);
+        try {
+          const result = await bridge.uninstallRuntime(version);
+          setMessage(result?.ok === true ? copy.saved : result?.reason ?? copy.kernelFailed);
+          await refreshRuntime();
+        } finally {
+          setRuntimeBusy("");
+        }
+      };
+
+      const runtimeOpenEdition = (id) => {
+        if (typeof bridge?.openEditionSource === "function") void bridge.openEditionSource(id);
+      };
+
+      const runtimeStatusLabel = (status) => ({
+        stopped: copy.runtimeStopped,
+        starting: copy.runtimeStarting,
+        running: copy.runtimeRunning,
+        failed: copy.runtimeFailed,
+        "missing-runtime": copy.runtimeMissing,
+      }[status] ?? status);
+
+      const runtimeEditionTrust = (edition) => edition.trust === "official-verified" ? copy.runtimeOfficial : copy.runtimeCommunity;
+
       const refreshLanState = async () => {
         if (typeof bridge?.getLanState !== "function") return;
         const value = await bridge.getLanState();
@@ -1340,7 +1726,8 @@ window.__ModuleLoader__.load({
         }
       };
 
-      if (typeof bridge?.getDesktopPreferences !== "function" || preferences === null) return null;
+      if (typeof bridge?.getDesktopPreferences !== "function") return react_jsx_runtime.jsx("p", { "data-dsh-connect-unavailable": true, children: copy.connectUnavailable });
+      if (preferences === null) return null;
       const canLaunch = preferences.launchAtLoginAvailable === true;
       const market = marketStatus ?? startup?.market ?? { state: "missing" };
       const marketState = market.state ?? "missing";
@@ -1363,6 +1750,19 @@ window.__ModuleLoader__.load({
       const marketResultState = marketResult === null ? "idle"
         : marketResult.installed === true ? "success"
         : "failure";
+      const connectPhase = connectState?.phase ?? "disabled";
+      const connectPhaseLabel = connectPhase === "ready" ? copy.connectServiceReady
+        : connectPhase === "starting" ? copy.connectStarting
+        : connectPhase === "degraded" ? copy.connectDegraded
+        : connectPhase === "crashed" ? copy.connectCrashed
+        : connectPhase === "stopped" ? copy.connectStopped
+        : copy.connectDisabled;
+      const connectMeta = connectState?.secretConfigured === true
+        ? copy.connectSecretStored + " · " + (connectState.credentialProtection === "safeStorage" ? copy.connectProtected : copy.connectFileFallback)
+        : copy.connectSecretMissing;
+      const connectActive = connectPhase === "ready" || connectPhase === "starting" || connectPhase === "degraded";
+      const connectHealthLabel = copy.connectChannel + ": " + ({ online: copy.connectOnline, offline: copy.connectOffline, connecting: copy.connectStarting }[connectState?.health?.channel] ?? copy.connectUnknown)
+        + " · " + copy.connectDsh + ": " + ({ available: copy.connectModelAvailable, unavailable: copy.connectModelUnavailable }[connectState?.health?.dsh] ?? copy.connectModelUnknown);
       return react_jsx_runtime.jsxs("div", {
         "data-dsh-desktop-settings": true,
         children: [
@@ -1428,6 +1828,85 @@ window.__ModuleLoader__.load({
           ] }),
           react_jsx_runtime.jsxs("section", { "data-dsh-desktop-settings-group": true, "data-dsh-desktop-group": "services", children: [
             react_jsx_runtime.jsx("h4", { "data-dsh-desktop-settings-group-title": true, children: copy.groupServices }),
+            typeof bridge?.getConnectState === "function" ? react_jsx_runtime.jsxs("div", { "data-dsh-desktop-connect": true, children: [
+              react_jsx_runtime.jsxs("div", { "data-dsh-connect-head": true, children: [
+                react_jsx_runtime.jsxs("span", { children: [
+                  react_jsx_runtime.jsx("strong", { "data-dsh-desktop-setting-label": true, children: copy.connectTitle }),
+                  react_jsx_runtime.jsx("small", { "data-dsh-connect-copy": true, children: copy.connectCopy }),
+                ] }),
+                react_jsx_runtime.jsx("span", { "data-dsh-connect-status": true, "data-state": connectPhase, children: connectPhaseLabel }),
+              ] }),
+              typeof bridge?.openConnectManager === "function" ? react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, "data-dsh-connect-manager": true, onClick: () => void bridge.openConnectManager(), children: copy.connectManage }) : null,
+              react_jsx_runtime.jsx("small", { "data-dsh-connect-health": true, children: connectHealthLabel }),
+              connectState?.health?.errorCode === "model-key-missing" ? react_jsx_runtime.jsx("small", { "data-dsh-connect-message": true, "data-state": "error", children: copy.connectModelKeyMissing }) : null,
+              react_jsx_runtime.jsxs("details", { "data-dsh-connect-advanced": true, children: [
+              react_jsx_runtime.jsx("summary", { children: copy.connectAdvanced }),
+              react_jsx_runtime.jsxs("fieldset", { "data-dsh-connect-fields": true, disabled: connectState === null, children: [
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectEnabled }),
+                  react_jsx_runtime.jsx("input", { "data-dsh-desktop-checkbox": true, type: "checkbox", checked: connectForm.enabled === true, onChange: (event) => editConnect({ enabled: event.target.checked }) }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectAppId }),
+                  react_jsx_runtime.jsx("input", { type: "text", value: connectForm.appId, autoComplete: "off", onChange: (event) => editConnect({ appId: event.target.value }) }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectAppSecret }),
+                  react_jsx_runtime.jsx("input", { type: "password", value: connectForm.appSecret, autoComplete: "new-password", placeholder: copy.connectAppSecretPlaceholder, onChange: (event) => editConnect({ appSecret: event.target.value }) }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectWorkspace }),
+                  react_jsx_runtime.jsxs("span", { "data-dsh-connect-workspace": true, children: [
+                    react_jsx_runtime.jsx("input", { type: "text", value: connectForm.workspace, readOnly: true, placeholder: "/", "aria-label": copy.connectWorkspace }),
+                    react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: connectBusy !== "", onClick: () => void chooseConnectWorkspace(), children: copy.connectChoose }),
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectDetailTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.detail, onChange: (event) => editConnect({ detail: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "full", children: copy.connectDetailFull }),
+                    react_jsx_runtime.jsx("option", { value: "compact", children: copy.connectDetailCompact }),
+                    react_jsx_runtime.jsx("option", { value: "quiet", children: copy.connectDetailQuiet }),
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectStreamPreview }),
+                  react_jsx_runtime.jsx("input", { "data-dsh-desktop-checkbox": true, type: "checkbox", checked: connectForm.showStreamPreview, onChange: (event) => editConnect({ showStreamPreview: event.target.checked }) }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectStreamPreviewInterval }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.streamPreviewIntervalMs, disabled: !connectForm.showStreamPreview, onChange: (event) => editConnect({ streamPreviewIntervalMs: Number(event.target.value) }), children: [
+                    ...[1500, 3000, 5000].map((value) => react_jsx_runtime.jsx("option", { value, children: `${value / 1000}s` }, value)),
+                    ![1500, 3000, 5000].includes(connectForm.streamPreviewIntervalMs) ? react_jsx_runtime.jsx("option", { value: connectForm.streamPreviewIntervalMs, children: copy.connectPreviewCurrent.replace("{seconds}", String(connectForm.streamPreviewIntervalMs / 1000)) }) : null,
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectCardModeTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.cardMode, onChange: (event) => editConnect({ cardMode: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "legacy", children: copy.connectCardModeLegacy }),
+                    react_jsx_runtime.jsx("option", { value: "rich", children: copy.connectCardModeRich }),
+                  ] }),
+                ] }),
+                react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
+                  react_jsx_runtime.jsx("span", { children: copy.connectProgressStyleTitle }),
+                  react_jsx_runtime.jsxs("select", { value: connectForm.progressStyle, onChange: (event) => editConnect({ progressStyle: event.target.value }), children: [
+                    react_jsx_runtime.jsx("option", { value: "legacy", children: copy.connectProgressStyleLegacy }),
+                    react_jsx_runtime.jsx("option", { value: "compact", children: copy.connectProgressStyleCompact }),
+                    react_jsx_runtime.jsx("option", { value: "card", children: copy.connectProgressStyleCard }),
+                  ] }),
+                ] }),
+              ] }),
+              react_jsx_runtime.jsx("small", { "data-dsh-connect-copy": true, children: copy.connectQuietHint }),
+              react_jsx_runtime.jsxs("div", { "data-dsh-connect-actions": true, children: [
+                react_jsx_runtime.jsx("button", { type: "button", "data-primary": true, disabled: connectBusy !== "" || connectState === null, onClick: () => void saveConnect(), children: connectBusy === "save" ? "…" : copy.connectSave }),
+                react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.secretConfigured !== true, onClick: () => void connectAction(connectActive ? "stop" : "start"), children: connectActive ? copy.connectStop : copy.connectStart }),
+                react_jsx_runtime.jsx("button", { type: "button", disabled: connectBusy !== "" || connectState?.enabled !== true || connectState?.secretConfigured !== true, onClick: () => void connectAction("restart"), children: connectBusy === "restart" ? "…" : copy.connectRestart }),
+              ] }),
+              ] }),
+              react_jsx_runtime.jsx("small", { "data-dsh-connect-meta": true, children: connectMeta }),
+              connectState?.lastError ? react_jsx_runtime.jsx("small", { "data-dsh-connect-message": true, "data-state": "error", children: copy.connectLastError + ": " + connectState.lastError }) : null,
+              connectMessage === "" ? null : react_jsx_runtime.jsx("small", { "data-dsh-connect-message": true, "data-state": connectMessage === copy.connectSaved ? "ok" : "error", role: "status", children: connectMessage }),
+            ] }) : react_jsx_runtime.jsx("p", { "data-dsh-connect-unavailable": true, children: copy.connectUnavailable }),
             typeof bridge?.getBundledPlugins === "function" ? react_jsx_runtime.jsxs("div", { "data-dsh-desktop-setting-row": true, children: [
               react_jsx_runtime.jsxs("span", { "data-dsh-desktop-setting-label": true, children: [copy.market, react_jsx_runtime.jsx("small", { "data-dsh-desktop-setting-detail": true, children: copy.marketDetail })] }),
               react_jsx_runtime.jsxs("span", { "data-dsh-desktop-lan-actions": true, children: [
@@ -1481,6 +1960,44 @@ window.__ModuleLoader__.load({
               react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: kernelBusy !== "", onClick: () => void kernelAction("check"), children: kernelBusy === "check" ? "…" : copy.kernelCheck }),
               kernel.latestVersion && kernel.latestVersion !== (kernel.overlayVersion ?? kernel.bundledVersion) ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: kernelBusy !== "", onClick: () => void kernelAction("install"), children: kernelBusy === "install" ? "…" : copy.kernelInstall }) : null,
               kernel.overlayVersion ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: kernelBusy !== "", onClick: () => void kernelAction("restore"), children: copy.kernelRestore }) : null,
+            ] }),
+          ] }) : null,
+          typeof bridge?.getRuntimeState === "function" ? react_jsx_runtime.jsxs("div", { "data-dsh-runtime-panel": true, children: [
+            react_jsx_runtime.jsxs("div", { "data-dsh-desktop-setting-label": true, children: [
+              copy.runtimeManager,
+              react_jsx_runtime.jsx("small", { "data-dsh-desktop-setting-detail": true, children: copy.runtimeManagerDetail }),
+            ] }),
+            runtimeState?.editions?.length ? react_jsx_runtime.jsxs(react.Fragment, { children: [
+              react_jsx_runtime.jsx("small", { "data-dsh-runtime-status": true, children: copy.runtimeCatalog }),
+              runtimeState.editions.map((edition) => react_jsx_runtime.jsxs("div", { "data-dsh-runtime-row": true, children: [
+                react_jsx_runtime.jsxs("span", { children: [edition.name, react_jsx_runtime.jsx("small", { children: `${edition.publisher} · ${runtimeEditionTrust(edition)} · ${edition.isolation.join("/")}` })] }),
+                react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, onClick: () => runtimeOpenEdition(edition.id), children: copy.runtimeOpen }),
+              ] }, edition.id)),
+            ] }) : null,
+            react_jsx_runtime.jsxs("div", { "data-dsh-runtime-form": true, children: [
+              react_jsx_runtime.jsx("input", { type: "text", value: runtimeVersionInput, placeholder: copy.runtimeVersionPlaceholder, onChange: (event) => setRuntimeVersionInput(event.target.value), onKeyDown: (event) => { if (event.key === "Enter") void runtimeInstall(); } }),
+              react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: runtimeBusy !== "" || runtimeVersionInput.trim() === "", onClick: () => void runtimeInstall(), children: runtimeBusy === "install" ? "…" : copy.runtimeInstall }),
+            ] }),
+            runtimeState === null ? react_jsx_runtime.jsx("small", { "data-dsh-runtime-status": true, children: copy.runtimeEmpty }) : react_jsx_runtime.jsxs(react.Fragment, { children: [
+              runtimeState.runtimes.length === 0 ? react_jsx_runtime.jsx("small", { "data-dsh-runtime-status": true, children: copy.runtimeEmpty }) : null,
+              react_jsx_runtime.jsxs("div", { "data-dsh-runtime-form": true, children: [
+                react_jsx_runtime.jsx("input", { type: "text", value: runtimeNameInput, placeholder: copy.runtimeNamePlaceholder, onChange: (event) => setRuntimeNameInput(event.target.value) }),
+                react_jsx_runtime.jsx("select", { value: runtimeCreateVersion, disabled: runtimeState.runtimes.length === 0, onChange: (event) => setRuntimeCreateVersion(event.target.value), children: runtimeState.runtimes.map((version) => react_jsx_runtime.jsx("option", { value: version, children: version }, version)) }),
+                react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: runtimeBusy !== "" || runtimeNameInput.trim() === "" || runtimeCreateVersion === "", onClick: () => void runtimeCreate(), children: runtimeBusy === "create" ? "…" : copy.runtimeCreate }),
+              ] }),
+              runtimeState.runtimes.map((version) => {
+                const usedByRunning = runtimeState.environments.some((environment) => environment.runtimeVersion === version && (environment.status === "running" || environment.status === "starting"));
+                return react_jsx_runtime.jsxs("div", { "data-dsh-runtime-row": true, children: [
+                  react_jsx_runtime.jsxs("span", { children: [version, react_jsx_runtime.jsx("small", { children: `${runtimeState.environments.filter((environment) => environment.runtimeVersion === version).length} ${copy.runtimeManager}` })] }),
+                  react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: runtimeBusy !== "" || usedByRunning, onClick: () => void runtimeUninstall(version), children: runtimeBusy === `uninstall:${version}` ? "…" : copy.runtimeUninstall }),
+                ] }, `runtime-${version}`);
+              }),
+              runtimeState.environments.map((environment) => react_jsx_runtime.jsxs("div", { "data-dsh-runtime-row": true, children: [
+                react_jsx_runtime.jsxs("span", { children: [environment.name, react_jsx_runtime.jsx("small", { children: `${environment.runtimeVersion} · ${runtimeStatusLabel(environment.status)}` })] }),
+                react_jsx_runtime.jsxs("span", { "data-dsh-desktop-lan-actions": true, children: [
+                  environment.status === "running" || environment.status === "starting" ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: runtimeBusy !== "", onClick: () => void runtimeProcess(environment.id, "stop"), children: runtimeBusy === `stop:${environment.id}` ? "…" : copy.runtimeStop }) : environment.status === "missing-runtime" ? null : react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: runtimeBusy !== "", onClick: () => void runtimeProcess(environment.id, "start"), children: runtimeBusy === `start:${environment.id}` ? "…" : copy.runtimeStart }),
+                ] }),
+              ] }, environment.id)),
             ] }),
           ] }) : null,
           typeof bridge?.listPresets === "function" ? react_jsx_runtime.jsxs("div", { "data-dsh-desktop-setting-row": true, children: [
@@ -1825,6 +2342,17 @@ window.__ModuleLoader__.load({
 
     const inject = ["slots", "sessions"];
     function apply(ctx) {
+      ctx.effect(() => {
+        const bridge = typeof window !== "undefined" ? window.dshDesktop : undefined;
+        let disposed = false;
+        const scope = bridge?.getStartupStatus?.();
+        const unsubscribe = bridge?.onTrashChanged?.((change) => {
+          void Promise.resolve(scope).then(status => {
+            if (!disposed && status?.dshHome === change.home) return ctx.sessions.refresh();
+          }).catch(() => {});
+        });
+        return () => { disposed = true; unsubscribe?.(); };
+      });
       ctx.slots.inject("shell.overlay", () => ctx.slots.register({
         name: "shell.overlay", id: "dsh-desktop-controls", order: 100, label: "Desktop controls",
       }, DesktopControls));
@@ -1837,7 +2365,7 @@ window.__ModuleLoader__.load({
       ctx.slots.inject("settings.section", () => ctx.slots.register({
         name: "settings.section", id: "dsh-desktop-trash", order: 21,
         label: () => document.documentElement.lang.toLowerCase().startsWith("zh") ? "垃圾桶" : "Trash",
-      }, TrashSection));
+      }, (props) => TrashSection({ ...props, sessionsService: ctx.sessions })));
     }
 
     exports.apply = apply;

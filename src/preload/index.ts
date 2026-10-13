@@ -11,8 +11,11 @@ import { MACOS_SIDEBAR_COLLAPSED_SAFE_TOP, MACOS_SIDEBAR_SAFE_TOP } from '../mai
 import type { DesktopPreferencesResult, DesktopPreferencesSnapshot, DesktopPreferencesUpdate } from '../main/desktop-preferences.ts'
 import type { ProfilePackageStatus } from '../main/profile.ts'
 import type { KernelOperationResult } from '../main/kernel-manager.ts'
+import type { RuntimeEnvironment, RuntimeManagerState } from '../main/runtime-manager.ts'
+import type { EditionManifest } from '../main/edition-catalog.ts'
 import type { MarketInstallProgress, MarketInstallResult } from '../main/market-install.ts'
 import type { DesktopHealthReport } from '../main/health-check.ts'
+import type { ConnectSaveResult, ConnectSettingsInput, ConnectState } from '../main/cc-connect-types.ts'
 
 export interface DesktopTrashSession {
   projectKey: string
@@ -128,12 +131,40 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   /** Kernel overlay state (decision 0026). */
   getKernelState: (): Promise<{ bundledVersion?: string; overlayVersion?: string; failedVersions: string[]; installedVersions: string[]; latestVersion?: string; lastOperation?: KernelOperationResult } | null> =>
     ipcRenderer.invoke('desktop:kernel:state'),
+  /** Manage explicitly versioned dsh environments; each has its own DSH_HOME. */
+  getRuntimeState: (): Promise<(RuntimeManagerState & { editions: EditionManifest[] }) | null> => ipcRenderer.invoke('desktop:runtime:state'),
+  installRuntime: (version: string): Promise<{ ok: true } | { ok: false; reason: string } | null> =>
+    ipcRenderer.invoke('desktop:runtime:install', version),
+  createRuntimeEnvironment: (name: string, runtimeVersion: string): Promise<{ ok: true; environment: RuntimeEnvironment; state: RuntimeManagerState } | { ok: false; reason: string } | null> =>
+    ipcRenderer.invoke('desktop:runtime:create', { name, runtimeVersion }),
+  startRuntimeEnvironment: (id: string): Promise<{ ok: true; state: RuntimeManagerState } | { ok: false; reason: string } | null> =>
+    ipcRenderer.invoke('desktop:runtime:start', id),
+  stopRuntimeEnvironment: (id: string): Promise<{ ok: true; state: RuntimeManagerState } | { ok: false; reason: string } | null> =>
+    ipcRenderer.invoke('desktop:runtime:stop', id),
+  uninstallRuntime: (version: string): Promise<{ ok: true; state: RuntimeManagerState } | { ok: false; reason: string } | null> =>
+    ipcRenderer.invoke('desktop:runtime:uninstall', version),
+  openEditionSource: (id: string): Promise<boolean> => ipcRenderer.invoke('desktop:edition:open-source', id),
   /** Read the LAN pairing state for the extension settings surface. */
   getLanState: (): Promise<{ running: boolean; busy: boolean } | null> =>
     ipcRenderer.invoke('desktop:lan:state'),
   /** Read shell-only preferences without exposing the settings file to Web UI. */
   getDesktopPreferences: (): Promise<DesktopPreferencesSnapshot | null> =>
     ipcRenderer.invoke('desktop:preferences:get'),
+  /** Read non-sensitive cc-connect settings and runtime state. */
+  getConnectState: (): Promise<ConnectState | null> => ipcRenderer.invoke('desktop:connect:get-state'),
+  /** Open the shared, separately sandboxed Feishu application manager. */
+  openConnectManager: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:open-manager'),
+  /** Persist non-sensitive settings and optionally replace the Secret. */
+  saveConnectSettings: (input: ConnectSettingsInput): Promise<ConnectSaveResult | null> =>
+    ipcRenderer.invoke('desktop:connect:save-settings', input),
+  /** Let the main process choose and validate an absolute workspace directory. */
+  pickConnectWorkspace: (): Promise<string | null> => ipcRenderer.invoke('desktop:connect:pick-workspace'),
+  /** Start the configured cc-connect sidecar after Harness readiness. */
+  startConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:start'),
+  /** Explicitly close and persist disabled intent, including across restarts. */
+  stopConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:stop'),
+  /** Restart the sidecar using the current active kernel. */
+  restartConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:restart'),
   listLanInterfaces: (): Promise<Array<{ name: string; address: string }> | null> =>
     ipcRenderer.invoke('desktop:lan-interfaces'),
   /** Update one or more shell preferences through the allowlisted main handler. */
@@ -169,6 +200,12 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   openSupportIssue: (): Promise<boolean> => ipcRenderer.invoke('shell:open-support-issue'),
   /** List the desktop trash, newest first. */
   listTrash: (): Promise<DesktopTrashEntry[] | null> => ipcRenderer.invoke('desktop:trash:list'),
+  /** Resource identity is non-sensitive; handlers still enforce the Harness sender guard. */
+  onTrashChanged: (callback: (change: { home: string; action: string; id: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, change: { home: string; action: string; id: string }): void => callback(change)
+    ipcRenderer.on('desktop:trash:changed', listener)
+    return () => ipcRenderer.removeListener('desktop:trash:changed', listener)
+  },
   /** Restore one trash entry to its origin (numbered sibling on conflict). */
   restoreTrash: (id: string): Promise<DesktopTrashEntry | null> => ipcRenderer.invoke('desktop:trash:restore', id),
   /** Purge one trash entry permanently. */
@@ -181,12 +218,12 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   listTrashSessions: (): Promise<DesktopTrashSession[] | null> => ipcRenderer.invoke('desktop:trash:sessions'),
   /**
    * Delete one session into the desktop trash. Resolves false for unknown
-   * errors and 'active' when the WebUI still reports the session as running.
+   * errors and 'active' when the Host refuses activity or another writer.
    */
   deleteTrashSession: (projectKey: string, sessionId: string): Promise<boolean | 'active' | null> =>
     ipcRenderer.invoke('desktop:trash:session-delete', projectKey, sessionId),
   /** Restore a trashed session and clear its archive flag. */
-  restoreTrashSession: (trashId: string): Promise<boolean | null> => ipcRenderer.invoke('desktop:trash:session-restore', trashId),
+  restoreTrashSession: (trashId: string): Promise<boolean | 'conflict' | null> => ipcRenderer.invoke('desktop:trash:session-restore', trashId),
   /** Remove one session id from the workspace archive set (show it again). */
   unarchiveSession: (sessionId: string): Promise<boolean | null> => ipcRenderer.invoke('desktop:trash:session-unarchive', sessionId),
 })

@@ -1,0 +1,291 @@
+# 执行进度
+
+最后更新：2026-10-11。
+
+## 当前基线
+
+- 父仓库分支：`codex/cc-connect-dsh-integration`
+- 父仓库发布基线：`da4e4744b1e80ac31121f393d9f1f60e53431df3`（`v0.2.1-alpha.2.shell.1`；后续文档/网站提交不移动已发布 tag）
+- 子模块远端：`git@github.com:citrusli2026/cc-connect.git`
+- 子模块目录：`third_party/cc-connect`
+- 子模块当前提交：`dc8132ef5f6a30056b2b69036458156edbbfb25d`
+- 子模块本地开发分支：`codex/dsh-agent-integration`
+- 产品功能实现：已完成并发布；真实飞书应用回调、消息入站、DSH ACP 和回包均已验证，后续完整管理/降噪/垃圾桶修复见 [人工审查迭代记录](../2026-10-10-manual-review/progress.md)
+
+下表及逐项记录保留当时的提交与失败证据；历史 Go/网络和真实凭据阻塞已由后续验收解除。
+当前完整 Go test/race/build/vet 均通过，三平台 Release run `38114383738` 全绿。
+最终交付文档/skills 提交 `40da09431f18866334287441cf6cd7017549e805`，官网成功 bot
+通过 merge `54661258068599e5fdb233396c834b9282fe0c4b` 保留，完整门禁见后续迭代记录。
+
+## 状态表
+
+| 任务 | 状态 | 提交 | 验证摘要 |
+|---|---|---|---|
+| 仓库准备：父分支和子模块 | done | `5c8d430` | 两个分支已推送；子模块固定到 `dfad1941` |
+| PLAN-01 ADR | done | `0f92715f22004c49125a8c020fdcba6a3596a680` | 中英文 ADR、新索引链接；文档门禁通过 |
+| CC-01 一级 DSH Agent | done | `90e2f65b5128c43659d6b43745e0373cbee4d218` / gitlink `a6b6ea20ec2cbc25565b4500ae2606b629b07136` | Agent 单测已写入；格式门禁通过，Go 测试受模块下载阻塞 |
+| CC-02 session/resume | done | `604c1abe7593a12d7902802859805d9c1dad4e90` / gitlink `78034bf00eec431f3310827f6241b77d6dabe7e1` | fake ACP 覆盖 load、resume、无能力、错误和缺少响应 ID；Go 测试受模块下载阻塞 |
+| CC-03 close 与事件映射 | done | `e0ca09b9c82f82a4470e597dd677ccef7d1301b0` / gitlink `6ea430a355b648582b7518c4afee6bc466b7ba6e` | close、thought、createdAt 单测已写入；Go 测试受模块下载阻塞 |
+| CC-04 readiness | done | `c783f2f85a18fca12cbf5821bdbb9e48f7935209` / gitlink `20c9ab256e629b5f29965e4cbfc66946a3a3a6d4` | fake slog handler 覆盖成功一次、全失败零次；CLI 编译受环境阻塞 |
+| CC-05 子模块门禁 | done | `c88f4c911902cacaf6d53c28d3c8f160369c0979` / gitlink `62d05be3b11a3cf6a5659ee997df1016e4fdc102` | 包级 test/race 通过；全量受既有失败、依赖网络和缺失 web/dist 阻塞 |
+| DESK-01 打包 | done | `8a0e9a7` | sidecar 构建、manifest、Electron 资源映射、发布 CI 和 Windows 资源检查已完成；本机 `dist:dir`、SHA、版本和 macOS codesign 验证通过 |
+| DESK-02 路径与完整性 | done | `101b5be` | 新增 sidecar/manifest 路径解析，closure fixture 覆盖 sidecar，packaged smoke 校验 SHA 与 `--version` |
+| DESK-03 配置与凭证 | done | `51c7803` | 固定 TOML、非敏感 settings、safeStorage/file 凭证存储和脱敏测试已完成 |
+| DESK-04 Supervisor | done | `de5a5cf` | 独立 Sidecar 状态机、ready、stderr/log、脱敏、5 分钟/5 次退避和 SIGTERM→SIGKILL 已完成 |
+| DESK-05 App 生命周期 | done | `c63f1e6` | Harness ready 后按配置启动 Sidecar；Safe Mode 停止/恢复；Kernel 切换、恢复和回滚按当前 active kernel 重写配置并重启；退出纳入 Sidecar 停止和 8 秒保护 |
+| DESK-06 IPC/Preload | done | `1aa97b6` | 新增六个 guarded IPC、窄 Preload bridge、非敏感 Connect 状态类型和原生 workspace 目录选择/绝对目录校验；Secret 仅写入不读回 |
+| DESK-07 设置页 | done | `f95538f65a543218d605e52451da552f0282a346` | dsh-desktop-controls 增加中英文消息连接设置卡片、Secret 保留/清空语义、workspace 原生选择和 Sidecar 操作状态；静态契约、全量测试、构建通过 |
+| QA-01 假 Sidecar E2E | done | `4708ef04369617018638fe2c64fd95a59fed2e1c` | Electron renderer-to-main 假 Sidecar E2E 覆盖 disabled、保存、ready、重连崩溃、停止和 Safe Mode；开发环境路径注入不影响打包路径 |
+| QA-02 DSH ACP 契约 | done | `5d980fcce09604a9b536b26195d7414f744f738b` | 临时 DSH_HOME + 当前捆绑 Node/DSH 真实 ACP 测试通过 initialize/new/mock prompt/close/list/resume/close |
+| QA-03 飞书人工验收 | done | `ae0f9016f534322d638cd8bd304f5ceb9c0472b7` | 真实 App ID/Secret 仅在隔离临时目录使用；Feishu websocket 入站、cc-connect 路由、真实 DSH ACP 和 Feishu 回包通过；凭证值未输出或写入仓库/真实用户目录 |
+| DOC-01 用户文档 | done | `34e4554` | 新增飞书后台、启动/停止、Safe Mode、数据位置、脱敏日志、禁用与凭证删除指南；更新文档索引和发布说明；文档契约、全量测试、覆盖率、typecheck、site:check 通过 |
+| REL-01 最终门禁 | done | `9b9459dfa4dc8affd760b2a2cb546a4abffc4f7b` | 原门禁记录保留；子模块全量历史阻塞已在 2026-10-11 解除，完整 Go/race/build/vet、三平台安装包和真实飞书通过，见后续迭代记录 |
+
+## 下一任务
+
+下一任务：无后续任务；`QA-03-CC-BOT` 已完成。
+
+## 每项完成后的记录格式
+
+```text
+### TASK-ID — YYYY-MM-DD
+
+- 子模块提交：<sha 或 n/a>
+- 父仓库提交：<sha 或 n/a>
+- 行为变化：
+- 测试命令与退出码：
+- 未覆盖项：
+- 下一任务：
+```
+
+长日志保存到被忽略的 `test-results/`，这里只写脱敏摘要。状态改为 done 前必须有提交 SHA 或明确说明为何该任务只更新未提交的执行记录。
+
+### PLAN-01 — 2026-10-07
+
+- 子模块提交：n/a
+- 父仓库提交：`0f92715f22004c49125a8c020fdcba6a3596a680`
+- 行为变化：新增 ADR 0033 中英文版本，记录 cc-connect Desktop Sidecar 的进程边界、共享 `DSH_HOME`、设置页入口、安全模式、凭证边界和首版范围；未宣称功能已实现。
+- 测试命令与退出码：`git diff --check`（0）；决策文件存在性检查（0）；ADR 索引链接检查（0）。
+- 未覆盖项：未运行运行时代码或集成测试；人工飞书验收不属于本任务。
+- 下一任务：`CC-01`。
+
+### CC-01 — 2026-10-07
+
+- 子模块提交：`90e2f65b5128c43659d6b43745e0373cbee4d218`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：gitlink `a6b6ea20ec2cbc25565b4500ae2606b629b07136`
+- 行为变化：新增一级 `type = "dsh"` ACP Agent，默认 `dsh --profile acp` 与 `DeepSeek Harness`，保留用户覆盖的 command、args、display_name、work_dir、env；加入 `no_dsh` 插件注册、构建列表和配置样例。
+- 测试命令与退出码：`gofmt -d agent/dsh/dsh.go agent/dsh/dsh_test.go cmd/cc-connect/plugin_agent_dsh.go`（0）；`git diff --check`（0）；`GOPROXY=off go test ./agent/dsh`（1，既有 `gorilla/websocket`、`robfig/cron` 模块未缓存且外部代理不可达）。
+- 未覆盖项：`go test ./agent/dsh ./agent/acp ./cmd/cc-connect`、race、全量测试和构建未能执行；registry 集成只能由 Go 门禁覆盖。
+- 下一任务：`CC-02`。
+
+### CC-02 — 2026-10-07
+
+- 子模块提交：`604c1abe7593a12d7902802859805d9c1dad4e90`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：gitlink `78034bf00eec431f3310827f6241b77d6dabe7e1`
+- 行为变化：ACP 初始化能力新增 `sessionCapabilities.resume` 原始字段判断；持久会话按旧 `session/load`、标准 `session/resume`、新建的兼容顺序处理；resume 失败返回上下文错误，resume 响应缺少 ID 时沿用请求 ID；保留旧 load 失败创建新会话的兼容回退。
+- 测试命令与退出码：`gofmt -d agent/acp/list_sessions.go agent/acp/session.go agent/acp/session_resume_test.go`（0）；`git diff --check`（0）；`GOPROXY=off go test ./agent/acp`（1，既有 `gorilla/websocket`、`robfig/cron` 模块未缓存且外部代理不可达）。
+- 未覆盖项：在线 Go 单测、race、子模块全量门禁和真实 DSH ACP 契约测试待依赖可用后执行。
+- 下一任务：`CC-03`。
+
+### CC-03 — 2026-10-07
+
+- 子模块提交：`e0ca09b9c82f82a4470e597dd677ccef7d1301b0`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：gitlink `6ea430a355b648582b7518c4afee6bc466b7ba6e`
+- 行为变化：记录 DSH `close` capability；Close 最多等待 2 秒请求 `session/close` 后终止现有 ACP 进程，且重复调用幂等；映射 `agent_thought_chunk` 为 `EventThinking`；支持 RFC3339 `updatedAt` 和 DSH `Date.now()` Unix 毫秒 `createdAt`。
+- 测试命令与退出码：随包代码确认 `@deepseek-ai/dsh-acp` 的 `close/list/resume` capability、`agent_thought_chunk` payload 和 `Date.now()` 单位（0）；`gofmt -d agent/acp/list_sessions.go agent/acp/session.go agent/acp/session_close_test.go agent/acp/session_thought_test.go agent/acp/session_list_created_at_test.go`（0）；`git diff --check`（0）；`GOPROXY=off go test ./agent/acp`（1，既有模块未缓存且外部代理不可达）。
+- 未覆盖项：在线 ACP 单测、race、子模块全量门禁和真实 DSH 进程契约测试待依赖可用后执行。
+- 下一任务：`CC-04`。
+
+### CC-04 — 2026-10-07
+
+- 子模块提交：`c783f2f85a18fca12cbf5821bdbb9e48f7935209`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：gitlink `20c9ab256e629b5f29965e4cbfc66946a3a3a6d4`
+- 行为变化：所有 engine 完成启动尝试且未走“全部失败退出”路径后，输出一次结构化 `cc-connect ready` 日志并附带项目数；全部失败时不输出，不改变原有退出语义。
+- 测试命令与退出码：`gofmt -d cmd/cc-connect/main.go cmd/cc-connect/main_test.go`（0）；`git diff --check`（0）；`GOPROXY=off go test ./cmd/cc-connect`（1，既有 Go 模块未缓存，且 `web/embed.go` 缺少 `web/dist`）。
+- 未覆盖项：在线 CLI 单测、race、构建和实际 daemon 启动日志待 Go 依赖与 Web artifact 可用后执行。
+- 下一任务：`CC-05`。
+
+### CC-05 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：gitlink `62d05be3b11a3cf6a5659ee997df1016e4fdc102`
+- 行为变化：无；修复本计划新增 ACP 测试中的常量取址和未使用导入，使包级门禁可执行。
+- 测试命令与退出码：`GOPROXY=direct go test ./agent/dsh ./agent/acp`（0）；`GOPROXY=direct go test -race ./agent/dsh ./agent/acp`（0）；`GOPROXY=direct go test ./agent/dsh ./agent/acp ./cmd/cc-connect`（1，CLI 依赖下载超时且缺少 `web/dist`）；`GOPROXY=direct go build ./cmd/cc-connect`（1，同上）；`GOPROXY=direct go test ./...`（1，CLI/platform/web 依赖和 `web/dist` 阻塞，另有既有 `agent/codex` 测试失败）；`GOPROXY=direct go test -race ./...`（1，同样的编译阻塞及既有 Codex/Workspace Skills 测试失败）；`GOPROXY=direct go vet ./...`（1，同样的编译阻塞）；`git diff --check`（0）。
+- 未覆盖项：完整 Go 门禁需补齐既有跨平台依赖、构建 `web/dist`，并修复/隔离未改动的 Codex/Workspace Skills 基线失败；这些不属于本计划已允许文件，未擅自修改。`go test ./agent/codex -run '^TestListSkills_ExcludesClaudeDisabledAndCachedSkills$' -count=1` 单独重跑仍失败。
+- 下一任务：`DESK-01`。
+
+### DESK-01 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动，使用已推送固定提交）
+- 父仓库提交：`8a0e9a7`
+- 行为变化：新增 `scripts/build-cc-connect.mjs`，在干净子模块中以 `-trimpath`、固定 DSH commit ldflags 和最小 sidecar build tags 构建当前平台二进制；校验 `--version`、生成 SHA-256 manifest 并忽略本地二进制。Electron builder 复制 `resources/cc-connect`，`dist`/`dist:dir` 与 release CI 显式执行 sidecar 构建；Windows installer 检查验证 sidecar 和 manifest，macOS 跳过会改写 Mach-O 的二次签名。
+- 测试命令与退出码：`node --check scripts/build-cc-connect.mjs`（0）；`node --check scripts/verify-windows-installer.mjs`（0）；`pnpm run typecheck`（0）；`pnpm run runtime:check`（0）；`pnpm exec node --test test/packaged-resources.test.ts`（0，5 passed）；`pnpm run build`（0）；`GOPROXY=https://goproxy.cn,direct pnpm run cc-connect:build`（0）；`GOPROXY=https://goproxy.cn,direct pnpm run dist:dir`（0）；解包 sidecar SHA 与 manifest（0）；sidecar `--version`（0）；`codesign --verify --deep --strict`（0）。
+- 未覆盖项：当前主机未生成 Windows NSIS 安装包，Windows verifier 仅完成脚本语法和静态资源断言；macOS 按现有签名策略不生成根 `resources/manifest.json`，完整 closure manifest 仍由 Windows/Linux `afterPack` 验证。默认 Go proxy/direct 路径超时，成功门禁使用临时环境变量 `GOPROXY=https://goproxy.cn,direct`，未写入仓库配置。
+- 下一任务：`DESK-02`。
+
+### DESK-02 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`101b5be`
+- 行为变化：`paths.ts` 新增 `ccConnectBin()` 和 `ccConnectManifestPath()`，仅从 Electron resources root 拼接固定路径，不搜索 PATH；Windows 使用 `cc-connect.exe`。closure manifest fixture 纳入 `cc-connect/bin` 与 sidecar manifest；packaged smoke 校验 sidecar 文件、SHA-256 和 `--version`。
+- 测试命令与退出码：首次测试按 TDD 预期失败（缺少新导出、fixture 计数仍为 3）；`node --check scripts/smoke-packaged.mjs`（0）；`pnpm run typecheck`（0）；`pnpm exec node --test test/paths.test.ts test/closure-manifest.test.ts`（0，11 passed）；`pnpm run smoke:packaged`（0，sidecar SHA、版本和 Electron smoke 均通过）；`git diff --check`（0）。
+- 未覆盖项：本机为 macOS，未运行 Windows/Linux 原生 sidecar；Windows closure/installer 实机门禁留给 CI/REL-01。
+- 下一任务：`DESK-03`。
+
+### DESK-03 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`51c7803`
+- 行为变化：新增 `cc-connect-config.ts`，以固定结构生成带 TOML 转义的绝对路径配置，始终写入 `${DSH_CC_CONNECT_FEISHU_SECRET}` 占位符；非敏感 `settings.json` 与 `config.toml` 均原子写入且权限为 0600。新增 `cc-connect-credentials.ts`，优先使用 Electron `safeStorage`，不可用时使用 0600 文件 fallback；支持读取、删除、状态查询，并对错误文本脱敏。
+- 测试命令与退出码：TDD 初次运行因两个实现文件不存在退出 1；`pnpm run typecheck`（0）；`pnpm exec node --test test/cc-connect-config.test.ts test/cc-connect-credentials.test.ts`（0，6 passed）；`pnpm exec node --test test/cc-connect-config.test.ts test/cc-connect-credentials.test.ts test/config-file.test.ts`（0，13 passed）；凭证扫描命令（0，只有测试占位符和既有示例命中）；`git diff --check`（0）。
+- 未覆盖项：未接入 Supervisor/IPC，尚未验证真实 Electron safeStorage provider；未写入任何真实用户目录或凭证。
+- 下一任务：`DESK-04`。
+
+### DESK-04 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`de5a5cf`
+- 行为变化：新增 `cc-connect-supervisor.ts`，复用 `ManagedChild`/`InFlight` 实现 `disabled → stopped → starting → ready` 以及 `degraded/crashed` 状态；监听 stdout/stderr 的 `cc-connect ready`，记录 0600 rolling log，按 5 分钟窗口最多 5 次重启并采用有界退避；停止执行 SIGTERM 后 5 秒 SIGKILL，启动/停止并发共享 promise，日志和错误脱敏并限长。
+- 测试命令与退出码：TDD 初次运行因 supervisor 实现不存在退出 1；`pnpm run typecheck`（0）；`pnpm exec node --test test/cc-connect-supervisor.test.ts`（0，5 passed）；`pnpm exec node --test test/cc-connect-supervisor.test.ts test/supervisor.test.ts`（0，14 passed）；`git diff --check`（0）。
+- 未覆盖项：尚未接入真实 Electron App 生命周期、Safe Mode、Kernel 切换和 IPC；测试使用假 Node sidecar，未连接飞书。
+- 下一任务：`DESK-05`。
+
+### DESK-05 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`c63f1e6`
+- 行为变化：主进程仅在设置启用、配置完整、Harness 已 ready 且非 Safe Mode 时生成配置并启动 cc-connect；进入 Safe Mode 停止 Sidecar，退出后随 Harness 恢复；Kernel install/restore/rollback 后按当前 active DSH bin 重写 TOML 并重启 Sidecar；退出流程把 Sidecar stop 纳入已有 8 秒总保护。新增生命周期静态接线检查。
+- 测试命令与退出码：`node --test test/cc-connect-lifecycle.test.ts`（0，2 passed）；`pnpm run typecheck`（0）；相关 Desktop 测试（0，34 passed）；`pnpm run runtime:check`（0）；`pnpm test`（0，324 passed）；`pnpm run test:coverage`（0，88.72% 行覆盖、81.38% 分支覆盖、84.31% 函数覆盖）；`pnpm run build`（0）；`pnpm run smoke:packaged`（0，sidecar SHA/版本和 Electron smoke 通过）；`git diff --check`（0）。
+- 未覆盖项：生命周期测试未启动真实 Electron App，使用源码接线检查；Sidecar 运行仍由 DESK-04 假进程测试覆盖。未连接飞书、未写入真实用户目录或凭证；Windows/Linux 原生打包仍待跨平台门禁。
+- 下一任务：`DESK-06`。
+
+### DESK-06 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`1aa97b6`
+- 行为变化：新增 `getConnectState`、`saveConnectSettings`、`pickConnectWorkspace`、`startConnect`、`stopConnect`、`restartConnect` 六个窄接口；所有主进程 handler 校验 `isMainWindowHarnessSender`。Renderer 只得到 enabled/appId/secretConfigured/workspace/credentialProtection/脱敏状态，Secret 空值保留旧值且无读取接口；workspace 由原生目录选择器返回并在主进程验证绝对目录。
+- 测试命令与退出码：TDD 首次 `node --test test/cc-connect-ipc.test.ts`（1，预期因桥接尚不存在失败）；实现后同命令（0，2 passed）；相关 Connect/Desktop 测试（0，18 passed）；`pnpm run typecheck`（0）；串行 `pnpm test`（0，326 passed）；`pnpm run test:coverage`（0，88.72% 行覆盖、81.38% 分支覆盖、84.31% 函数覆盖）；`pnpm run runtime:check`（0）；`pnpm run build`（0）；`git diff --check`（0）。一次与覆盖率并行的 `pnpm test` 因已有 500ms 假 Sidecar readiness 测试在并发负载下退出 1，单测和串行全量均通过。
+- 未覆盖项：设置页尚未接入，真实 Electron renderer-to-main E2E、假 Sidecar E2E 仍待 DESK-07/QA-01；未连接飞书、未写入真实用户目录或凭证。
+- 下一任务：`DESK-07`。
+
+### DESK-07 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`f95538f65a543218d605e52451da552f0282a346`
+- 行为变化：`dsh-desktop-controls` 设置页新增中英文飞书消息连接卡片，包含启用开关、App ID、Secret、默认 workspace、原生目录选择、保存、启动、停止和重连操作；Secret 输入留空时保留已有值，保存成功后清空输入；页面只显示是否已配置及凭证保护方式，并展示脱敏状态和最近错误。缺少新 bridge 时显示不可用提示且不抛错，操作期间按钮置忙并禁用。
+- 测试命令与退出码：TDD 首次 `node --test test/desktop-controls.test.ts`（1，预期因设置页契约尚不存在失败）；实现后同命令（0，5 passed）；`node --check plugins/dsh-desktop-controls/lib/client.js`（0）；`pnpm test`（0，326 passed）；`pnpm run test:coverage`（0，88.72% 行覆盖、81.33% 分支覆盖、84.31% 函数覆盖）；`pnpm run typecheck`（0）；`pnpm run runtime:check`（0）；`pnpm run build`（0）；`git diff --check`（0）。
+- 未覆盖项：尚未运行真实 Electron renderer-to-main 页面操作和假 Sidecar E2E；人工飞书凭证验收、Windows/Linux 原生打包留待后续门禁；未写入真实用户目录或凭证。UI 设计按 `frontend-design` skill 的现有设计系统和紧凑状态卡片指导实现。
+- 下一任务：`QA-01`。
+
+### QA-01 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`4708ef04369617018638fe2c64fd95a59fed2e1c`
+- 行为变化：开发环境可通过 `DSH_CC_CONNECT_TEST_BIN` 指向临时假 Sidecar，且仅在 `!app.isPackaged` 时生效；Renderer 不能传入进程路径。新增 Electron E2E 使用临时目录、假 Secret 和假 Sidecar，验证 disabled、保存、Secret 不进入 TOML、ready、重连崩溃错误、停止，以及 Safe Mode 进入停止/退出恢复。
+- 测试命令与退出码：新增契约测试首次 `node --test test/cc-connect-lifecycle.test.ts`（1，预期因开发环境 override 尚不存在失败）；实现后同命令及 `test/cc-connect-supervisor.test.ts`（0，8 passed）；`pnpm run build`（0，E2E 所需 main bundle）；`pnpm exec playwright test e2e/electron-shell.spec.ts -g "renderer bridge drives a fake sidecar" --reporter=line`（0，1 passed）；`pnpm run typecheck`（0）；`git diff --check`（0）。实现前同一 E2E 在崩溃状态断言处退出 1，补上环境路径接线并重建 bundle 后通过。
+- 未覆盖项：未在打包应用中注入假 Sidecar，未连接真实飞书；真实 DSH ACP 会话契约留待 QA-02；未写入真实用户目录或凭证。
+- 下一任务：`QA-02`。
+
+### QA-02 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`5d980fcce09604a9b536b26195d7414f744f738b`
+- 行为变化：新增真实 DSH ACP 契约测试。测试先用捆绑 DSH 初始化 `acp` profile，再在临时 `DSH_HOME` 写入仅含本地 loopback endpoint 和假 API key 环境名的 patch；从捆绑 Node 启动当前 DSH ACP，通过本地 HTTP SSE mock route 完成 prompt，不连接真实账户或网络服务。
+- 测试命令与退出码：首次 `node --test test/dsh-acp-contract.test.ts`（1，测试最初错误要求 resume 响应必须返回 sessionId；DSH 合法响应可省略该字段）；修正后同命令（0，1 passed，覆盖 initialize/new/prompt/close/list/resume/close）；`pnpm run typecheck` 首次（1，测试数组元素可为 undefined）；修正后（0）；`git diff --check`（0）。
+- 未覆盖项：未使用真实 DeepSeek/飞书凭证；QA-03 人工飞书验收仍待真实凭证；未写入真实用户目录或凭证。
+- 下一任务：`QA-03`。
+
+### QA-03 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：n/a（仅记录外部阻塞）
+- 行为变化：未执行人工飞书连接验收；检查到当前环境没有匹配的 Feishu/Lark/cc-connect 凭证环境变量。没有猜测、生成、读取或写入真实 App ID/Secret，也没有接触真实用户配置目录。
+- 测试命令与退出码：凭证存在性检查（只输出变量名和 present/empty，不输出值）（0，结果为无匹配凭证环境变量）。
+- 未覆盖项：真实飞书 App ID/Secret 和人工操作授权缺失，QA-03 是真实外部阻塞；自动门禁、假 Sidecar 和本地 mock ACP 已覆盖。
+- 下一任务：`DOC-01`。
+
+### DOC-01 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动，使用已推送固定提交）
+- 父仓库提交：`34e4554`
+- 行为变化：新增 `docs/cc-connect.md`，说明飞书机器人/权限/事件与发布要求、Desktop 设置页的启动/停止/重连语义、Safe Mode 生命周期、`userData/cc-connect` 与 DSH_HOME 数据位置、滚动脱敏日志，以及退出应用后删除 `credentials.json` 的彻底清理步骤；更新文档索引和当前发布说明。新增文档契约测试，防止关键安全与生命周期说明回退。
+- 测试命令与退出码：TDD 首次 `node --test test/cc-connect-docs.test.ts`（1，文档尚不存在）；修正文档后同命令（0，1 passed）；`pnpm test`（0，329 passed）；`pnpm run test:coverage`（0，88.72% 行、81.27% 分支、84.31% 函数）；`pnpm run typecheck`（0）；`pnpm run site:check`（0）；`git diff --check`（0）。
+- 未覆盖项：真实飞书账号人工验收仍是 QA-03 已记录的外部阻塞；文档没有改变该边界，也没有读取或写入真实凭证。
+- 下一任务：`REL-01`。
+
+### REL-01 — 2026-10-07
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：`9b9459dfa4dc8affd760b2a2cb546a4abffc4f7b`（已推送至 `origin/codex/cc-connect-dsh-integration`；本任务无代码变更，仅作最终门禁提交）
+- 行为变化：无新增功能；完成本计划最终交付核对。只生成并验证本机 macOS arm64 unpacked 包，未创建 tag、Release 或真实发布。
+- 测试命令与退出码：`git status --short --branch`、`git submodule status`、两棵树状态和 gitlink 可达性（均 0）；`gofmt -d`（0）；`GOPROXY=https://goproxy.cn,direct go test ./agent/dsh ./agent/acp`（0）；同包 `go test -race`（0）；包含 CLI 的快速 Go test（1，缺少 `web/dist`）；CLI build（1，同一缺失 artifact）；`go test ./...`（1，缺少 `web/dist`、既有 `agent/codex` skills EOF、既有 core workspace-skills 基线失败）；`go test -race ./...`（1，同样阻塞）；`go vet ./...`（1，缺少 `web/dist`）；DSH ACP 临时目录 help 探测（0）；Desktop 快速门禁 21/21（0）；`pnpm run typecheck`（0）；`pnpm run runtime:check`（0）；`pnpm run test:coverage`（0，329 passed，88.72% 行、81.27% 分支、84.31% 函数）；`pnpm run build`（0）；`GOPROXY=https://goproxy.cn,direct pnpm run cc-connect:build`（0）；`GOPROXY=https://goproxy.cn,direct pnpm run dist:dir`（0）；`pnpm run smoke:packaged`（0）；`pnpm run smoke:packaged-ui`（0）；validation grep E2E（0，17 passed、9 skipped）；修正后的 unpacked sidecar/manifest/sha 校验（0）；Secret 扫描（0，仅测试、示例和占位符命中）；`git submodule sync --recursive && git submodule update --init --recursive`（0）。
+- 本地打包验证：`dist/mac-arm64/dsh-desktop.app` 存在；sidecar `--version` 报告 commit `c88f4c9`；打包 manifest SHA 与二进制 `6932e48b339ef532afd0793d9f130eed5100e82ee9499d0fa195846fb113d423` 一致；macOS 根 closure manifest 按既有签名策略省略；真实 Harness UI packaged smoke 通过。
+- 未覆盖项：QA-03 仍缺少真实飞书 App ID/Secret 和人工授权；当前主机未生成 Windows/Linux 原生安装包，跨平台打包留给对应 CI；子模块全量门禁的 `web/dist` 与既有 Codex/Workspace Skills 失败均不属于本计划改动，未擅自修改。未读取或写入任何真实用户目录或凭证。
+- 下一任务：无；计划完成，QA-03 为唯一真实外部阻塞。
+
+## 后续扩展：FEISHU-CLI-01 — 2026-10-08
+
+- 子模块提交：`c88f4c911902cacaf6d53c28d3c8f160369c0979`（无子模块改动）
+- 父仓库提交：`b5bbbe4`（一键入口、可复用 skill、文档和契约测试）
+- 行为变化：新增 `pnpm run feishu:setup`，调用官方 `@larksuite/cli` 安装向导，生成官方飞书 skills 并引导用户 OAuth；新增 `.agents/skills/feishu-dsh-setup`，明确用户身份 CLI 与 cc-connect 机器人身份的边界，禁止 Secret/token 进入仓库、命令记录或日志。
+- 测试命令与退出码：`node --test test/feishu-cli-setup.test.ts`（0，2 passed）；`node --test test/feishu-cli-setup.test.ts test/packaged-resources.test.ts`（0，7 passed）；`pnpm run feishu:setup -- --dry-run`（0）；`node --check scripts/setup-feishu-cli.mjs`（0）；skill `quick_validate.py`（0）；`pnpm run build`（0）；`pnpm run smoke:packaged`（0）；`pnpm run dist:dir`（0）；`git diff --check`（0）。
+- 本地打包产物：`dist/mac-arm64/dsh-desktop.app` 存在；打包内 cc-connect manifest SHA 与二进制一致，二进制 commit 为 `c88f4c9`。
+- 真实飞书验证：官方 CLI 临时 HOME 下 `config init --new`、浏览器 OAuth、`lark-cli whoami` 和 `lark-cli doctor` 均通过；用户身份、机器人身份、Feishu/MCP 端点均 ready。真实 CLI 凭证保留在临时目录，未复制到仓库或真实 DSH 目录。
+- 未覆盖项：cc-connect 机器人二维码已生成并等待手机飞书扫码确认；Desktop 消息链路的 QA-03 仍待该外部动作完成。官方授权有一项企业策略禁止申请的视频会议权限，不影响已验证的 CLI/消息/文档等能力。
+- 下一任务：`QA-03-CC-BOT`（手机飞书扫码后继续临时 cc-connect → DSH ACP → Desktop/飞书消息验收）。
+
+## 后续扩展：CC-06 — 2026-10-08
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（已推送至 `origin/codex/dsh-agent-integration`）
+- 父仓库提交：`784e124`（已推送至 `origin/codex/cc-connect-dsh-integration`，更新 gitlink 和 macOS sidecar manifest）
+- 行为变化：修复 `cc-connect feishu setup/new --config <不存在路径>` 在飞书授权成功后无法回填的缺陷；自动创建配置父目录和空配置，并修正空配置时项目/平台索引越界。
+- 测试命令与退出码：`GOPROXY=direct go test ./config -run TestEnsureProjectWithFeishuPlatform_CreatesMissingConfigFile -count=1`（0）；相关 config 测试（0）；`GOPROXY=direct go test ./config`（0）；`GOPROXY=direct go test ./config ./cmd/cc-connect`（1，既有缺失 `web/dist`）；`pnpm run cc-connect:build`（0）；父仓库 gitlink/manifest 精确提交并推送（0）。
+- 未覆盖项：修复后二进制已生成新的二维码，等待手机端再次完成该码的授权回调；成功后继续 QA-03-CC-BOT。
+- 下一任务：`QA-03-CC-BOT`。
+
+## 后续扩展：EXT-01 — 2026-10-08
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（复用已推送修复）
+- 父仓库提交：`c17315d`（已推送至 `origin/codex/cc-connect-dsh-integration`）
+- 行为变化：新增隔离的 Feishu QR setup runner。它只在临时目录启动捆绑 cc-connect，等待 QR 图片、读取成功后的 App ID/Secret，并在完成或取消后删除临时配置；Secret 不进入状态、错误或日志。
+- 测试命令与退出码：先运行缺失实现的 `node --test test/feishu-setup.test.ts`（1，预期红灯）；`node --test test/feishu-setup.test.ts`（0，3 passed）；`pnpm run typecheck`（0）；`git diff --check`（0）。
+- 未覆盖项：尚未接入原生扩展菜单、窗口和 Desktop 设置保存；真实飞书验收仍待后续端到端任务。
+- 下一任务：`EXT-02`。
+
+## 后续扩展：EXT-02 — 2026-10-08
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（复用已推送修复）
+- 父仓库提交：`5c80fb6`（已推送至 `origin/codex/cc-connect-dsh-integration`）
+- 行为变化：在原生「扩展 / Desktop tools」菜单增加独立飞书配置入口；新增专用二维码窗口和中英文状态页；成功后复用现有受保护凭证存储、保存工作区并自动尝试启动 Sidecar。退出应用时会取消尚未完成的配置流程。
+- 测试命令与退出码：缺失菜单实现的 `node --test test/menu-template.test.ts`（1，预期红灯）；`node --test test/menu-template.test.ts test/feishu-page.test.ts test/feishu-setup.test.ts`（0，13 passed）；`pnpm run typecheck`（0）；`pnpm run build`（0）；`pnpm exec playwright test e2e/electron-shell.spec.ts -g "Extensions menu completes QR setup" --reporter=list`（0，1 passed）；`git diff --check`（0）。
+- 未覆盖项：真实飞书二维码仍需手机端完成最终回调；完整发布门禁和官网文案待后续任务。
+- 下一任务：`DOC-02`。
+
+## 后续扩展：DOC-02 — 2026-10-08
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（复用已推送修复）
+- 父仓库提交：`05e0d4f`（已推送至 `origin/codex/cc-connect-dsh-integration`）
+- 行为变化：补充扩展菜单二维码配置、临时目录/Secret 安全边界、官方 `lark-cli` skills 一键安装说明；更新中英文安装页和首页，明确用户 CLI 身份与 cc-connect 机器人身份的区别。
+- 测试命令与退出码：先运行扩展文案契约测试（1，预期因官网文案尚未添加失败）；`node --test test/cc-connect-docs.test.ts`（0，1 passed）；`pnpm run site:check`（0，现有 12 页、170 条翻译契约通过）；`git diff --check`（0）。
+- 未覆盖项：真实飞书二维码回调仍是 QA-03-CC-BOT 的外部阻塞；完整发版门禁、打包产物和 Release 尚未执行。
+- 下一任务：`REL-02`。
+
+## REL-02 — 2026-10-09
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（已推送至 `origin/codex/dsh-agent-integration`）。
+- 父仓库提交：`dba48daf16905adee6c026d53f1727848b3096`（Windows Feishu JS fixture 改用 bundled Node，已推送 GitHub/GitCode）；站点 release 数据提交 `1406010`（已推送 GitHub/GitCode）。
+- 行为变化：完成 cc-connect × DSH Desktop 集成、官方 Feishu CLI 一键入口/skills、扩展菜单独立二维码窗口、临时 Secret 边界、文档和中英文官网文案；Windows 打包 Feishu E2E 修复 Electron `process.execPath` 与 Node executable 混淆。
+- 测试命令与退出码：`node --test test/feishu-setup.test.ts`（0，4 passed）；`pnpm exec tsc --noEmit`（0）；本地 `pnpm run test:e2e`（0，18 passed、9 skipped）；`pnpm run test:e2e:packaged`（0，8 passed）；`pnpm run test:e2e:market:offline`（0，1 passed）；`pnpm run site:check`（0，12 pages、170 translations、API checks all pass）；GitHub Release run `37821983420`（0，verify 15 passed/12 skipped，Linux/macOS/Windows build、Windows Feishu QR packaged E2E、NSIS residue/silent install、attestation、publish 全部通过）。
+- 本地/发布产物：GitHub Release `v0.2.1-alpha.1.shell.5` 已发布 8 个资产；tag peeled commit 为 `dba48daf16905adee6c026d53f1727848b3096`；GitCode tag 对齐，按发布技能上传 macOS/Windows 安装包和 4 个校验文件，匿名 range GET `4/4` 通过。GitCode 预发布标记受 20 个上限限制，创建为普通 Release；Linux `.deb` 保留 GitHub 下载并在官网 fallback。
+- 真实验收：官方 CLI 临时 HOME 的 OAuth/`whoami`/`doctor` 和 28 个官方 skills 安装通过；用户两次扫码手机均提示“应用成功”，但 Desktop 侧 cc-connect callback 仍超时，未保存真实机器人配置。
+- 未覆盖项/风险：`QA-03-CC-BOT` 是真实外部阻塞，缺少 Desktop 端成功回调；子模块全量 Go gate 仍有计划外既有 `web/dist`、`agent/codex` Skills EOF、core workspace-skills 基线失败，未擅自修改；GitCode Linux 资产不镜像是当前发布技能策略。Site Data Refresh run `37826506360` 已成功完成；线上 `release.json` 已切换到 shell.5，macOS/Windows 4 个 GitCode 资产均为 `gitcode_ok=true`，Linux 保持 GitHub fallback，`pnpm run site:check` 与 `/api/downloads` 校验通过。
+- 下一任务：无；计划完成，保留 `QA-03-CC-BOT` 外部阻塞记录。
+
+## QA-03-CC-BOT follow-up — 2026-10-09
+
+- 子模块提交：`dd637656761ecaea0144bedbf3c7576e962f7da3`（复用已推送修复）
+- 父仓库提交：`ae0f9016f534322d638cd8bd304f5ceb9c0472b7`（已推送至 `origin/codex/cc-connect-dsh-integration` 与 `gitcode/codex/cc-connect-dsh-integration`）
+- 行为变化：使用新的隔离临时目录运行 cc-connect；将本机 credentials service 文件临时复制到权限为 `0600` 的隔离 `DSH_HOME`，未修改真实用户目录。确认正确的新建 Feishu bot 会话后发送 `dsh-connect e2e ping`，真实 Feishu websocket 入站经 cc-connect 路由到 DSH ACP，随后成功回包并在飞书界面显示 “Connectivity confirmed”。
+- 验证命令与退出码：临时配置存在性/权限/字段检查（0，仅输出 present/empty）；飞书 `tenant_access_token` 与 bot info API 检查（HTTP 200，业务 code 0）；隔离 cc-connect/DSH ACP 端到端进程日志与退出状态（0）；飞书界面回包检查（0）；`node --test test/cc-connect-docs.test.ts`（0，1 passed）；临时诊断目录清理（0，已删除，真实 credentials 文件仍为 `0600`）。
+- 未覆盖项：本次集成验收没有剩余项。上游子模块全量 Go gate 仍保留既有 `web/dist`、`agent/codex` 和 core workspace-skills 基线失败；模型凭证仅作为用户拥有的临时测试输入，未随代码交付。
+- 下一任务：无；计划完成。

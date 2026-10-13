@@ -1,6 +1,6 @@
 ---
 name: release-dsh-desktop
-description: "Run a full dsh-desktop release — bump the bundled @deepseek-ai/dsh kernel, pass local gates, cut the composite tag, watch the GitHub release CI, mirror installers to GitCode, verify the site data, and record the run in HANDOFF. Use when the user asks to 发版/发布/release/bump kernel/重发版本, or when version.mjs check reports an upstream update. Companion: gitcode-release-publisher (browser-based GitCode uploads when backfill stalls)."
+description: "Run a full dsh-desktop shell-only or kernel release, pass local gates, cut the composite tag, watch the GitHub release CI, mirror installers to GitCode, verify the site data, and record the run in HANDOFF. Use when the user asks to 发版/发布/release/bump kernel/重发版本, or when version.mjs check reports an upstream update. Companion: gitcode-release-publisher."
 ---
 
 # dsh-desktop Release Runbook
@@ -15,18 +15,52 @@ are all part of the release, not afterthoughts.
 1. `gh` authenticated to `citrusli2026/dsh-desktop` (workflow
    dispatch, run watching, release verification).
 2. Working tree clean; `main` fetched. Remote bot commits are common
-   (`dsh-shell-bot` site syncs) — always `git pull --rebase` right
-   before tagging and re-create the tag if it was made pre-rebase.
+   (`dsh-shell-bot` site syncs). Sync before tagging; for an integration
+   branch use the merge route below to preserve completed task SHAs.
 3. Local gates runnable: pnpm 10.33.2 (the repo's `packageManager` pin; see the pnpm fault-table entry for why 11.x is banned), Node 24, network to npm registry.
 4. For the mirror step: kimi-webbridge daemon + a logged-in gitcode.com
    tab in the user's browser (`~/.kimi-webbridge/bin/kimi-webbridge start`).
 
 ## Release-day playbook (follow in order; each step names its success signal)
 
+### Choose shell-only vs kernel upgrade first
+
+For shell features/fixes without an authorized kernel upgrade, run only
+`node scripts/version.mjs bump shell`. Keep the harness pin, peer ranges,
+patch versions, release-age excludes and lockfiles unchanged. Do not turn an
+upstream update discovered during a shell release into an implicit upgrade.
+Skip kernel-only steps 1–7 below; run local verification, fresh versioned
+packaging, notes, CI, mirrors and site/HANDOFF as usual. Notes must describe
+the unchanged kernel and the actual shell revision, not blindly use `.shell.0`.
+
+When releasing from a user-designated integration branch, preserve its atomic
+commit SHAs: fetch and merge `origin/main` on that branch after the task tree is
+clean, inspect conflicts, and push the integration branch. A normal `HEAD:main`
+push is allowed only after it is a fast-forward; never force the default branch.
+Tag that checked commit and push the exact tag to both remotes. Record the tag
+SHA separately from later site/HANDOFF commits. Do not rebase completed task
+commits merely to incorporate site bot updates.
+
+Published release tags are immutable. Any re-point procedure below applies
+only to a new, unpublished candidate after canceling its old run and verifying
+that no release assets were published; otherwise bump the shell revision.
+Never force-push the default branch or move a historical published tag.
+
+Build `dist:dir` to completion before starting smoke, packaged E2E or real
+Feishu acceptance; never rebuild/overwrite the executable they are running.
+After the final version bump, repeat both packaged smokes and packaged E2E.
+For Feishu changes run the display/manager cases with `--repeat-each=5` and
+the full `pnpm run test:e2e:packaged` subset. Production must continue to
+ignore fake-bin environment overrides; inject dependencies only in isolated
+test main processes. Real messages require an authorized application/conversation,
+temporary credential copies and cleanup; verify thoughts cannot enter answer text.
+
+### Kernel-upgrade route
+
 1. `node scripts/version.mjs check` → exit 3 with `update available: <v>`.
 2. `node scripts/version.mjs bump dsh <v>` → prints `synced N dsh-* peer pins`.
 3. `node scripts/sync-release-age-excludes.mjs <v>` → `241 -> 229 pinned entries` (numbers vary).
-4. `pnpm -C manifest/harness install --lockfile-only` → if it exits with
+4. `pnpm -C manifest/harness install --lockfile-only --no-frozen-lockfile --reporter=append-only` → if it exits with
    `ERR_PNPM_UNUSED_PATCH`, rebuild the login patch for the new kernel
    version (see the patch-regeneration fault-table row), then re-run.
 5. `pnpm -C manifest/harness install --frozen-lockfile` → `Done`.
@@ -37,8 +71,12 @@ are all part of the release, not afterthoughts.
 8. `pnpm run verify` → exit 0 (typecheck, unit tests + coverage, site
    checks, build).
 9. `pnpm exec playwright test -g "LAN pairing"` → 2 passed. Then
-   `pnpm test:e2e:market:offline` → 1 passed, and `pnpm run smoke:packaged`
-   → `packaged smoke: OK`.
+   `pnpm test:e2e:market:offline` → 1 passed. Immediately before packaged
+   smoke, run `GOPROXY=https://goproxy.cn,direct pnpm run dist:dir`; then run
+   `pnpm run smoke:packaged` and `pnpm run smoke:packaged-ui` → both pass.
+   The smoke driver passes the source package version into the app and fails
+   early if `dist/` is stale, so never treat an old `packaged smoke: OK` as a
+   release result.
 10. `pnpm test:e2e:market:real` → 2 passed. **If it reports
     `install-failed`**, read the market fault-table row (bundled-pnpm
     publish-age window vs the new kernel's peer enforcement) before
@@ -102,6 +140,29 @@ pnpm -C manifest/harness install --frozen-lockfile
 
 pnpm may auto-add new packages to `minimumReleaseAgeExclude`
 (supply-chain policy) — that is expected, keep it.
+
+If the lockfile step reports `ERR_PNPM_UNUSED_PATCH`, the patch filename still
+targets the previous kernel version. Regenerate it against the package that is
+actually being installed; do not leave the old patch file beside the new one:
+
+```sh
+PATCH_DIR=$(mktemp -d -t dsh-account-patch.XXXXXX)
+pnpm -C manifest/harness patch \
+  @deepseek-ai/dsh-client-ui-settings-account@<new-kernel> \
+  --edit-dir "$PATCH_DIR"
+# Edit "$PATCH_DIR/lib/client.js" and re-apply the openedAttemptId auto-open effect.
+pnpm -C manifest/harness patch-commit "$PATCH_DIR" \
+  --patches-dir manifest/harness/patches
+# Update patchedDependencies to the generated <new-kernel>.patch and remove
+# the obsolete old-version patch, then regenerate the lockfile.
+pnpm -C manifest/harness install --lockfile-only --no-frozen-lockfile --reporter=append-only
+pnpm run bootstrap
+rg -c 'openedAttemptId' resources/harness/node_modules/@deepseek-ai/dsh-client-ui-settings-account/lib/client.js
+```
+
+`pnpm patch` uses the exact package version, while a leftover old patch is
+reported as unused; rebuilding the diff from the new package also catches
+upstream source-line drift before the release reaches CI.
 
 ### 2. Bootstrap the closure and fix peer gaps
 
@@ -178,7 +239,7 @@ windows-2022 + ubuntu-24.04) → publish. Success means: 8 assets
 (dmg/exe/deb + three `.sha256` + blockmap + latest.yml; AppImage is
 not built), attestations verified, release created.
 
-### 6. GitCode mirror (one command — v2 pipeline)
+### 6. GitCode mirror (v2 pipeline)
 
 **INCIDENT (2026-09-20 → ongoing, root-caused 2026-09-28/29):**
 GitCode's **v5 upload pipeline** (`api.gitcode.com/api/v5/.../upload_url`,
@@ -202,6 +263,17 @@ message when one is missing):**
    gitcode.com and sign in, then re-run.
 3. The GitCode tag already pushed and aligned (the script checks it):
    `git push gitcode refs/tags/<tag>`.
+4. Verify the current browser origin is `https://gitcode.com` immediately
+   before borrowing authorization. A successful `find_tab` response alone
+   is not enough: this release observed evaluate still using the previous
+   GitHub page. Navigate this task's current tab to the GitCode releases URL
+   and re-check origin/login without printing credential values.
+5. Check whether the GitCode release object exists. `mirror-gitcode-v2.mjs`
+   links through PUT to an **existing** release; it does not POST-create one.
+   For a new tag returning 404, use the companion skill's upload → create
+   flow with all six verified descriptors and the exact tag commit first.
+   Use `--status unset` when the existing prerelease quota is exhausted.
+   Then run the v2 script's `--check-only`; do not assume PUT will upsert.
 
 **Run it:**
 
@@ -316,8 +388,9 @@ run `GH_CLI=1 node scripts/gen-site-data.mjs` — it routes the API reads
 and checksum fetches through `gh api` (same escape-hatch idea as
 `GH_SOCKS5`, which routes through curl).
 
-Watch for push races: the bot pushes its own sync; `git pull --rebase`
-and re-push. If `release.json` conflicts, keep the bot's download
+Watch for push races: the bot pushes its own sync; fetch and merge
+`origin/main` to preserve recorded atomic-task SHAs, then re-push normally.
+Never force main or move a published tag. If `release.json` conflicts, keep the bot's download
 counts and regenerate over it.
 
 ### 8. HANDOFF and live verification
@@ -332,7 +405,7 @@ Fill the placeholders from the commands in the template.
 1. **内核升级**：`<dsh>.<rev>` 说明（bump 命令、lockfile、release-age 豁免同步）。
 2. **发布**：tag `v<version>` → `<short-sha>`（核对 peeled commit），release.yml
    verify + build + publish 全绿；<N> 文件契约齐全，attestation 与 packaged smoke 通过。
-3. **GitCode 镜像（mirror-gitcode.mjs）**：本机直连上传 dmg/exe/deb + 3×sha256
+3. **GitCode 镜像（v2 / gitcode-release-publisher）**：本机上传 dmg/exe/deb + 3×sha256
    （<实际耗时>），Range GET 6×206；`gitcode_ok` 已刷新。
 4. **网站数据**：gen-site-data 重新生成（stats <n> 次：mac x / win y / linux z），
    site-refresh 自动同步提交 <sha>。
@@ -349,8 +422,7 @@ Fill commands:
 gh run list --workflow=release.yml --limit 1 --json databaseId,status --jq '.[0]'
 gh run list --workflow=site-refresh.yml --limit 1 --json databaseId,status --jq '.[0]'
 git rev-parse --short v<version>^{}     # peeled tag commit, cross-check the mirror tag
-GITCODE_TOKEN=$(cat ~/.gitcode-token) GITCODE_REPO=citrusli2026/dsh-desktop \
-  node scripts/mirror-gitcode.mjs v<version> --check-only   # 6× present
+node scripts/mirror-gitcode-v2.mjs v<version> --check-only   # 6× present, no token read
 ```
 
 - Verify live:
@@ -364,15 +436,31 @@ GITCODE_TOKEN=$(cat ~/.gitcode-token) GITCODE_REPO=citrusli2026/dsh-desktop \
 
 | Symptom | Cause / fix |
 |---|---|
+| Site Data Refresh verifies the mirrors but fails rebasing `site/data/release.json` | local generated-data push raced the bot's five-minute re-probe. Let the in-flight bot finish before pushing the same generated files. If it already failed, verify live delivery, dispatch a fresh refresh from current main after mirrors settle, keep main unchanged until it finishes, then fetch/merge its bot commit. Never force main or retag the release to repair website data |
+| GitCode returns HTTP 200/206 but the file has not been checked | status is only availability. Reject HTML, verify range total/first byte against the local asset (or full size/hash for 200), and fully read back at least one installer. Record its SHA; do not treat an upload message or release page as verified delivery |
+| browser Actions log appears stuck although job steps have advanced | the live page may be cached. Use current run/job step status and the completed Actions log; a completed job's log may remain unavailable until the whole run ends. Do not infer failed residue or missing artifacts from a stale browser frame |
+| Windows peer-client trash test sees the correct session breadcrumb but no treeitems | responsive layout collapsed the sidebar; the Windows work area can constrain BrowserWindow width. Explicitly open the visible sidebar before asserting its tree/session, and use a deliberately narrow peer in all-platform regression. Retain every delete/restore/unarchive and two-client assertion; do not bypass peer checks or merely increase timeouts |
+| Chinese real Harness startup has no sessions and an input labelled "Choose workspace" / "选择工作区" on Linux CI | the kernel resolves its default workspace under the system Documents directory, not child cwd. Headless runners may have no XDG Documents. Set the public `workspace-controller.documentsDirectory` profile option to the fixture's temporary directory and make seed/session cwd match that default path. Do not probe or create a real account's Documents in isolated E2E, and do not bypass workspace/session assertions |
+| real Harness E2E cannot find Chinese controls on an English CI runner, but passes on a Chinese development machine | trash/message fixtures must configure locale, theme and onboarding directly in the active profile before boot, then assert the rendered locale. Do not rely on asynchronous legacy settings import or replace exact controls with bilingual fallbacks. Keep legacy migration coverage in its dedicated tests |
+| a real persistence fixture fails on Windows with `ERR_UNSUPPORTED_ESM_URL_SCHEME`, or its origin-path assertion fails | dynamic imports must use `pathToFileURL(require.resolve(...)).href`, not a native drive path. Compare the exact expected session origin with `path.join`, not a POSIX-only prefix; run the real cross-process lease and restart checks on every release platform |
+| a fresh local ad-hoc package blocks fake-secret E2E on a macOS keychain dialog | fake Secrets do not justify real keychain access. In the isolated test main process, inject safeStorage unavailable and assert the existing restricted-file fallback; retain safeStorage adapter unit tests and real protected-storage acceptance. Do not approve system dialogs, modify keychain access or add production bypasses |
+| packaged launch with a temporary workspace fails `ENOENT` although the binary exists | a relative `dist` path was resolved against the new cwd; `locatePackagedExecutable` must return an absolute path (unit regression covers relative input) |
+| packaged manager remains closed / actions unexpectedly rejected just after launch | absence of the boot overlay is not readiness; require mounted desktop-controls, tolerate only expected navigation/context transitions and body=null while loading; preserve failure-surface assertions |
+| live compact/quiet still leaks reasoning as answer text | ACP thought passed through generic fallback and a dedicated mapper; test the complete notification boundary, not only the thought helper, and map `agent_thought_chunk` once |
+| packaged trash or another Harness disconnects while tests are running | a concurrent dist rebuild replaced running resources; serialize packaging and runtime gates, then rerun the complete failed suite without weakening assertions |
+| `git add` says the manually maintained tracked plugin client is ignored | the broad lib ignore matches even this exact path; use precise `git add -f plugins/dsh-desktop-controls/lib/client.js`, never `git add -A` |
+| GitCode upload reports `no extension connected` | start the daemon once; if the browser extension remains disconnected, report this mirror prerequisite to the user while completing other release gates. Do not report the mirror or full release complete |
 | publish fails: `release-notes: missing docs/release-notes/v<tag>.md` | every release must write notes; scaffold with `node scripts/write-release-notes.mjs v<tag>`, fill it, commit, re-run (or re-push the tag) |
 | publish fails/ warns: `still contains placeholder <>` | fill every `<...>` in the notes file before tagging |
+| `pnpm -C manifest/harness install --lockfile-only` reports `ERR_PNPM_UNUSED_PATCH` after a kernel bump | the `patchedDependencies` key and patch filename still target the previous `dsh-client-ui-settings-account` version; use the exact `pnpm patch` → edit → `patch-commit` flow above, remove the obsolete patch, regenerate the lockfile, and verify `openedAttemptId` in the staged closure |
 | `audit-harness-peers` fails after bump | new kernel peer gap; add the package to the manifest and re-install |
-| `main` push rejected | bot sync landed; `git pull --rebase`, re-tag if the tag was already cut |
+| `main` push rejected | bot sync landed; fetch and merge origin/main, preserve task SHAs, push normally. A published tag remains immutable; a docs/site follow-up is not a reason to retag |
 | backfill run cancels at ~120 min with installers missing | normal; re-dispatch (idempotent), expect 2–3 runs |
 | upload API reports success + release lists assets, but anonymous Range GET 404 `NOT_PATH` on EVERY asset of a fresh release | v5 upload pipeline silently non-persisting (2026-09-20 incident): uploads via `api.gitcode.com` v5 never reach storage. Switch to the v2 browser pipeline (section 6), delete the dead attachments (`action:"delete"`), re-upload + re-link, re-verify |
 | linking a v2-uploaded asset fails with 400 `release update failed` | a link with the same filename already exists on the release; delete the old one first, then link |
 | `gitcode_ok=false` in bot sync although mirror is up | bot ran before mirror finished; regenerate locally after verifying |
-| CI verify fails on the dependency security audit right after a release-day advisory drop (`security:audit`, fresh GHSAs in the electron toolchain or the harness chain) | raise the **security floors** in BOTH `pnpm-workspace.yaml` override lists (root + `manifest/harness`) to the patched in-range versions, regenerate both lockfiles, re-run `pnpm security:audit` until exit 0, re-bootstrap, then **cancel the failed run, `git tag -f`, force-push the tag to both remotes** (established re-point procedure). Get patched versions from `gh api /advisories/<GHSA>` — if `first_patched_version` is missing it may just not be backfilled yet; check `gh api repos/<repo>/dependabot/alerts` for the real fix version before falling back to an audit ignore (prefer a floor whenever a patched version exists) |
+| GitCode release creation returns HTTP 400 `预发布版本最多标记20个` | GitCode has a platform-wide prerelease count limit; keep the same tag/commit and create this release as a normal release (`release_status: 0`). Asset links and website data are unaffected; record the fallback in HANDOFF |
+| CI verify fails on the dependency security audit right after a release-day advisory drop (`security:audit`, fresh GHSAs in the electron toolchain or the harness chain) | raise the **security floors** in BOTH `pnpm-workspace.yaml` override lists (root + `manifest/harness`) to the patched in-range versions, regenerate both lockfiles, re-run `pnpm security:audit` until exit 0, re-bootstrap. Retry only an unpublished candidate after stopping old runs and confirming no Release/assets on either host; use the exact tag's force-with-lease. Published versions need a new version. Get patched versions from `gh api /advisories/<GHSA>` — if `first_patched_version` is missing it may just not be backfilled yet; check `gh api repos/<repo>/dependabot/alerts` for the real fix version before falling back to an audit ignore (prefer a floor whenever a patched version exists) |
 | market:real (`install-failed`) after a kernel bump that adds install-time peer enforcement | the packaged app installs plugins with the **bundled pnpm 11.11.0**, which applies a ~24h publish-age default: it resolves the newest plugin version OLDER than 24h. If that version's peers don't cover the new kernel it is rejected (clear message + `allow-version` guidance in the app's technical detail; the E2E only shows `install-failed`). Diagnose with the bundled probe: `pnpm run build && DSH_MARKET_PROBE=1 pnpm exec playwright test -g @market-probe` prints the full result (status/reason/detail) — see `e2e/market-probe.spec.ts`. Fix = wait for a peer-compatible plugin version to cross the 24h window (self-heals); do NOT downgrade the bundled pnpm or grant allow-version — both strip real safety for all users |
 | release PUT returns 200 but a link never disappears, or a same-name re-link returns 400 `release update failed` | the `action:"delete"` descriptor is missing the link row `id` (a v2 GET returns it): without the id the delete is a silent no-op that leaves a null-attachment tombstone blocking the same-name create. `scripts/mirror-gitcode-v2.mjs` carries the id — prefer it over hand-built PUTs |
 | runner upload stuck for hours | check assets with Range GETs; if still 404 after a run, cancel and re-dispatch |
@@ -382,13 +470,14 @@ GITCODE_TOKEN=$(cat ~/.gitcode-token) GITCODE_REPO=citrusli2026/dsh-desktop \
 | site-refresh fails: `SyntaxError: Identifier 'classifyPublicAsset' has already been declared` | `scripts/gen-site-data.mjs` had a duplicated local `export function classifyPublicAsset` alongside the import from `release-shape.mjs` (introduced by the architecture refactor); keep only the import, delete the local function, re-trigger the workflow |
 | packaged Windows build: `boot failed: bundled harness incomplete: node missing at ...\harness\node\bin\node.exe` | the win-x64 dist zip keeps `node.exe` at the archive root (no `bin/`); `scripts/fetch-node.mjs` now moves it to `node/bin/node.exe` after extraction — mac/linux tarballs already have `bin/node` |
 | smoke steps print `packaged smoke: OK` while the app logged a boot failure (Windows) | `app.quit()` drops `process.exitCode` as the process exit code on Windows; `quitGracefully` now forces `app.exit(code)` in `will-quit`. Never judge a gate by the script's exit code alone without a negative-path check (boot failure must exit non-zero) |
+| `pnpm run smoke:packaged` passes but the app version is from an older release | `dist/` was left over from an earlier build; run `pnpm run dist:dir` immediately before smoke. The smoke driver now injects the source version and the packaged app rejects a mismatch before boot |
 | Windows packaged E2E: native menu stays in English after writing a zh preference | directory `fs.watch` can miss content rewrites on Windows; `ShellLocaleController` re-reads `settings.yaml` every 2s as a fallback (refresh() dedupes) |
 | deb install step: `dpkg: dependency problems prevent configuration of dsh-desktop` | `dpkg -i` never resolves Depends and the bare runner lacks libnotify4/libsecret-1-0; install with `sudo apt-get install -y ./dist/<deb>` instead |
 | `RangeError [ERR_CHILD_PROCESS_STDIO_MAXBUFFER]` from `dpkg -L` | a 160 MB install lists every file, overflowing the 1 MB cap; `smoke-installed.mjs` passes a 32 MB buffer — and selects the binary by `stat` (**regular executable**, since `dpkg -L` lists the `/opt/<app>` directory before the binary inside it) |
 | NSIS same-version overwrite (`/S` reinstall) hangs indefinitely | electron-builder replaces the install by running the existing uninstaller; on CI it never finishes (150s and 300s timeouts; zero output; the first silent install takes 4s). Deliberately out of CI scope — the deb reinstall smoke covers the overwrite logic; see test-hardening-plan A-3 |
 | `pnpm install --lockfile-only` at the repo root exits 0 but never writes `pnpm-lock.yaml`, and full `pnpm install` hangs after `resolved N, reused M, downloaded 0` (§49/§54) | **ROOT-CAUSED 2026-09-14 (HANDOFF §55)**: pnpm 11.11.0 silently writes no lockfile for trees containing `electron-builder`, and the root `packageManager: pnpm@…` field makes every pnpm >= 10 self-switch (`manage-package-manager-versions`) to the pinned 11.11 before running — so even `npx pnpm@10.33.2` executed 11.11. Fix shipped: `packageManager` pinned to `pnpm@10.33.2` (workflows too); lockfile regenerated natively. Never raise the pin past 10.x until the upstream pnpm 11 defect is fixed; if a one-shot modules-purge prompt appears after a pin change, rerun with `CI=true` |
 | custom NSIS hooks never run (installer compiles fine, no error, `MessageBox`/probe code absent from the built installer) | `nsis.include` is resolved via `getResource` against the buildResources FILE LIST — a value like `build/installer.nsh` silently matches nothing (buildResources-relative). Omit the key entirely: the default lookup already finds `build/installer.nsh`. Diagnostic: append a marker line to `$TEMP\dsh-nsis-probe.log` from the hook and check it after a silent install (see HANDOFF §55) |
-| a just-pushed release tag needs re-pointing after a rebase | `git tag -f v<version>` locally, then `git push --force origin v<version>`; cancel any release run already started from the old commit first (`gh run cancel <id>`) and force-push the GitCode tag to the same peeled commit (branch is a mirror, force is the established practice) |
+| a failed, unpublished release candidate needs re-pointing | preserve task SHAs with merge, stop old runs, verify neither host has a Release or assets, and push only this exact tag with force-with-lease at the checked old SHA to both hosts. Never force main or move any published tag |
 
 ## Exit criteria
 

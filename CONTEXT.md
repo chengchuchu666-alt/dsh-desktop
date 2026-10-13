@@ -27,6 +27,7 @@ DeepSeek Harness(`@deepseek-ai/dsh`,简称 **dsh**)的非官方 Electron 桌面�
 | **harness** | 被壳托管的 DeepSeek Harness 运行时;闭包 = 内置 Node 22(`resources/harness/node`)+ `@deepseek-ai/dsh` 及依赖(`resources/harness/node_modules`),由 `pnpm run bootstrap`(deploy-harness + fetch-node)物化 |
 | **shell / 壳修订** | 壳自身的修订;版本为复合式 `<dsh 版本>.shell.<壳修订>`,如 `0.1.1-rc.2.shell.2`(决策 0009) |
 | **DSH_HOME / settings.yaml** | 壳与 harness 的私有数据根(默认 `~/.dsh-desktop`,决策 0012);`settings.yaml` 是 Harness 偏好(locale/theme),变更经 fs.watch + 2 秒轮询兜底生效;桌面快捷键、开机启动、通知与首次成功引导状态保存在应用 userData 下的 `shell-preferences.json`;`DSH_HOME=~/.dsh` 可回退为与 CLI 共享 |
+| **Edition / Runtime / Environment** | Dashboard 的三层模型:Edition 是官方或社区桌面/runtime 来源;Runtime 是已安装的具体 dsh 版本;Environment 是绑定版本、独立 `DSH_HOME`/workspace、端口和进程生命周期的实例。目录/进程隔离是 L1–L3，不等于 OS 安全沙箱(决策 0034) |
 | **composite version** | `version.mjs`(show/check/bump shell/bump dsh/set)统一管理版本字段;tag `v<版本>` |
 | **smoke 协议** | `src/main/smoke-protocol.ts` 集中定义旗标/退出码/注入 env:`--smoke-test`、`--smoke-ui`、`DSH_DESKTOP_TEST_FAIL_HARNESS`、`DSH_DESKTOP_TEST_RETRY_FAIL`、`DSH_DESKTOP_DEV_WEB_URL`;`quitGracefully` 在 will-quit 强制 `app.exit(code)`(Windows 上 app.quit 会丢退出码) |
 | **S1 / S2 / S2.5 / A组** | 发布门禁层级,规划与边界见 `docs/test-hardening-plan.md`:S1=打包 E2E+故障注入;S2=安装态冒烟(deb/NSIS,含重装),macOS 无安装器故无 S2;S2.5=真实 Harness 首屏渲染(`--smoke-ui`);A组=设置面板/更新检查/诊断导出/几何恢复/真第二实例/特殊路径 |
@@ -42,6 +43,7 @@ DeepSeek Harness(`@deepseek-ai/dsh`,简称 **dsh**)的非官方 Electron 桌面�
 | **首次成功引导** | 主界面「桌面工具」旁的一次性非模态卡片：运行时 → 工作区 → 模型 → 第一条任务；可关闭，检测到既有非空会话或新的运行→完成边沿后自动结束；插件市场不在必经路径（决策 0031） |
 | **运行体检** | 「桌面设置」中的用户触发、只读检查；默认只查本地运行时、两类数据目录/磁盘、Harness loopback、Profile/插件/版本，代理/registry/更新源必须显式勾选；结果脱敏、不上传、不自动修复（决策 0031） |
 | **LAN 配对状态** | 代理主密钥和设备登记只保存在应用 userData 的 `lan/` 下（0600），不写随包资源；设备会话可跨 Harness/代理重启继续使用。诊断报告只导出连接状态、局域网地址/端口、脱敏后的 loopback origin 与配对过期时间，不导出密钥或配对码 |
+| **飞书应用 / 连接意图 / 健康状态** | 飞书应用是具名本地机器人连接配置；可保存多份，只连接一份。连接意图区分持久启用、启动时自动连接与安全模式暂停；窗口关闭不是断连。健康状态区分服务启动、飞书通道在线、DSH 任务可用和已验证往返，不能混称“已连接”（决策 0037） |
 | **恢复中心** | 错误恢复页四动作:重试 / 以安全模式启动(已在安全模式时为退出)/ 导出诊断 / 打开日志文件夹 |
 | **桌面垃圾桶** | 壳拥有的删除回收层:删除=改名进 `$DSH_HOME/trash/items/<id>` 并记入 `trash/index.json`(原路径/时间/来源),桌面设置「垃圾桶」分区查看/还原/清除,30 天保留;覆盖预设、会话(整目录移走,内核索引自愈)与 Agent 的 rm 类删除(PreToolUse 钩子拦截,可疑即拦,设置可关) |
 | **.dshpreset** | 便携 Agent 预设包(JSON,`dsh-preset/v1`):导出某用户预设(`$DSH_HOME/.agent-presets/<id>/agent.cordis.yml + preset.yml`),导入带冲突检测(跳过/替换/克隆)与信任警告;写回用户预设根即被官方预设选择器挂载(决策 0021) |

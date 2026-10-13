@@ -9,10 +9,13 @@
 | 文档 | 内容 | 维护时机 |
 |---|---|---|
 | `README.md` / `README.zh.md` | 面向用户：产品、下载、开发（官网为第一入口） | 功能、下载方式或开发流程变化时 |
+| [`cc-connect.md`](cc-connect.md) | cc-connect × DSH Desktop 飞书连接的配置、生命周期、数据与清理 | 集成行为或用户操作变化时 |
 | `HANDOFF.md` | **运维核心**：当前状态、发布流程、速查、版本记录 | 每次发布、镜像或官网调整后 |
 | `docs/ARCHITECTURE.md` | 产品架构、源码职责、验证契约 | 架构或门禁变化时 |
 | `docs/reliable-shell-iteration-plan.md` | 可靠 Electron 壳与开箱即用的后续迭代边界和顺序 | 产品范围或迭代推进时 |
 | [双路线执行入口](plans/2026-09-29-dual-track.md) | 主干可靠性维护与官方桌面补丁 Worktree 的分工、执行顺序和模型交接 | 后续路线或执行状态变化时 |
+| [多版本 Dashboard 产品计划](plans/2026-10-08-multi-runtime-dashboard.md) | Edition、Runtime、Environment 的产品边界、竞品借鉴、信任/隔离模型与里程碑 | 多版本管理或社区 Edition 路线变化时 |
+| [人工审查：垃圾桶与飞书管理](plans/2026-10-10-manual-review/README.md) | 垃圾桶状态同步诊断、飞书二维码应用管理、消息降噪/卡片样式与有序验收任务 | 人工反馈复核或对应迭代推进时 |
 | [主干可靠性任务](plans/reliable-shell/README.md) | 现有壳的数据兼容、任务保护、更新与恢复任务卡 | 按任务验收后更新 progress |
 | [官方桌面补丁实验](plans/official-desktop/README.md) | 固定上游源码、有序补丁、隔离构建和平台验证 | 仅在实验 Worktree 实施，按任务更新 progress |
 | `docs/decisions/README.md` | ADR 索引 | 新增决策记录时 |
