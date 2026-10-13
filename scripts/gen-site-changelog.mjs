@@ -65,9 +65,12 @@ function parseNotes(tag, text, lang) {
 }
 
 async function main() {
+  const publishedTag = JSON.parse(await readFile(path.join(ROOT, 'site', 'data', 'release.json'), 'utf8')).release.tag
   const files = (await readdir(NOTES)).filter(name => /^v[\w.-]+\.shell\.\d+\.md$/.test(name))
   const tags = files
     .map(name => name.replace(/\.md$/, ''))
+    // A committed release draft is not evidence that users can download it.
+    .filter(tag => compareTagsDesc(tag, publishedTag) >= 0)
     .sort(compareTagsDesc)
     .slice(0, MAX_RELEASES)
   const entries = []
