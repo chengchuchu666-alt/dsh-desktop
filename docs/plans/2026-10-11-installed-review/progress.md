@@ -2,7 +2,8 @@
 
 更新：2026-10-12。INS-01、REAL-01 本机安全验收、BUG-01/02、QA-02/03 本地门禁完成；
 最终 pin 的 shell.2 已安装并真实复验。手机部分按用户最新指示由真实二维码 + 无头移动浏览器
-完成自动验收，不声称物理相机/异机 Wi-Fi 或 Windows/Linux 本机实测。下一任务 REL-02 发布。
+完成自动验收，不声称物理相机/异机 Wi-Fi 或 Windows/Linux 本机实测。REL-02 已发布、镜像及官网
+闭环；CI-only BUG-03 已修复。待迭代签名基础设施/测试收尾告警单列，不声称零告警或无限硬件覆盖。
 
 ## INS-01 — 正式 DMG 覆盖安装
 
@@ -228,3 +229,56 @@ CUA 用 bundle ID 选应用时发现多个既存安装副本，改用明确路�
 - 本原子文档门禁：`git diff --check` 与两份文档本地链接/结尾检查均退出 0；提交
   `aa5c9270c5f5718c29f3cf931a93d60a5a49a4f0`，origin/GitCode 集成分支均推送成功（退出 0）。
   下一任务：合并远端 main，保持历史提交 SHA，正式 shell.2 tag、三平台 CI、六资产镜像与官网。
+
+## BUG-03 — main CI bootstrap 顺序（2026-10-12）
+
+- REL-02 准备提交 `6cb1e1c1aa3826f9b383390b4feea027e23ab4cc`、正常合并 main 的提交
+  `8038553acf6720465635271ff46141109d53f739` 已推两远端 main/集成分支；shell.2 tag 双远端
+  同指该合并提交（退出 0）。Release run `38249871041` 的 verify 已通过，三平台构建进行中。
+- 普通 main CI `38249860196` verify 退出 1：`session-trash-patch.test.ts` 与 `trash-host.test.ts`
+  读取未安装的真实内核文件报 ENOENT；完整失败日志 `/tmp/dsh-shell2-main-ci-failed.log`。
+- 诊断顺序：最可能为 bootstrap 在 verify 后；其次路径/版本漂移；再次 frozen 依赖缺失。
+  同 tag Release verify 先 bootstrap 即通过，支持顺序根因，不用跳过依赖检查或虚假内核源码。
+- 按 README 原子范围移动原步骤并补普通 CI/Release 两项 YAML 顺序回归，随后执行本地全量
+  verify 和真实新 main CI。仅 CI/测试/文档改变，不移动 tag、不重签或重装当前应用。
+- 新 YAML 回归 2/2（退出 0）；首轮全量 typecheck 因测试 tuple 推断报 TS2538（退出 1），
+  加 `as const` 保留精确 job 类型后全量 `pnpm run verify` 通过：402 单测 + 1 ACP、0 failed/skipped，
+  覆盖率 89.99/82.97/86.41%，退出 0，日志 `/tmp/dsh-shell2-ci-order-verify.log`。
+  下步推送 CI-only 原子提交，等待真实新 main CI，不用本机已装依赖冒充 clean runner 验证。
+- 原子提交 `4a7b819b302ee46f311dbd3e69c3f82ae2b7d0aa` 已推两远端 main/集成分支（退出 0）。
+  干净 runner main CI `38252364542` 成功，402 单测 + 1 ACP、bootstrap 与三条 smoke 通过；
+  Linux E2E 23 passed/12 既有条件未启用，有 worker teardown 非用例错误，未隐瞒（见下节）。
+
+## REL-02 — shell.2 完整分发（2026-10-12）
+
+- 发布 tag 固定 `8038553acf6720465635271ff46141109d53f739`，双远端已核对，未移动历史 tag。
+  子 HEAD/父 gitlink 均为 `5cf99a2700ee5401af1b8c4fa15b6e63fd840bcb`。
+- Release `38249871041` verify/三平台 build/publish 成功，8 个资产齐全，SHA-256 与 Windows
+  SHA-512/blockmap 校验退出 0；三份 attestation 本机独立验证均退出 0，公开校验文件与
+  同 run artifacts 相同。本地严格 8 文件目录 `/private/tmp/dsh-shell2-release.rhqI2q/assets/`。
+- mac/Linux packaged 各 15，Windows 14 首次通过 + 1 重试通过。首次 autoConnect 谓词超时
+  以及 Linux E2E worker teardown 告警如实保留；没有改 retry/skip、删除或降低断言。
+  不把 CI job success 混同零错误；后续 P2 诊断/高频回归范围见 README。
+- mac DMG 286,741,648 字节、SHA `d7e691d75fd8d1e0aac878b51824109f1f9c762b37852b8b5fa91d5c06e19410`；
+  只读 CRC/codesign/版本/Sidecar commit 与二进制 SHA 校验退出 0，disk8 已卸载。
+  CI Sidecar SHA `2212a8389621c1b02a23fce9737deb04f6c2968dbb42be9c0d40b6abc6564e3c`。
+  Applications 保留最终已授权本地 shell.2（同 source/pin，不是 CI DMG 的位级副本），不再次
+  覆盖并触发额外授权；本机实机复验证据仍对应该最终本地包，旧备份保留。
+- GitCode v2 上传六资产约 53.6s，创建 id `57058`（普通 Release/unset，沿用已知 prerelease
+  数量限额），commit 精确为 tag SHA；原始探测 418 后通过正确 GitCode 页面授权读取确认
+  新 tag 404，不误当 PUT upsert。借用前 origin/登录状态仅输出布尔，不泄露授权头。
+  六份匿名 206 的 HTML 拒绝、Content-Range 总尺寸/首字节等值检查全部退出 0。
+  DEB 全量读回 229,987,916 字节、SHA `988f9b552254aa445b6bd122465422855462c9614cb0c3bf608a23cfc1d7cc57`
+  与公开 GitHub 校验一致（退出 0）。Windows EXE 261,982,792 字节，SHA 见 HANDOFF §78。
+- 直连 Actions 下载慢，已停止仅本任务两个下载进程并用既存 SOCKS 代理重取；未使用部分
+  下载作为完整制品。严格资产目录只放 8 文件，回读与描述符均在外，不污染校验集合。
+- 自动 Site Refresh `38253677766` 成功后才合并 bot
+  `d4f5c60aa0894700a2a6fb5d6f3926ac240d513f`，不与 re-probe 竞争。线上 JSON/API 均为
+  shell.2、6/6 镜像 true、HTTP 200；实时累计快照 6587（mac 756 / win 5203 / linux 628）。
+- GitCode 真实浏览器页面已核对 tag/8038553a/六附件（截图 28）。Mac 后来锁屏，未尝试解锁或
+  系统认证；官网改用隔离无头 Chrome，实际三个 GitHub + 三个 GitCode shell.2 下载链接、
+  宽窄无横向溢出、pageerror 为空，退出 0。截图 31–33 为实际浏览器视口，不冒充原生窗口；
+  29/30 的长元素截屏叠入固定导航条，不用其裁切判断真实页面布局。
+- 新生产代码没有混入公开发布后的 CI/docs/site 跟进；只有 `.github/workflows/ci.yml`、新增
+  YAML 测试、文档与 bot 网站数据不同。未再次打包/换装已授权应用，没有真实凭据入仓库。
+  当前修复/验收/分发任务完成；P1 稳定签名需外部发行身份/CI 密钥配置，P2 收尾/首次等待仍待下轮。

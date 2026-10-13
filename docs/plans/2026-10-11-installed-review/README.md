@@ -102,3 +102,23 @@ release skill，最终真实安装验证不能被旧本地包/前三平台 CI �
   Secret 无需重复授权。当前 ad-hoc 指定要求随 cdhash 变化，不能靠再次保存 Secret 消除系统授权。
   不自动点击系统认证、修改钥匙串 ACL、导出签名私钥或改成明文；现有 Apple Development 身份
   不等于公开发行所需的 Developer ID 配置。此项为独立基础设施前置，不伪称本版已经永久解决。
+
+## BUG-03 — 普通 CI 在真实依赖安装前运行验证
+
+- shell.2 main CI `38249860196` 的 verify 明确失败：session-controller 与 persistence-jsonl
+  源码尚未安装，两个真实内核契约测试报 ENOENT。Release 工作流同提交先 bootstrap 后 verify 已通过。
+- 允许修改仅 `.github/workflows/ci.yml`、`test/ci-bootstrap-order.test.ts`、本目录两份文档。
+  将既有 bootstrap 移到 verify 前，补两工作流先安装真实闭包的顺序断言；不改测试断言、产品或依赖。
+- 本地全量 verify 与新 main CI 都要通过；保持 shell.2 已推 tag 不变。这是 CI-only 后续提交，
+  不重打包/替换已授权 Applications，也不因工作流修正重新发同版安装包。
+
+## 本轮交付后待迭代项
+
+- P1 稳定发行签名/CI 密钥管理：见 QA-02 补充。外部发行身份未配置，不能承诺 unsigned/ad-hoc
+  每次升级都免系统授权；当前已授权最终包不继续换装。不存明文、不改钥匙串 ACL。
+- P2 CI 测试稳定性：Windows 发布首次 `autoConnect` 谓词 8 秒超时后重试通过；需要定向观察
+  首次保存完成、checkbox 操作与刷新/写入的先后关系，再验证真正根因。Linux worker teardown
+  仍有非用例错误，需定位进程/fixture 收尾。下轮要求 Windows 五轮无 flaky、worker 正常退出；
+  保留所有持久化、安全与行为断言，不靠扩大 timeout、skip 或修改 guarded verdict 消除告警。
+- 物理相机扫码/异机 Wi-Fi、Android 原生 WebView 与其他桌面硬件未实测；已按用户指定的
+  真实二维码 + 隔离移动浏览器完成扫码后路径，不把模拟升级为实机结论。
