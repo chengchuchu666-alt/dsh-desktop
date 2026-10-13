@@ -44,11 +44,11 @@
   <!-- changelog:auto:start -->
   <h2>v0.2.1-alpha.2.shell.2 <small>（kernel 0.2.1-alpha.2）</small></h2>
   <ul>
-    <li>Styles the Feishu management entry consistently and separates connection health text from the button,</li>
+    <li>Styles the Feishu management entry consistently and separates connection health text from the button, preserving Secret storage, connection intent and Safe Mode behavior.</li>
     <li>Fixes the localized LAN QR countdown without changing expiry, one-time pairing or sharing permissions.</li>
-    <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup.</li>
-    <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into</li>
-    <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted</li>
+    <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup. Local unit, ACP, Go/race and candidate packaged gates passed without weakened assertions.</li>
+    <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into an isolated mobile browser, including session access, rotation, reload, single-use pairing and logout. This is not physical-camera or separate-device Wi-Fi evidence. Temporary sharing is disabled afterward.</li>
+    <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted credentials. Stable distribution signing is a separate follow-up, not a plaintext-credential workaround.</li>
   </ul>
 
   <h2>v0.2.1-alpha.2.shell.1 <small>（kernel 0.2.1-alpha.2）</small></h2>

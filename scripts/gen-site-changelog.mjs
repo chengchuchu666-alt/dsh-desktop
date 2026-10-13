@@ -57,7 +57,8 @@ function parseNotes(tag, text, lang) {
     : text.indexOf(fallbackHeading)
   if (sectionStart === -1) return null
   const section = text.slice(sectionStart).split('\n## ')[0]
-  const bullets = [...section.matchAll(/^- (.+)$/gm)].map(match => match[1])
+  const bullets = [...section.matchAll(/^- (.+(?:\n[ \t]+\S.*)*)$/gm)]
+    .map(match => match[1].replace(/\n[ \t]+/g, ' '))
   if (bullets.length === 0) return null
   const kernel = /`(@deepseek-ai\/dsh)`?\s*`?([\w.-]+)`?/.exec(kernelLine)?.[2]
     ?? /@deepseek-ai\/dsh`\s+`?([\w.-]+)/.exec(kernelLine)?.[1]

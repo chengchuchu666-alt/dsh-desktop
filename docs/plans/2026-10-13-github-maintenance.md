@@ -107,3 +107,7 @@
   两项 packaged smoke、packaged E2E 15、飞书五轮 35、市场 offline 1 / real 2、LAN 2。
   dev E2E 26 / 9 个既有环境用例未启用；没有新增跳过或降低断言。
 - 同步中英 README 飞书能力与 Node 24 事实、文档入口；下一任务是从干净提交切不可变 shell.3 tag。
+- shell.3 tag `93d0f2fa8556aaa0828d8c1e3f95df321313ea78` 已正常推两远端；Release run `38330491175`
+  正在验证。后续仅网站/记录提交不移动 tag。
+- 官网日志另外发现旧解析器会丢掉 Markdown bullet 的缩进续行；补齐连续段落，增加中英完整内容
+  断言，保留发布上界/旧版本/手工 scaffold 原断言。此为网站生成改进，不另发 shell.4。
