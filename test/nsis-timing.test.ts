@@ -22,7 +22,13 @@ test('installer timing retains runtime occupancy failure and release benchmarks 
   for (const phase of ['attribute-clear', 'install-before-probe', 'runtime-probe']) assert.ok(hooks.includes(phase))
   assert.match(hooks, /SetErrorLevel 5/)
   assert.match(hooks, /i 1073741824, i 0/)
+  assert.match(hooks, /!ifndef BUILD_UNINSTALLER\s+Var DshInstallStartTick/)
+  assert.match(hooks, /!macroend\s+!endif\s*$/)
   const workflow = await readFile('.github/workflows/release.yml', 'utf8')
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/)
   assert.match(workflow, /if: \$\{\{ github\.ref_type == 'tag' \}\}/)
+  assert.match(workflow, /github\.event_name == 'workflow_dispatch' && '--allow-same-version' \|\| ''/)
+  for (const os of ['macos-14', 'windows-2022', 'ubuntu-24.04']) {
+    assert.match(workflow, new RegExp(`Cross-version upgrade[^\\n]+\\n        if: matrix\\.os == '${os}'`))
+  }
 })

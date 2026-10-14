@@ -38,9 +38,9 @@ export function parseChecksum(text) {
   return match[1].toLowerCase()
 }
 
-export function assertPreviousTag(currentTag, previousTag) {
+export function assertPreviousTag(currentTag, previousTag, allowSameVersion = false) {
   if (!/^v\S+$/.test(previousTag)) throw new Error(`site release tag is invalid: ${previousTag}`)
-  if (previousTag === currentTag) throw new Error(`site data still points at current build ${currentTag}; a previous release is required`)
+  if (previousTag === currentTag && !allowSameVersion) throw new Error(`site data still points at current build ${currentTag}; a previous release is required`)
   return previousTag
 }
 
@@ -63,11 +63,11 @@ export async function verifyPreviousInstaller(dir, platform = process.platform) 
   return installer
 }
 
-export async function downloadPreviousRelease(dir, platform = process.platform) {
+export async function downloadPreviousRelease(dir, platform = process.platform, allowSameVersion = false) {
   const packageJson = JSON.parse(await readFile('package.json', 'utf8'))
   const siteData = JSON.parse(await readFile('site/data/release.json', 'utf8'))
   const currentTag = `v${packageJson.version}`
-  const previousTag = assertPreviousTag(currentTag, siteData.release?.tag ?? '')
+  const previousTag = assertPreviousTag(currentTag, siteData.release?.tag ?? '', allowSameVersion)
   await mkdir(dir, { recursive: true })
   const args = ['release', 'download', previousTag, '--repo', siteData.repo?.full_name ?? 'citrusli2026/dsh-desktop', '--dir', dir, '--clobber']
   for (const pattern of previousAssetPatterns(platform)) args.push('--pattern', pattern)
@@ -79,5 +79,7 @@ export async function downloadPreviousRelease(dir, platform = process.platform) 
 
 const entry = process.argv[1] === undefined ? undefined : resolve(process.argv[1])
 if (entry === fileURLToPath(import.meta.url)) {
-  await downloadPreviousRelease(resolve(process.argv[2] ?? 'test-results/previous-release'))
+  // An unpublished branch candidate can keep the published version number.
+  // Tag builds remain strict; only manual validation supplies this flag.
+  await downloadPreviousRelease(resolve(process.argv[2] ?? 'test-results/previous-release'), process.platform, process.argv.includes('--allow-same-version'))
 }

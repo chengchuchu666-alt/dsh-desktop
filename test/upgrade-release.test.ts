@@ -17,6 +17,11 @@ test('previous release selection refuses a same-version overwrite fixture', () =
   assert.throws(() => assertPreviousTag('v2.shell.1', ''), /invalid/)
 })
 
+test('manual candidate baseline explicitly allows the published version but still rejects invalid tags', () => {
+  assert.equal(assertPreviousTag('v2.shell.1', 'v2.shell.1', true), 'v2.shell.1')
+  assert.throws(() => assertPreviousTag('v2.shell.1', '', true), /invalid/)
+})
+
 test('current installer selection ignores stale artifacts in a reused dist directory', () => {
   const version = '0.1.2-alpha.4.shell.0'
   assert.equal(isCurrentInstaller(`dsh-desktop-${version}-arm64-mac.dmg`, version, 'darwin'), true)

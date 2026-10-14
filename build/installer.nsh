@@ -21,6 +21,9 @@
 
 !include "LogicLib.nsh"
 
+; electron-builder compiles this include twice. These hooks and variables
+; belong only to the installer, not the uninstaller-generation pass.
+!ifndef BUILD_UNINSTALLER
 Var DshInstallStartTick
 Var DshAttributeStartTick
 Var DshProbeStartTick
@@ -111,3 +114,4 @@ dsh_post_close:
 dsh_post_done:
   !insertmacro DshLogTiming "runtime-probe" $DshProbeStartTick
 !macroend
+!endif

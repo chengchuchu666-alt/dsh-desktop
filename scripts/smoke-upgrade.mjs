@@ -192,7 +192,9 @@ try {
     const before = await snapshot()
     await smoke(executable)
     await assertPreserved(before)
-    await execFileP('sudo', ['apt-get', 'install', '-y', current], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
+    // Manual branch candidates can share the published version number. Force
+    // installation of the candidate bytes instead of accepting apt's no-op.
+    await execFileP('sudo', ['apt-get', 'install', '--reinstall', '-y', current], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
     await assertPreserved(before)
     await smoke(executable)
     await assertPreserved(before)

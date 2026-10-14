@@ -78,3 +78,15 @@
 - REL-01 收尾修正：pending-start 修复后5/5；正常/辅助窗口退出、最小化激活、真实第二实例、
   旧凭据恢复与 Sidecar PID 退出合计五轮25/25 exit0。增加 terminal shutdown / 迟到 factory /
   单项失败仍停所有服务的单测；重复 Quit 不能抢先绕过清理，保持原8秒绝对兜底。
+- 收尾提交 `57be72b52e1d457de9da110b455b642589244ca8` 已推两远端；本地 verify 423 + 1 ACP、
+  audit、dist、两项 smoke、packaged 18、开发态29（9个既有环境未启用）、市场 offline1 / real2、LAN2 全 exit0。
+- 手动 CI `38497846309` verify 成功；打包暴露两个门禁问题。NSIS 的卸载器生成 pass 未插入
+  customInit，安装器计时变量因未使用被 warning-as-error 阻断；将安装器 hooks/变量限定到安装器 pass，
+  不关闭编译警告。分支候选仍用 shell.3 版本号，下载旧包的严格 tag 检查错误拒绝同版本基线。
+  追加原子修正范围：`build/installer.nsh`、`scripts/download-previous-release.{mjs,d.mts}`、
+  `scripts/smoke-upgrade.mjs`、对应 upgrade/timing 单测、release workflow 与本记录。
+  仅手动候选显式允许已发布同版本基线；tag 默认严格检查保持。三平台升级门禁也在手动验证执行，
+  Linux 强制重装候选 bytes，不能把同版本 apt no-op 当升级成功。下一步重跑完整跨平台 CI。
+- 打包门禁修正本地：`node --test test/nsis-timing.test.ts test/upgrade-release.test.ts` 8/8 exit0；
+  typecheck、两脚本语法、workflow YAML parse、diff check 均 exit0。误用未安装的 tsx 命令 exit254，
+  改用仓库既有 Node24 原生测试执行方式；未安装新依赖。Windows 编译成功与实际安装结果仍待 CI。
