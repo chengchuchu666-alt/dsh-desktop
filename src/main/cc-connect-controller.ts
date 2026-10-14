@@ -2,6 +2,7 @@
  * failed stop retains the process owner, so another application cannot spawn. */
 import { normalizeConnectSettings } from './cc-connect-config.ts'
 import { ConnectApplicationStore, ConnectApplicationError, parseConnectApplicationInput } from './cc-connect-applications.ts'
+import { CredentialNeedsReentryError } from './cc-connect-credentials.ts'
 import { shouldStartConnect, type ConnectStartReason } from './cc-connect-policy.ts'
 import type { ConnectState as RuntimeState } from './cc-connect-supervisor.ts'
 import type { ConnectApplication, ConnectHealth, ConnectManagerState, ConnectSettingsInput } from './cc-connect-types.ts'
@@ -54,6 +55,7 @@ export class ConnectController {
       ...normalizeConnectSettings(selected), enabled: settings.enabled,
       phase, secretConfigured: selected?.secretConfigured ?? false,
       credentialProtection: selected?.credentialProtection ?? 'none',
+      ...(selected?.needsSecretReentry === true ? { needsSecretReentry: true } : {}),
       autoConnect: settings.autoConnect, applicationId: settings.activeApplicationId, health: { ...this.health },
       ...('lastError' in this.runtime && this.runtime.lastError !== undefined ? { lastError: this.runtime.lastError } : {}),
       ...('restartAttempts' in this.runtime ? { restartAttempts: this.runtime.restartAttempts } : {}),
@@ -90,7 +92,10 @@ export class ConnectController {
     if (application === undefined) { this.health.errorCode = 'credentials'; return false }
     if (!await this.options.validWorkspace(application.workspace)) { this.health.errorCode = 'workspace'; return false }
     let secret: string | undefined
-    try { secret = await this.options.store.readSecret(application.id) } catch { this.health.errorCode = 'storage'; return false }
+    try { secret = await this.options.store.readSecret(application.id) } catch (error) {
+      this.health.errorCode = error instanceof CredentialNeedsReentryError ? 'credentials' : 'storage'
+      return false
+    }
     if (!secret) { this.health.errorCode = 'credentials'; return false }
     const generation = ++this.generation
     this.health = { channel: 'unknown', dsh: 'unknown' }

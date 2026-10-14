@@ -45,4 +45,14 @@
   `pnpm run typecheck` / `pnpm run build` exit 0；相关单测 14/14 exit 0；
   `pnpm exec playwright test e2e/electron-shell.spec.ts -g 'closing the main window|second-instance activation restores' --repeat-each=5 --reporter=line`
   exit 0，10/10。打包态全门禁与真实服务进程/端口关闭验证留 REL-04。
-- 下一任务：REL-02。子模块不需要生产或测试修改；本任务提交 SHA 在后续进度回填。
+- REL-01 提交 `68dcc387d0adae4db698fd6275bcb77e6f4f828a` 已推 origin/gitcode 集成分支。
+- REL-02 完成：macOS 写 0600 明文文件且系统存储探测/加解密调用为零；Windows 保留 DPAPI。
+  旧加密文档保留，状态/IPC/UI 明确 needsSecretReentry，所有 start 原因返回 credentials，
+  不创建进程、不自动重试；显式重新保存后恢复。二维码与手工配置使用同一存储层。
+  旧安全存储测试显式绑定 Windows，保留加密、错误脱敏、复制不解密等全部原断言。
+  related 单测 29/29、typecheck/build、full verify 415 + 1 ACP 均 exit 0。
+  新真实 Electron 恢复/退出用例五轮 5/5 exit 0，断言旧密文保持、系统存储调用0、
+  新文件标签、主窗口关闭后 Sidecar PID 消失且连接意图保留。补全整页截图并检查状态区；
+  表单占位文字随旧凭据状态刷新，但不覆盖未保存的用户输入。
+  本轮全部为临时目录/假 Secret/假 Sidecar，没有读取真实凭据或与系统认证窗口交互。
+- 下一任务：REL-03。子模块不需要生产或测试修改；REL-02 SHA 后续回填。

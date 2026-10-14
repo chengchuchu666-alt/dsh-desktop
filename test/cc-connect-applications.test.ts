@@ -34,12 +34,12 @@ test('legacy migration preserves intent, all display preferences and protected c
       const settings = { enabled: true, appId: 'cli_legacy', workspace: f.home,
         detail: 'quiet' as const, showStreamPreview: false, streamPreviewIntervalMs: 8000, cardMode: 'rich' as const, progressStyle: 'card' as const }
       await writeConnectSettings(home, settings)
-      const credential = new ConnectCredentials(credentialsPath(home), storage(protectedStorage))
+      const credential = new ConnectCredentials(credentialsPath(home), storage(protectedStorage), 'win32')
       await credential.setSecret('fake-migration-secret')
       const before = await readFile(credentialsPath(home), 'utf8')
       const oldSettings = await readFile(connectSettingsPath(home), 'utf8')
       const unavailable = { ...storage(false), decryptString: () => { throw new Error('must not decrypt during migration') } }
-      const store = new ConnectApplicationStore(home, { storage: unavailable })
+      const store = new ConnectApplicationStore(home, { storage: unavailable, platform: 'win32' })
       const manager = await store.read()
       assert.equal(manager.enabled, true); assert.equal(manager.autoConnect, true)
       assert.equal(manager.applications.length, 1)
@@ -57,7 +57,7 @@ test('legacy migration preserves intent, all display preferences and protected c
       await assert.rejects(stat(credentialsPath(home)), { code: 'ENOENT' })
       assert.equal(await readFile(connectSettingsPath(home), 'utf8'), oldSettings)
       assert.doesNotMatch(JSON.stringify(await store.applications()), /fake-migration-secret|appSecret|protected:/)
-      const reopened = new ConnectApplicationStore(home, { storage: storage(protectedStorage) })
+      const reopened = new ConnectApplicationStore(home, { storage: storage(protectedStorage), platform: 'win32' })
       assert.deepEqual(await reopened.read(), manager)
       assert.equal(await reopened.readSecret(application.id), 'fake-migration-secret')
     }

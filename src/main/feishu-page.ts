@@ -40,7 +40,8 @@ const managerEnglish = {
   save: 'Save application', saveOpen: 'Save and open connection', start: 'Open connection', close: 'Close connection', restart: 'Reconnect', edit: 'Edit', remove: 'Remove locally',
   removeConfirm: 'Remove this local application and its credential? The active connection will close. Feishu apps, workspaces and DSH sessions are not deleted.', auto: 'Connect automatically when Desktop starts',
   platform: 'Open Feishu application console', boundary: 'Closing this window does not close a saved connection. Safe Mode pauses it without changing your choice.', platformHelp: 'Feishu app publication, bot permissions, long-connection event subscription and user availability must be enabled. Desktop cannot bypass organization approval.',
-  process: 'Desktop service', channel: 'Feishu channel', dsh: 'DSH tasks', selected: 'Selected application', none: 'None', configured: 'Secret saved', missing: 'Secret not saved', secretHint: 'Leave blank to keep a saved Secret', file: 'Protected local file (system encryption unavailable)', protected: 'System secure storage',
+  process: 'Desktop service', channel: 'Feishu channel', dsh: 'DSH tasks', selected: 'Selected application', none: 'None', configured: 'Secret saved', missing: 'Secret not saved', secretHint: 'Leave blank to keep a saved Secret', file: 'Restricted local file (unencrypted)', protected: 'System secure storage',
+  reentry: 'Re-enter App Secret once. The old macOS keychain credential will not be accessed.',
   'process.disabled': 'Closed', 'process.stopped': 'Stopped / paused', 'process.starting': 'Starting / retrying', 'process.ready': 'Service started', 'process.degraded': 'Service unstable', 'process.crashed': 'Service failed',
   'channel.unknown': 'Not confirmed', 'channel.connecting': 'Connecting', 'channel.online': 'Online', 'channel.offline': 'Offline',
   'dsh.unknown': 'Not verified by a task', 'dsh.available': 'Task completed successfully', 'dsh.unavailable': 'Task failed', paused: 'Paused in Safe Mode.', notReady: 'Wait for the main workspace to finish starting.',
@@ -62,7 +63,8 @@ const managerChinese: Record<keyof typeof managerEnglish, string> = {
   save: '保存应用', saveOpen: '保存并开启连接', start: '开启连接', close: '关闭连接', restart: '重新连接', edit: '编辑', remove: '移除本地配置',
   removeConfirm: '移除本地应用和凭据？对应连接会关闭，但不会删除飞书应用、工作区或 DSH 会话。', auto: '启动 Desktop 时自动连接',
   platform: '打开飞书应用管理', boundary: '关闭窗口不等于关闭连接。Safe Mode 只暂停，不改变连接意图。', platformHelp: '请在飞书确认应用发布、机器人权限、长连接事件订阅与可用范围。Desktop 无法绕过组织审批。',
-  process: '桌面服务', channel: '飞书通道', dsh: 'DSH 任务', selected: '选中应用', none: '无', configured: 'Secret 已保存', missing: '尚未保存 Secret', secretHint: '留空保留已保存的 Secret', file: '本机受限文件（系统加密不可用）', protected: '系统安全存储',
+  process: '桌面服务', channel: '飞书通道', dsh: 'DSH 任务', selected: '选中应用', none: '无', configured: 'Secret 已保存', missing: '尚未保存 Secret', secretHint: '留空保留已保存的 Secret', file: '本机受限文件（未加密）', protected: '系统安全存储',
+  reentry: '请重新录入一次 App Secret；不会读取旧 macOS 钥匙串凭据。',
   'process.disabled': '已关闭', 'process.stopped': '已停止／暂停', 'process.starting': '启动／重试中', 'process.ready': '服务已启动', 'process.degraded': '服务不稳定', 'process.crashed': '服务失败',
   'channel.unknown': '尚未确认', 'channel.connecting': '连接中', 'channel.online': '在线', 'channel.offline': '离线',
   'dsh.unknown': '尚未通过任务验证', 'dsh.available': '已成功完成任务', 'dsh.unavailable': '任务失败', paused: 'Safe Mode 中已暂停。', notReady: '请等待主工作区启动完成。',
@@ -94,6 +96,7 @@ function fill(application) {
   for (const key of fields) key === 'showStreamPreview' ? byId(key).checked = value[key] : byId(key).value = value[key];
   byId('streamPreviewIntervalMs').disabled = !value.showStreamPreview;
   byId('manual').open = !!application;
+  byId('appSecret').placeholder = application?.needsSecretReentry ? copy.reentry : copy.secretHint;
 }
 function values() {
   const input = Object.fromEntries(fields.map(key => [key, key === 'showStreamPreview' ? byId(key).checked : key === 'streamPreviewIntervalMs' ? Number(byId(key).value) : byId(key).value]));
@@ -105,12 +108,13 @@ function render(next) {
   state = next;
   byId('form').disabled = busy; byId('auto').disabled = busy; byId('new').disabled = busy;
   const selected = state.applications.find(a => a.id === state.activeApplicationId);
+  byId('appSecret').placeholder = state.applications.find(a => a.id === edited)?.needsSecretReentry ? copy.reentry : copy.secretHint;
   text('selected', (selected?.name || copy.none));
   text('process', copy['process.' + state.connection.phase]); text('channel', copy['channel.' + state.health.channel]); text('dsh', copy['dsh.' + state.health.dsh]);
-  text('guidance', [state.safeMode ? copy.paused : !state.harnessReady ? copy.notReady : '', copy['error.' + state.health.errorCode]].filter(Boolean).join(' '));
+  text('guidance', [state.safeMode ? copy.paused : !state.harnessReady ? copy.notReady : '', selected?.needsSecretReentry ? copy.reentry : copy['error.' + state.health.errorCode]].filter(Boolean).join(' '));
   if (!busy) byId('auto').checked = state.autoConnect;
   byId('close').disabled = busy || (!state.enabled && ['disabled','stopped'].includes(state.connection.phase));
-  byId('restart').disabled = busy || !state.enabled || state.safeMode || !state.harnessReady;
+  byId('restart').disabled = busy || !state.enabled || !selected?.secretConfigured || state.safeMode || !state.harnessReady;
   const qr = state.qr; text('qr-status', copy['qr.' + qr.stage]);
   byId('qr-image').hidden = !qr.qrDataUrl; if (qr.qrDataUrl) byId('qr-image').src = qr.qrDataUrl; else byId('qr-image').removeAttribute('src');
   text('deadline', qr.expiresAt && ['starting','waiting-for-scan'].includes(qr.stage) ? copy.deadline + ': ' + Math.max(0, Math.ceil((qr.expiresAt - Date.now()) / 1000)) + 's' : '');
@@ -127,7 +131,7 @@ function render(next) {
     const row = document.createElement('article'); row.dataset.application = app.id;
     const title = document.createElement('strong'); title.textContent = app.name + (app.id === state.activeApplicationId ? ' · ' + copy.selected : '');
     const detail = document.createElement('small'); detail.textContent = app.appId + ' · ' + app.workspace;
-    const credential = document.createElement('small'); credential.textContent = !app.secretConfigured ? copy.missing : copy.configured + ' · ' + (app.credentialProtection === 'safeStorage' ? copy.protected : copy.file);
+    const credential = document.createElement('small'); credential.textContent = app.needsSecretReentry ? copy.reentry : !app.secretConfigured ? copy.missing : copy.configured + ' · ' + (app.credentialProtection === 'safeStorage' ? copy.protected : copy.file);
     const actions = document.createElement('div'); actions.className = 'actions';
     const open = button(copy.start, () => command('start', app.id)); open.disabled = busy || !app.secretConfigured || state.safeMode || !state.harnessReady;
     actions.append(open, button(copy.edit, () => { fill(app); byId('name').focus() }), button(copy.remove, async () => { if (window.confirm(app.name + '\n' + copy.removeConfirm)) { const result = await command('remove', app.id); if (result?.ok) text('message', copy.removed) } }));

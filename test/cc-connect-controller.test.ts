@@ -1,14 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ConnectController, ConnectOperationError, type ConnectControllerOptions } from '../src/main/cc-connect-controller.ts'
 import { ConnectApplicationStore } from '../src/main/cc-connect-applications.ts'
+import { credentialsPath } from '../src/main/cc-connect-credentials.ts'
+import { connectApplicationsPath } from '../src/main/cc-connect-config.ts'
+import { atomicWriteFile } from '../src/main/config-file.ts'
 
-async function fixture() {
+async function fixture(platform: NodeJS.Platform = process.platform) {
   const home = await mkdtemp(join(tmpdir(), 'dsh-connect-controller-'))
-  const store = new ConnectApplicationStore(home, { storage: { isEncryptionAvailable: () => false, encryptString: () => Buffer.alloc(0), decryptString: () => '' } })
+  const store = new ConnectApplicationStore(home, { platform, storage: { isEncryptionAvailable: () => false, encryptString: () => Buffer.alloc(0), decryptString: () => '' } })
   const environment = { safeMode: false, harnessReady: true }
   let stopFailure = false
   let startFailure = false
@@ -45,6 +48,29 @@ async function fixture() {
     close: async () => { stopFailure = false; await controller.pause(); await rm(home, { recursive: true, force: true }) },
   }
 }
+
+test('macOS legacy credentials block startup without spawning or retrying, and explicit re-entry restores the connection', async () => {
+  const f = await fixture('darwin')
+  try {
+    const app = await f.add('legacy')
+    const manifest = JSON.parse(await readFile(connectApplicationsPath(f.home), 'utf8'))
+    const path = credentialsPath(f.home, manifest.credentials[app.id])
+    const legacy = JSON.stringify({ version: 1, protection: 'safeStorage', value: 'ZmFrZS1sZWdhY3k=' }) + '\n'
+    await atomicWriteFile(path, legacy, 0o600)
+    await f.store.setIntent({ enabled: true, autoConnect: true })
+    for (const reason of ['startup', 'manual', 'restart', 'resume'] as const) assert.equal(await f.controller.start(reason), false)
+    const state = await f.controller.state()
+    assert.equal(state.connection.needsSecretReentry, true)
+    assert.equal(state.connection.secretConfigured, false)
+    assert.equal(state.health.errorCode, 'credentials')
+    assert.equal(f.living, 0)
+    assert.equal(f.actions.length, 0)
+    assert.equal(await readFile(path, 'utf8'), legacy)
+    await f.controller.saveApplication({ id: app.id, name: app.name, appId: app.appId, workspace: f.home, appSecret: 'fake-legacy' })
+    assert.equal(await f.controller.start('startup'), true)
+    assert.equal((await f.controller.state()).connection.needsSecretReentry, undefined)
+  } finally { await f.close() }
+})
 
 test('persistent close survives startup and Safe Mode exit; pause and autoConnect have independent semantics', async () => {
   const f = await fixture()

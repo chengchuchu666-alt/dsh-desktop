@@ -10,6 +10,12 @@ export type CredentialProtection = 'none' | 'safeStorage' | 'file'
 export interface CredentialState {
   secretConfigured: boolean
   credentialProtection: CredentialProtection
+  needsSecretReentry?: boolean
+}
+
+/** A legacy macOS credential is retained, but never decrypted implicitly. */
+export class CredentialNeedsReentryError extends Error {
+  constructor() { super('credential requires App Secret re-entry') }
 }
 
 export interface SafeStorageAdapter {
@@ -54,10 +60,12 @@ function isCredentialDocument(value: unknown): value is CredentialDocument {
 export class ConnectCredentials {
   private readonly path: string
   private readonly storage: SafeStorageAdapter
+  private readonly platform: NodeJS.Platform
 
-  constructor(path: string, storage: SafeStorageAdapter = electronStorage) {
+  constructor(path: string, storage: SafeStorageAdapter = electronStorage, platform: NodeJS.Platform = process.platform) {
     this.path = path
     this.storage = storage
+    this.platform = platform
   }
 
   private encryptionAvailable(): boolean {
@@ -89,6 +97,9 @@ export class ConnectCredentials {
   async state(): Promise<CredentialState> {
     const document = await this.readDocument()
     if (document === undefined) return { secretConfigured: false, credentialProtection: 'none' }
+    if (this.platform === 'darwin' && document.protection === 'safeStorage') {
+      return { secretConfigured: false, credentialProtection: 'safeStorage', needsSecretReentry: true }
+    }
     return { secretConfigured: true, credentialProtection: document.protection }
   }
 
@@ -96,6 +107,7 @@ export class ConnectCredentials {
     const document = await this.readDocument()
     if (document === undefined) return undefined
     if (document.protection === 'file') return document.value
+    if (this.platform === 'darwin') throw new CredentialNeedsReentryError()
     if (!this.encryptionAvailable()) throw redactError(new Error('safeStorage is unavailable'))
     try {
       return this.storage.decryptString(Buffer.from(document.value, 'base64'))
@@ -118,7 +130,9 @@ export class ConnectCredentials {
       await this.clearSecret()
       return 'none'
     }
-    const protection: Exclude<CredentialProtection, 'none'> = this.encryptionAvailable() ? 'safeStorage' : 'file'
+    // macOS ad-hoc updates change the keychain identity. Never even probe
+    // safeStorage there; Windows keeps DPAPI and Linux keeps its existing backend.
+    const protection: Exclude<CredentialProtection, 'none'> = this.platform !== 'darwin' && this.encryptionAvailable() ? 'safeStorage' : 'file'
     let value: string
     try {
       value = protection === 'safeStorage'

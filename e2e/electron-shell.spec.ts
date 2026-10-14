@@ -1231,6 +1231,70 @@ test('real Desktop display controls save, reopen, preserve edits and show both l
 shellTest.describe('Feishu extension setup', () => {
   shellTest.use({ connectSidecar: true, feishuSetupSidecar: true })
 
+  shellTest('credential recovery and main-window quit stop the sidecar @smoke @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
+    await packagedOrStubHeadline(window)
+    const handle = await electronApp.browserWindow(window)
+    const mainId = await handle.evaluate(main => main.id)
+    const pending = electronApp.waitForEvent('window')
+    await clickMenuItem(electronApp, 'Manage Feishu connections…')
+    const manager = await pending
+    await expect(manager.getByRole('heading', { name: 'Feishu connections', exact: true })).toBeVisible()
+    await electronApp.evaluate(({ dialog }, workspace) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [workspace] }) }, dshHome)
+    await manager.getByRole('button', { name: 'Choose folder', exact: true }).click()
+    await manager.getByLabel('Local name', { exact: true }).fill('Credential recovery robot')
+    await manager.getByText('Existing application (advanced)', { exact: true }).click()
+    await manager.getByLabel('App ID', { exact: true }).fill('cli_reentry_fake')
+    await manager.getByLabel('App Secret', { exact: true }).fill('fake-reentry-secret')
+    await manager.getByRole('button', { name: 'Save application', exact: true }).click()
+    const row = manager.locator('article').filter({ hasText: 'cli_reentry_fake' })
+    await expect(row).toHaveCount(1)
+    const manifestPath = join(userData, 'cc-connect', 'applications.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    const credentialPath = join(userData, 'cc-connect', 'credentials', manifest.credentials[manifest.activeApplicationId] + '.json')
+    expect(JSON.parse(await readFile(credentialPath, 'utf8')).protection).toBe('file')
+    if (process.platform === 'darwin') {
+      // Test only this isolated application's adapter. No real keychain access
+      // is allowed, including an accidental availability probe.
+      await electronApp.evaluate(({ safeStorage }) => {
+        ;(globalThis as any).__keychainCalls = 0
+        const deny = () => { (globalThis as any).__keychainCalls++; throw new Error('system storage forbidden in this test') }
+        safeStorage.isEncryptionAvailable = deny; safeStorage.encryptString = deny; safeStorage.decryptString = deny
+      })
+      const legacy = JSON.stringify({ version: 1, protection: 'safeStorage', value: 'ZmFrZS1sZWdhY3k=' })
+      await writeFile(credentialPath, legacy)
+      await expect(row.getByText('Re-enter App Secret once. The old macOS keychain credential will not be accessed.', { exact: true })).toBeVisible()
+      await expect(row.getByRole('button', { name: 'Open connection', exact: true })).toBeDisabled()
+      await expect(manager.getByLabel('App Secret', { exact: true })).toHaveAttribute('placeholder', 'Re-enter App Secret once. The old macOS keychain credential will not be accessed.')
+      expect(await window.evaluate(() => (window as any).dshDesktop.startConnect())).toBe(false)
+      await expect.poll(() => window.evaluate(() => (window as any).dshDesktop.getConnectState())).toMatchObject({ needsSecretReentry: true, secretConfigured: false, health: { errorCode: 'credentials' } })
+      expect(await readFile(credentialPath, 'utf8')).toBe(legacy)
+      await manager.screenshot({ path: testInfo.outputPath('feishu-needs-reentry.png'), fullPage: true })
+      await row.getByRole('button', { name: 'Edit', exact: true }).click()
+      await expect(manager.getByLabel('App Secret', { exact: true })).toHaveAttribute('placeholder', 'Re-enter App Secret once. The old macOS keychain credential will not be accessed.')
+      await manager.getByLabel('App Secret', { exact: true }).fill('fake-reentry-secret')
+      await manager.getByRole('button', { name: 'Save and open connection', exact: true }).click()
+      expect(await electronApp.evaluate(() => (globalThis as any).__keychainCalls)).toBe(0)
+    } else {
+      await row.getByRole('button', { name: 'Open connection', exact: true }).click()
+    }
+    await expect(manager.locator('#process')).toHaveText('Service started')
+    await expect(row.getByText('Secret saved · Restricted local file (unencrypted)', { exact: true })).toBeVisible()
+    await manager.screenshot({ path: testInfo.outputPath('feishu-file-credential.png'), fullPage: true })
+    const sidecarPid = Number((await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n').at(-1))
+    expect(Number.isInteger(sidecarPid) && sidecarPid > 0).toBe(true)
+    const exited = electronApp.waitForEvent('close', { timeout: 10_000 })
+    await electronApp.evaluate(({ BrowserWindow }, id) => { setImmediate(() => BrowserWindow.fromId(id)?.close()) }, mainId)
+    await exited
+    await expect.poll(() => {
+      try { process.kill(sidecarPid, 0); return true } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false
+        throw error
+      }
+    }).toBe(false)
+    expect(manager.isClosed()).toBe(true)
+    expect(JSON.parse(await readFile(manifestPath, 'utf8')).enabled, 'app quit pauses, not permanently disables, the saved connection').toBe(true)
+  })
+
   shellTest('manager edits, switches, closes and removes local applications; forged same-page window is rejected @smoke @critical', async ({ electronApp, window, dshHome, userData, connectModePath }, testInfo) => {
     const managerPromise = electronApp.waitForEvent('window')
     await clickMenuItem(electronApp, 'Manage Feishu connections…')

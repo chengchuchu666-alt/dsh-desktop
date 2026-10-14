@@ -5,7 +5,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { atomicWriteFile, jsonCodec, withFileLock } from './config-file.ts'
 import { connectApplicationsPath, connectSettingsPath, isConnectRecordId, normalizeConnectSettings } from './cc-connect-config.ts'
-import { ConnectCredentials, credentialsPath, type SafeStorageAdapter } from './cc-connect-credentials.ts'
+import { ConnectCredentials, CredentialNeedsReentryError, credentialsPath, type SafeStorageAdapter } from './cc-connect-credentials.ts'
 import type { ConnectApplication, ConnectApplicationInput, ConnectApplicationState, ConnectIntent, ConnectManagerSettings } from './cc-connect-types.ts'
 
 interface ApplicationDocument extends ConnectManagerSettings {
@@ -88,16 +88,18 @@ export function parseConnectApplicationInput(raw: unknown): ConnectApplicationIn
 export class ConnectApplicationStore {
   private readonly userData: string
   private readonly storage: SafeStorageAdapter | undefined
+  private readonly platform: NodeJS.Platform
   private readonly write: typeof atomicWriteFile
 
-  constructor(userData: string, options: { storage?: SafeStorageAdapter; write?: typeof atomicWriteFile } = {}) {
+  constructor(userData: string, options: { storage?: SafeStorageAdapter; write?: typeof atomicWriteFile; platform?: NodeJS.Platform } = {}) {
     this.userData = userData
     this.storage = options.storage
+    this.platform = options.platform ?? process.platform
     this.write = options.write ?? atomicWriteFile
   }
 
   private credential(id?: string): ConnectCredentials {
-    return new ConnectCredentials(credentialsPath(this.userData, id === 'legacy' ? undefined : id), this.storage)
+    return new ConnectCredentials(credentialsPath(this.userData, id === 'legacy' ? undefined : id), this.storage, this.platform)
   }
 
   private commit(document: ApplicationDocument): Promise<void> {
@@ -172,7 +174,7 @@ export class ConnectApplicationStore {
     try {
       return await withFileLock(`${connectApplicationsPath(this.userData)}.lock`, async () => operation(await this.load()), { timeoutMs: 10_000 })
     } catch (error) {
-      if (error instanceof ConnectApplicationError) throw error
+      if (error instanceof ConnectApplicationError || error instanceof CredentialNeedsReentryError) throw error
       // Do not propagate filesystem, parse, encryption or input text into UI/logs.
       throw new ConnectApplicationError('storage')
     }

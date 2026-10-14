@@ -46,6 +46,11 @@ test('cc-connect user documentation covers setup, lifecycle, storage, and remova
     'applications.json',
     'Models',
     '关闭管理窗口不会关闭',
+    'DPAPI',
+    '受限明文文件',
+    '重新录入一次 App Secret',
+    '不解密',
+    'Windows ACL',
   ]) {
     assert.match(guide, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }

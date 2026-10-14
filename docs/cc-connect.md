@@ -119,11 +119,22 @@ Safe Mode 不会删除 Secret、工作区或会话数据。
 - `applications.json`：版本化的本地应用列表、选中应用、启用意图和启动自动连接偏好，不含 Secret。
 - `config.toml`：Sidecar 使用的固定配置，不含 Secret，只包含
   `${DSH_CC_CONNECT_FEISHU_SECRET}` 占位符。
-- `credentials/<UUID>.json`：每份应用的私有凭据修订。优先使用 Electron `safeStorage`；不可用
-  时使用权限为 `0600` 的本机文件回退。两种情况下应用都不会把 Secret 写入 TOML。
+- `credentials/<UUID>.json`：每份应用的私有凭据修订。macOS 新凭据使用本机受限明文文件，
+  权限 `0600`；保存、读取和自动连接均不探测或调用 `safeStorage`，不访问系统钥匙串。
+  文件权限不是加密，不能防同一账户运行的其它程序、管理员或读取备份的人。
+  Windows 保留 Electron `safeStorage` / DPAPI；Linux 保留已有系统加密策略与文件回退。
+  Windows 的 `0600` 不等同于 POSIX 用户隔离，文件回退需依赖所在目录的 Windows ACL。
+  所有情况下 Secret 都不写入 TOML、renderer 状态或日志。
 - `applications/<应用 UUID>/data/`：各新应用隔离的 cc-connect 运行数据。
 - 旧 `settings.json` / `credentials.json` 会在首次读取时无损迁移，成功提交后才清理旧凭据；
-  原应用继续使用 `data/`，不要求手改配置或重新输入 Secret。损坏文件失败关闭，不覆盖成默认值。
+  原应用继续使用 `data/`，不要求手改配置。macOS 历史 `safeStorage` 凭据仅复制密文、不解密，
+  显示「请重新录入一次 App Secret」；连接不启动且不自动重试。旧密文保留到用户显式成功
+  保存替换凭据后才清理；不在启动路径自动迁移，避免再触发系统授权。
+  新 Secret 保存后可手动开启或按原自动连接偏好在下次启动连接。损坏文件失败关闭，不覆盖成默认值。
+
+此变化仅移除飞书凭据在 macOS 上的钥匙串访问，不使用 `use-mock-keychain`，不修改签名、
+系统钥匙串或浏览器 Cookie。当前 Electron Cookie Encryption fuse 为 disabled；不能仅凭
+磁盘存在 Cookies 文件就认定还需要禁用另一条钥匙串路径。
 
 `<userData>/logs/cc-connect.log` 是 Sidecar 的滚动日志，文件权限为 `0600`。Desktop
 默认还会把 DSH_HOME 放在 `~/.dsh-desktop`；只有显式设置 `DSH_HOME` 时才会改用指定目录，
@@ -143,7 +154,8 @@ App ID 和会话标识，不要粘贴任何 Secret。
    点击「打开飞书应用管理」，按组织要求操作；Desktop 不会暗中撤销。
 
 不需要手删凭据文件，也不应删除系统 `safeStorage` 服务密钥、整个 `<userData>` 或
-`~/.dsh-desktop`。关闭窗口、关闭连接、Safe Mode 暂停和移除本地配置是四种不同操作。
+`~/.dsh-desktop`。关闭管理窗口不关闭连接；关闭主窗口会退出 Desktop 并停止所有服务，
+但不改写保存的自动连接意图。关闭连接、Safe Mode 暂停和移除本地配置仍是不同操作。
 
 ## 已知限制
 

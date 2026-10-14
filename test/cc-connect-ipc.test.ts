@@ -10,6 +10,8 @@ import { normalizeConnectSettings, connectApplicationsPath, CONNECT_DISPLAY_DEFA
 import { credentialsPath } from '../src/main/cc-connect-credentials.ts'
 import { ConnectApplicationStore } from '../src/main/cc-connect-applications.ts'
 import { ConnectController, ConnectOperationError } from '../src/main/cc-connect-controller.ts'
+import { atomicWriteFile } from '../src/main/config-file.ts'
+import type { ConnectState } from '../src/main/cc-connect-types.ts'
 import type { ConnectSaveResult, ConnectSettingsInput } from '../src/main/cc-connect-types.ts'
 
 const preload = readFileSync('src/preload/index.ts', 'utf8')
@@ -47,11 +49,11 @@ test('cc-connect IPC handlers guard the Harness sender and use a native workspac
 
 /** Execute the actual registered save/get handlers with real temporary config
  * and credential storage. Only Electron/lifecycle capabilities are faked. */
-async function settingsIPC(active = false) {
+async function settingsIPC(active = false, platform: NodeJS.Platform = process.platform) {
   const home = await mkdtemp(join(tmpdir(), 'dsh-connect-ipc-'))
   let restarts = 0
   let stops = 0
-  const store = new ConnectApplicationStore(home, { storage: { isEncryptionAvailable: () => false,
+  const store = new ConnectApplicationStore(home, { platform, storage: { isEncryptionAvailable: () => false,
     encryptString: () => { throw new Error('unused') }, decryptString: () => { throw new Error('unused') } } })
   const controller = new ConnectController({ store, environment: () => ({ safeMode: false, harnessReady: true }),
     validWorkspace: async workspace => isAbsolute(workspace) && (await stat(workspace)).isDirectory(),
@@ -68,8 +70,10 @@ async function settingsIPC(active = false) {
   const functions = main.slice(main.indexOf('async function readConnectState('), main.indexOf('function getConnectController('))
   const registrations = main.slice(main.indexOf("ipcMain.handle('desktop:connect:get-state'"), main.indexOf("ipcMain.handle('desktop:connect:pick-workspace'"))
   assert.ok(functions && registrations)
-  runInNewContext(transformSync(functions + registrations, { loader: 'ts', format: 'cjs' }).code, {
+  const startRegistration = main.slice(main.indexOf("ipcMain.handle('desktop:connect:start'"), main.indexOf("ipcMain.handle('desktop:connect:stop'"))
+  runInNewContext(transformSync(functions + registrations + startRegistration, { loader: 'ts', format: 'cjs' }).code, {
     getConnectController: () => controller, normalizeConnectSettings, ConnectOperationError, isAbsolute, stat, console,
+    startConnectAfterHarness: () => controller.start('manual'),
     windowContext: { mainWindow: {}, allowedOrigin: 'test-harness' },
     isMainWindowHarnessSender: (_window: unknown, sender: unknown) => sender === 'authorized',
     ipcMain: { handle: (channel: string, handler: (...args: unknown[]) => Promise<unknown>) => handlers.set(channel, handler) },
@@ -82,9 +86,31 @@ async function settingsIPC(active = false) {
     },
     save: (input: unknown, authorized = true) => handlers.get('desktop:connect:save-settings')!({ sender: authorized ? 'authorized' : 'untrusted' }, input) as Promise<ConnectSaveResult | null>,
     state: () => handlers.get('desktop:connect:get-state')!({ sender: 'authorized' }),
+    start: (authorized = true) => handlers.get('desktop:connect:start')!({ sender: authorized ? 'authorized' : 'untrusted' }),
     close: () => rm(home, { recursive: true, force: true }),
   }
 }
+
+test('IPC reports macOS credential re-entry and refuses legacy starts without spawning', async () => {
+  const ipc = await settingsIPC(false, 'darwin')
+  try {
+    const saved = await ipc.save({ enabled: true, appId: 'cli_legacy_ipc', workspace: ipc.home, appSecret: 'fake-ipc-secret' })
+    assert.equal(saved?.ok, true)
+    const manifest = JSON.parse(await readFile(connectApplicationsPath(ipc.home), 'utf8'))
+    const path = credentialsPath(ipc.home, manifest.credentials[manifest.activeApplicationId])
+    const legacy = JSON.stringify({ version: 1, protection: 'safeStorage', value: 'ZmFrZS1sZWdhY3k=' }) + '\n'
+    await atomicWriteFile(path, legacy, 0o600)
+    assert.equal(await ipc.start(), false)
+    assert.equal(await ipc.start(false), false, 'unauthorized sender remains rejected')
+    const state = await ipc.state() as ConnectState
+    assert.equal(state.needsSecretReentry, true)
+    assert.equal(state.secretConfigured, false)
+    assert.equal(state.health?.errorCode, 'credentials')
+    assert.equal(ipc.restarts, 0)
+    assert.equal(await readFile(path, 'utf8'), legacy)
+    assert.doesNotMatch(JSON.stringify(state), /fake-ipc-secret|ZmFrZS1sZWdhY3k=/)
+  } finally { await ipc.close() }
+})
 
 test('save-settings accepts display preferences, returns resolved state and preserves them for legacy callers', async () => {
   const ipc = await settingsIPC(true)

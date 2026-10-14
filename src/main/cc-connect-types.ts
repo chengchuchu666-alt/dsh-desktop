@@ -7,6 +7,7 @@ export interface ConnectState extends ConnectSettings {
   phase: ConnectPhase
   secretConfigured: boolean
   credentialProtection: CredentialProtection
+  needsSecretReentry?: boolean
   lastError?: string
   restartAttempts?: number
   applicationId?: string | null
@@ -43,6 +44,7 @@ export interface ConnectManagerSettings extends ConnectIntent {
 export interface ConnectApplicationState extends ConnectApplication {
   secretConfigured: boolean
   credentialProtection: CredentialProtection
+  needsSecretReentry?: boolean
 }
 
 export type ConnectErrorCode = 'credentials' | 'permissions' | 'network' | 'workspace'
