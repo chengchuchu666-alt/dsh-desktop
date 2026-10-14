@@ -9,7 +9,7 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `codex/cc-connect-dsh-integration` 在 shell.3 版本号上追加尚未发布的退出/凭据/安装维护；内核 `0.2.1-alpha.2` 未变，见 §80。main 与最新已发布 tag 仍为 §79 的 shell.3 |
+| 最新代码基线 | `0.2.1-alpha.2.shell.4` 发布候选：主窗口关闭退出、macOS 飞书无钥匙串凭据、Windows 安装精简；内核 `0.2.1-alpha.2` 与子模块 pin 不变，见 §81；最新已发布仍为 §79 的 shell.3 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.3`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ 维护候选 verify424 + ACP1、audit、dist、packaged18、五轮关键退出/凭据25、市场 offline1/real2、LAN2、两项 smoke及故障注入/闭包/真实进程退出通过（§80）；已发布基线与 Go 门禁见 §79 |
 | 核心发布 | ✅ 已发布 Release `38330491175` / tag `93d0f2f` 不变；维护候选手动 `38499367065` 三平台构建/安装/升级/来源证明通过，未 publish（§80）；既有 worker teardown 告警仍记录 |
@@ -2121,3 +2121,21 @@ shell.3 GitHub 原始安装包（GitCode 六项 Range 内容与 DEB 全量已核
 本轮公开网站仍准确指向已发布 shell.3；未把维护候选写成公开已发布更新日志。
 外部限制仍包括 #100 用户原始 Windows 白屏证据、稳定签名密钥、第三方 AV 的受控真机 T6；
 这些不通过绕过安全保护或删除真实用户数据来“完成”。
+
+## 81. shell.4 发布（2026-10-14，进行中）
+
+用户已明确授权发版。仅 `node scripts/version.mjs bump shell` → `0.2.1-alpha.2.shell.4`，
+Harness保持 `0.2.1-alpha.2`，cc-connect保持 `a9a936c5102ffa24f8165d74d5199206ba6d724a`。
+合并最新 `origin/main` 的官网机器人提交，保留 §80 全部原子提交；不 rebase、不 force main、不移动 shell.3。
+
+发布顺序：新版本 verify/audit → dist完成 → 两项smoke/packaged与飞书五轮/市场/LAN →
+发布说明检查 → 双远端 main与精确tag → GitHub三平台正式Release → GitCode六资产内容校验 →
+官网刷新与线上更新日志/下载检查。不得用旧版 dist 的结果冒充 shell.4。
+本轮不覆盖已安装 shell.2、不访问真实凭据目录或系统认证窗口。
+tag SHA、正式Release/镜像/Refresh门禁结果在完成后回填；此前不宣称发布成功。
+
+shell.4 本地门禁：`pnpm verify` 424 + ACP1、`pnpm security:audit`、`pnpm dist:dir`、
+两项smoke、packaged18、九组飞书/退出场景五轮45、市场offline1/real2、LAN2均exit0；
+codesign deep/strict通过。没有重建正在测试的包、没有新增跳过/放宽断言。
+本地新sidecar SHA `38ff886737c7994c8b1e1aeeb1c50dfea0f5a67afcce81c7274b9d15620d8dce`，pin不变。
+GitCode WebBridge已连接，但任务页显示未登录；已非阻塞提示登录，继续GitHub发版，镜像尚未宣称完成。
