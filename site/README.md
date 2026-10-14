@@ -58,8 +58,8 @@ cd site && python3 -m http.server 8080
 
 `assets/` 的 css/js 带 `?v=N` 版本号,使用一年 immutable;图片类一小时
 可重新验证;`data/` 使用五分钟缓存。改动 css/js/data-model 后必须同步
-提升对应文件的 `?v=`(当前 style v=44、data-model v=46、app v=46、seo v=13),
-否则 immutable 会让用户锁在旧内容。当前首页、下载页 app/data-model 为 `v=46`。
+提升对应文件的 `?v=`(当前 style v=44、data-model v=47、app v=47、seo v=13),
+否则 immutable 会让用户锁在旧内容。当前首页、下载页 app/data-model 为 `v=47`。
 
 首页 `#feishu` 独立介绍机器人创建、工作区、连接生命周期、降噪和安全边界；
 中英 FAQ 分开解释机器人 Secret、模型 Key 与 CLI OAuth，以及 Keychain 和 Windows profile 权限。

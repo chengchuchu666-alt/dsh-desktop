@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.2.shell.4` 发布候选：主窗口关闭退出、macOS 飞书无钥匙串凭据、Windows 安装精简；内核 `0.2.1-alpha.2` 与子模块 pin 不变，见 §81；最新已发布仍为 §79 的 shell.3 |
-| 已发布 | ✅ `0.2.1-alpha.2.shell.3`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ 维护候选 verify424 + ACP1、audit、dist、packaged18、五轮关键退出/凭据25、市场 offline1/real2、LAN2、两项 smoke及故障注入/闭包/真实进程退出通过（§80）；已发布基线与 Go 门禁见 §79 |
-| 核心发布 | ✅ 已发布 Release `38330491175` / tag `93d0f2f` 不变；维护候选手动 `38499367065` 三平台构建/安装/升级/来源证明通过，未 publish（§80）；既有 worker teardown 告警仍记录 |
-| 官网数据 | ✅ 线上 release JSON 与实时 API 为 shell.3，6/6 `gitcode_ok=true`；Refresh `38333222697` 成功，bot `d97328a`；中英日志保留完整换行内容，首页 cache 46 |
-| 国内镜像 | ✅ GitCode v2 六资产匿名 Range 内容与 DEB 全量回读一致；release id `57181`，tag 对齐 `93d0f2f`，沿用配额约束下的 unset 标记 |
-| 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.3；2026-10-13 快照总量 6628（官网现有计数口径，实时变化）；仓库生成的 GitHub 原始下载快照 5805 / 73 个版本，不混称同一计数 |
+| 最新代码基线 | `0.2.1-alpha.2.shell.4`：主窗口关闭退出、macOS 飞书无钥匙串凭据、Windows 安装精简；内核 `0.2.1-alpha.2` 与子模块 pin 不变，见 §81 |
+| 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
+| 本地门禁 | ✅ shell.4 verify424 + ACP1、audit、新版dist、packaged18、五轮飞书/退出45、额外manager零重试10、市场 offline1/real2、LAN2、两项smoke均exit0（§81）；维护候选故障注入与真实进程退出见 §80 |
+| 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
+| 官网数据 | ✅ 线上release JSON与实时API为shell.4，6/6 `gitcode_ok=false`并回退GitHub；Refresh `38578510405` success，bot `367b99d`；中英更新日志已生成，cache47文案随本次跟进推送 |
+| 国内镜像 | ⛔ shell.4待GitCode浏览器登录，六资产匿名HTTP404，内容门禁exit1；tag已对齐a57，原始产物保留。shell.3历史成功证据见 §79，不混称shell.4可用 |
+| 实时下载统计 | ✅ `/api/downloads` HTTP200、shell.4、source=github；2026-10-14生成的GitHub原始安装下载快照5972 / 74个版本；官网另含既有GitCode引导计数且实时变化，不混称同一口径 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2122,7 +2122,7 @@ shell.3 GitHub 原始安装包（GitCode 六项 Range 内容与 DEB 全量已核
 外部限制仍包括 #100 用户原始 Windows 白屏证据、稳定签名密钥、第三方 AV 的受控真机 T6；
 这些不通过绕过安全保护或删除真实用户数据来“完成”。
 
-## 81. shell.4 发布（2026-10-14，进行中）
+## 81. shell.4 发布（2026-10-14，GitHub已发布，官网与镜像收尾中）
 
 用户已明确授权发版。仅 `node scripts/version.mjs bump shell` → `0.2.1-alpha.2.shell.4`，
 Harness保持 `0.2.1-alpha.2`，cc-connect保持 `a9a936c5102ffa24f8165d74d5199206ba6d724a`。
@@ -2132,10 +2132,61 @@ Harness保持 `0.2.1-alpha.2`，cc-connect保持 `a9a936c5102ffa24f8165d74d51992
 发布说明检查 → 双远端 main与精确tag → GitHub三平台正式Release → GitCode六资产内容校验 →
 官网刷新与线上更新日志/下载检查。不得用旧版 dist 的结果冒充 shell.4。
 本轮不覆盖已安装 shell.2、不访问真实凭据目录或系统认证窗口。
-tag SHA、正式Release/镜像/Refresh门禁结果在完成后回填；此前不宣称发布成功。
+镜像与Refresh门禁结果在完成后回填；不把GitHub成功等同国内镜像成功。
 
 shell.4 本地门禁：`pnpm verify` 424 + ACP1、`pnpm security:audit`、`pnpm dist:dir`、
 两项smoke、packaged18、九组飞书/退出场景五轮45、市场offline1/real2、LAN2均exit0；
 codesign deep/strict通过。没有重建正在测试的包、没有新增跳过/放宽断言。
 本地新sidecar SHA `38ff886737c7994c8b1e1aeeb1c50dfea0f5a67afcce81c7274b9d15620d8dce`，pin不变。
 GitCode WebBridge已连接，但任务页显示未登录；已非阻塞提示登录，继续GitHub发版，镜像尚未宣称完成。
+
+正式 tag `v0.2.1-alpha.2.shell.4` → `a57ee80183ef863747b3edc952da84b94a1e0a88`，
+双远端main/集成分支/tag已推送；历史shell.3 tag `93d0f2f` 未移动。
+Release `38573030445` success（2026-10-14 14:12:29 UTC公开）：verify、三平台build、publish通过。
+发布门禁验证8文件形状、三安装包SHA-256和GitHub来源证明后上传；公开Release非draft、prerelease。
+三平台升级均保持6份用户文件，Windows损坏/只读/占用残留3场景通过，安装冒烟exit0。
+正式Windows本次安装99.172s（smoke3.802s、uninstall7.073s），不作为跨机器或对照提速结论。
+Defender RT=false是runner状态，未人为关闭安全软件；第三方AV真机T6仍未覆盖。
+
+正式packaged门禁：macOS18、Linux18一次通过；Windows17一次通过 + 1重试通过。
+Windows `manager edits...` 首次在 `applications.json.autoConnect` 的8秒持久化断言超时；
+重试通过但根因未确认，不新增跳过或调大超时，不称18项一次全绿。
+同shell.4本机该原始用例额外零重试10轮全部通过（56.5s），不能代替Windows复现或证明无竞态。
+CI开发态26通过/12既有环境用例未启用，仍有历史worker teardown45000ms告警。
+正式DMG已只读挂载核验shell.4版本、codesign deep/strict、独立本机来源证明：tag源码a57一致。
+包内sidecar pin a9不变，CI构建SHA `59cefea7952b40e355c8add23f4cef657c42fb346454daff5db2626a803ff976`；
+与本机Go构建hash不同但各自manifest一致，不替换产物。
+首次从只读镜像启动sidecar超过10秒；原命令复测exit0、真实Harness UI渲染成功，原因未确认。
+不删除quarantine、不改安全检查，不用一次重试抹掉首次异常。
+同一正式DMG复制到 `/tmp/dsh-shell4-install-probe.QLVkhB` 独立目录，真实UI冒烟exit0；
+不是安装到Applications，也未改用户数据。临时只读挂载已卸载。
+
+本机 `pnpm release:check-assets /tmp/dsh-shell4-assets.UsNvO0 v0.2.1-alpha.2.shell.4` exit0，
+三包独立 `gh attestation verify` exit0，源码均为a57；8文件大小/本机SHA与GitHub公开digest逐项一致，
+公开DEB/EXE校验文件与artifact逐字节一致。
+匿名GitHub DEB Range前1MiB与正式文件逐字节一致（Node断言exit0）；没有把HTML或仅HTTP200当下载验证。
+
+| 正式安装包 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 288502289 | `5474b51ff33684d6deef5d329a1dde699151c441d64bda6b457aa54e8bd8e3ab` |
+| Windows EXE | 263689956 | `d1369866e9811572cc14bb1fc84be58262ef9bc77e3003dcaa6257bb6caa6fea` |
+| Linux DEB | 231210296 | `88888b3688ba9aca5622aea60044f64e1a76686478aaa2647cc3f9754bd33e42` |
+
+GitCode六项匿名Range请求均HTTP404（application/json）；内容门禁exit1如实保留，
+不是应用测试失败，也不能用链接存在或已推tag冒称镜像已交付。
+原始8文件已留存上面的artifact目录；登录后可继续v2上传→创建→匿名六项内容校验及至少一包完整回读。
+不借用旧认证缓存或绕过GitCode登录。
+
+官网Refresh `38578510405` success：六次GitCode回退探测后保留明确warning，
+bot `367b99d9e48cc21b6fc960650b5993b34e5215f1`已合并，不在机器人探测期间推送同一批生成文件。
+线上release JSON及实时API均shell.4，六镜像flag全部false；中英日志已由同源说明生成。
+官网中英文首页/FAQ草稿已改清楚主窗口与管理窗口关闭区别、0600明文风险和旧Secret重录；
+新数据合并后的静态检查及八组窄/宽屏亮/暗主题视觉门禁exit0，文案跟进不重打包/移动tag。
+额外展开中英凭据风险FAQ，在390/1280两种宽度断言0600/明文可见、无横向溢出/pageerror；
+四组exit0并视觉复核中文手机亮色/英文桌面暗色，风险说明未隐藏或裁切。
+
+Windows manager后续复现入口：同正式Windows包、临时profile/假Secret，运行
+PowerShell：`$env:DSH_E2E_PACKAGED='1'; pnpm exec playwright test e2e/electron-shell.spec.ts -g 'manager edits' --repeat-each=20 --retries=0`，
+保留首次失败trace与文件持久化证据，再区分界面状态、IPC结果和磁盘写入；不能靠提高超时/重试或跳过来关闭。
+当前未在本机Windows环境复现，根因待确认；与#100用户问答白屏不混称同一个故障。
+发布后仅修正文档/Release正文的验收状态，不移动tag或替换8个已验证资产。

@@ -219,7 +219,7 @@
         <article><span>02</span><h3>选工作区，显式开启</h3><p>可保存多份配置，但一次只连接一个应用。先在 Harness 模型设置中配置模型凭据，再开启连接；“服务已启动”“飞书在线”和“任务完成”是不同状态。</p></article>
         <article><span>03</span><h3>少刷消息，随时关闭</h3><p>默认精简消息、3 秒流式预览；可选择完整/精简/静默、经典/富卡片和进度展示。在同一窗口关闭连接、设置启动时自动连接或移除本地配置。</p></article>
       </div>
-      <p class="note">关闭窗口或收进托盘不会断连；进入安全模式会暂停连接。Secret 在本机安全存储，移除本地配置不会删除远端飞书应用。飞书权限审批、可用范围和版本发布仍由组织管理。</p>
+      <p class="note">关闭管理窗口或最小化不影响连接；关闭主窗口会退出并停止服务，安全模式也会暂停连接。macOS Secret 使用 0600 受限明文文件，旧加密凭据需重填一次；Windows 策略不变。移除本地配置不会删除远端飞书应用，组织仍管理权限、可用范围和发布。</p>
       <div class="cta-row"><a class="btn btn--primary btn--sm" href="https://github.com/citrusli2026/dsh-desktop/blob/main/docs/cc-connect.md" target="_blank" rel="noopener">飞书连接完整指南 →</a><a class="btn btn--ghost btn--sm" href="/docs/faq#feishu">连接与凭据常见问题 →</a></div>
     </div>
   </section>
@@ -283,10 +283,10 @@
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">安全依赖已更新，飞书连接有完整指南</h3>
-          <p data-i18n="latest.lead">shell.3 更新 Electron 与运行时安全依赖，官网补齐飞书连接流程；内置 Harness 版本不变。</p>
+          <h3 id="latest-title" data-i18n="latest.title">关闭即退出，飞书凭据不再访问 macOS 钥匙串</h3>
+          <p data-i18n="latest.lead">shell.4 停止关闭后的后台服务，改用 macOS 本机受限凭据文件，并精简 Windows 安装；内置 Harness 版本不变。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>安全维护：</b>更新可修复依赖，保留 Node 24 与现有功能。</li><li><b>连接流程：</b>扫码保存、显式开启、消息降噪与随时关闭。</li><li><b>发布证据：</b>三平台安装/升级和下载校验通过，已知边界如实记录。<a href="/changelog">查看完整更新日志 →</a></li></ul>
+        <ul data-i18n="latest.items"><li><b>完整退出：</b>关闭主窗口会停止 Harness、飞书和局域网服务，保留自动连接选择。</li><li><b>凭据边界：</b>macOS 文件权限为 0600、未加密；旧加密 Secret 需重填一次，Windows 策略不变。</li><li><b>安装优化：</b>维护候选同机三轮安装中位数改善约 4.9%，不承诺所有电脑相同提速。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>
@@ -436,7 +436,7 @@
   </div>
 </footer>
 
-<script type="module" src="/assets/app.js?v=46"></script>
+<script type="module" src="/assets/app.js?v=47"></script>
 
 <!-- 下载后提示(校验方式 + 未签名处理 + GitHub Star 邀请),由 app.js 填充 -->
 <div class="download-toast" id="download-toast" role="status" aria-live="polite" hidden></div>
