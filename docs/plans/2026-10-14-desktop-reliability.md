@@ -5,6 +5,11 @@
 用户认可先前建议；继续采用实现 → 验证 → 修正 → 再验证，不采用 TDD。
 一次只做一个原子任务，精确暂存；不改真实数据/凭据、不关闭防护，不升级内核或依赖。
 
+当前状态：REL-01/02/03/04 全部完成。代码验证头
+`256aedf4ef03cf71e054ef718192caa09742ef80`；手动验收 `38499367065` success。
+收尾仅更新本记录、文档索引/交付说明及最终本地构建 manifest，不改变已验收的运行时代码。
+本轮未发布/未覆盖已安装应用；后续若发版，另按发布流程 bump shell 和构建，不移动 shell.3 tag。
+
 ## 有序任务与修改范围
 
 1. **REL-01 关闭即退出**：`src/main/window.ts`、`src/main/index.ts`、
@@ -56,7 +61,7 @@
   表单占位文字随旧凭据状态刷新，但不覆盖未保存的用户输入。
   本轮全部为临时目录/假 Secret/假 Sidecar，没有读取真实凭据或与系统认证窗口交互。
 - REL-02 提交 `f04e93810e6d4e9e7f37d9d9658d010f52b0ee69`，已推集成分支。
-- 当前任务：REL-03。明确的精简候选为 1,464 个 .d.mts/.d.cts 声明（7,716,308 B）；
+- REL-03 开始：明确的精简候选为 1,464 个 .d.mts/.d.cts 声明（7,716,308 B）；
   原脚本仅覆盖 .d.ts。采用窄扩展，不删除包的任意文档/测试/运行资源。
 - REL-03 本地门禁：临时夹具验证删除声明/保留执行 TypeScript、原生模块、资源/许可证；
   计时 parser、中位数、退出码与禁止分支发版护栏 4/4，typecheck/两轮 bootstrap/full verify
@@ -90,3 +95,56 @@
 - 打包门禁修正本地：`node --test test/nsis-timing.test.ts test/upgrade-release.test.ts` 8/8 exit0；
   typecheck、两脚本语法、workflow YAML parse、diff check 均 exit0。误用未安装的 tsx 命令 exit254，
   改用仓库既有 Node24 原生测试执行方式；未安装新依赖。Windows 编译成功与实际安装结果仍待 CI。
+- 门禁修正提交 `256aedf4ef03cf71e054ef718192caa09742ef80` 已推两远端；手动 run `38499367065`
+  verify 成功，三平台包已编译完成，正在运行安装/升级/性能门禁，publish 仍为 tag-only。
+- 最终源码本地重新打包：verify424 + ACP1、audit、dist、两项 smoke、packaged18、
+  Safe Mode、启动失败、重试恢复、closure clean/tamper、codesign deep/strict 全 exit0。
+  新凭据/重录整页截图已视觉复核。最终本地 sidecar SHA
+  `0b72c6acf3a3a9e5ee022c800cb54955ce8fa74031fa2ea70d3423070a226c0e` 与候选内 manifest 一致。
+- 额外隔离 macOS 真实 Harness 退出探针最终 exit0：记录5个归属进程（含1个真实 Harness child），
+  主窗口关闭后全部 PID 消失、真实端口关闭、app exit0。首次诊断误猜英文标题导致超时 exit1；
+  第二次在 Electron dispatcher 关闭后重新取 app.process 导致 helper 错误 exit1，PID/端口检查已通过。
+  修正为既有 onboarding/真实渲染条件及提前保留 ChildProcess handle 后完整断言全通过；
+  不改产品行为、不移除任何已有测试断言，不触碰真实数据。
+- `38499367065` Linux/macOS build success：packaged 各18、offline各1、升级6份用户文件保持、
+  clean/tamper 及各故障注入、安装/来源证明通过。verify 开发 E2E26通过/12个既有环境未启用，
+  仍有历史 worker teardown 45000ms 非用例告警与 Go cache 路径告警；未改 guarded runner/降低断言，
+  不宣称零告警。补充本地 visual/旧凭据/双语消息控制3/3 exit0。Windows 升级已通过，残留与 A/B 待完成。
+- REL-03/04 最终远端门禁：`gh run watch 38499367065 --exit-status` exit0；verify 与三平台 build
+  全 success，publish/report-failure 正确跳过。三平台 packaged 各18、offline各1、升级6份用户文件保持、
+  故障注入/闭包/来源证明通过；Windows S1损坏/S2只读/S3占用均通过（占用必须exit5），Defender RT=false。
+  未关闭真实防护；受控第三方 AV / 真机 T6 仍属外部硬件项，不把 runner 代替用户电脑。
+- Windows 六次对照报告独立复算 exit0：基线 SHA `43f20cc34b00404d46211e3d39126f7df64fec402a726073468e7ac3de31ba43`；
+  候选 SHA `8a1c9d7b343a607bbef00544a61cb704df7104ea748f06d7abbc64303b6e5cc1`。
+  基线安装样本164132/165722/168510ms，候选156694/157638/160270ms；中位数165722→157638ms，
+  减少8084ms / 4.878%。所有安装/冒烟/卸载都成功，候选各产生完整三阶段计时。
+  仅本 runner 的三轮结果，不能承诺所有电脑相同提速；完整样本见 CI artifact `windows-installer-timings`。
+- 收尾 `node --test test/cc-connect-docs.test.ts test/window-close.test.ts test/linux-e2e.test.ts test/nsis-timing.test.ts test/upgrade-release.test.ts`
+  12/12 exit0；`pnpm site:check` / `git diff --check` exit0。#107 按最终成功 run 关闭历史手动构建告警；
+  #100 仍 needs-info，不以本轮安装优化冒称修复原始 Windows 白屏。
+- 下一任务：本轮没有待实施任务。新版本发布/真实既有用户 profile 的重录操作不在本轮执行；
+  后续发布按新的 shell 版本交付，首次升级旧 macOS 加密 Secret 需重填一次，不访问系统钥匙串。
+- 最终文档与 manifest 收尾后再次 `pnpm verify` 424 + ACP1 exit0，`git diff --check` exit0。
+
+## 收尾复现命令
+
+```sh
+pnpm verify
+pnpm security:audit
+pnpm dist:dir
+pnpm smoke:packaged
+pnpm smoke:packaged-ui
+pnpm test:e2e:packaged
+pnpm test:e2e:market:offline
+pnpm test:e2e:market:real
+pnpm exec playwright test -g 'LAN pairing' --reporter=line
+gh workflow run release.yml --ref codex/cc-connect-dsh-integration
+gh run watch 38499367065 --exit-status
+gh run download 38499367065 --name windows-installer-timings --dir test-results/installer-timings
+```
+
+对应故障注入入口：`DSH_DESKTOP_SAFE_BREAK=1`、`DSH_DESKTOP_TEST_FAIL_HARNESS=1`、
+`DSH_DESKTOP_TEST_FAIL_HARNESS=1 DSH_DESKTOP_TEST_RETRY_FAIL=1`、`DSH_SMOKE_CLOSURE=1`
+分别运行 `pnpm smoke:packaged`。只在隔离候选中执行；真实飞书/真实 profile 不参与。
+Windows 对照命令 `node scripts/benchmark-nsis.mjs baseline.exe candidate.exe output.json`
+需要 Windows 与校验过的旧版/候选安装包；不能在 macOS 上模拟一个安装时间当结论。

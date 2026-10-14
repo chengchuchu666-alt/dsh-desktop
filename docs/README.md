@@ -17,6 +17,7 @@
 | [多版本 Dashboard 产品计划](plans/2026-10-08-multi-runtime-dashboard.md) | Edition、Runtime、Environment 的产品边界、竞品借鉴、信任/隔离模型与里程碑 | 多版本管理或社区 Edition 路线变化时 |
 | [人工审查：垃圾桶与飞书管理](plans/2026-10-10-manual-review/README.md) | 垃圾桶状态同步诊断、飞书二维码应用管理、消息降噪/卡片样式与有序验收任务 | 人工反馈复核或对应迭代推进时 |
 | [GitHub 待办与官网维护](plans/2026-10-13-github-maintenance.md) | issue/PR 两轴审查、依赖安全、飞书官网介绍、同步竞争与发布边界 | 待办处理、官网和 shell.3 发布进度变化时 |
+| [桌面退出、凭据与 Windows 安装迭代](plans/2026-10-14-desktop-reliability.md) | 关闭主窗口退出、macOS 无钥匙串飞书凭据、安装计时与三平台候选门禁 | 本轮维护实现、验证或交付状态变化时 |
 | [主干可靠性任务](plans/reliable-shell/README.md) | 现有壳的数据兼容、任务保护、更新与恢复任务卡 | 按任务验收后更新 progress |
 | [官方桌面补丁实验](plans/official-desktop/README.md) | 固定上游源码、有序补丁、隔离构建和平台验证 | 仅在实验 Worktree 实施，按任务更新 progress |
 | `docs/decisions/README.md` | ADR 索引 | 新增决策记录时 |

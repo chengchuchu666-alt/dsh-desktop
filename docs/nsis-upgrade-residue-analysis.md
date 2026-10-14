@@ -117,3 +117,27 @@ Release workflow 的**手动验证模式**在同一 Windows runner 用公开 she
 候选必须产生三个阶段计时；未执行 hook 即失败。报告作为 CI artifact，
 不包含 userData/Secret，也不创建 tag 或 Release。发布模式不重复跑六次安装。
 受控第三方安全软件的 T6 仍需真实 Windows 环境，不能通过关闭防护来取得“快”结果。
+
+手动验收 `38499367065`（代码头 `256aedf`，Windows Server 2022 x64 runner）成功，
+Defender RT 检测为 false；本次没有关闭防护。各轮交替执行，全部完成真实启动与卸载：
+
+| 轮次 | shell.3 安装 ms | 候选安装 ms |
+|---|---:|---:|
+| 1 | 164132 | 156694 |
+| 2 | 165722 | 157638 |
+| 3 | 168510 | 160270 |
+| 中位数 | 165722 | 157638 |
+
+减少8084ms / 4.878%，只说明该 runner 的三轮改善，安装仍约2.6分钟。
+候选属性清理125ms，post-install前累计144844/147000/150266ms，占用探针为0ms
+（GetTickCount计时粒度内，不代表真实耗时严格为零）。累计阶段不是纯解压时间；
+不能把前次不同 runner 约105秒与本次数据直接作 A/B，也不能归因全部来自 AV。
+完整安装/启动/卸载样本及校验和保存在本 run 的 `windows-installer-timings` artifact：
+基线 EXE SHA-256 `43f20cc34b00404d46211e3d39126f7df64fec402a726073468e7ac3de31ba43`，
+候选 `8a1c9d7b343a607bbef00544a61cb704df7104ea748f06d7abbc64303b6e5cc1`。
+
+此轮复用修复：NSIS include 会编译安装器与卸载器生成两个 pass，安装器专用变量/hook
+必须限定在 `!ifndef BUILD_UNINSTALLER`，不能关闭 warning-as-error 来掩盖 unused-var。
+手动候选可沿用已发布版本号，仅显式允许同版本基线；tag 的严格检查仍保留。
+升级门禁在手动模式也执行，Linux 用 `--reinstall` 防止 apt 同版本 no-op；
+Windows 用真实卸载/重装与独立残留矩阵，不把文件复制或版本号变化当验收成功。

@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-13。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-14。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,10 +9,10 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | ✅ `0.2.1-alpha.2.shell.3` 已发布；内核 `0.2.1-alpha.2` 未变，GitHub/官网/安全维护与 site-only 后续见 §79 |
+| 最新代码基线 | `codex/cc-connect-dsh-integration` 在 shell.3 版本号上追加尚未发布的退出/凭据/安装维护；内核 `0.2.1-alpha.2` 未变，见 §80。main 与最新已发布 tag 仍为 §79 的 shell.3 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.3`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ release 候选 verify 410 + 1 ACP；网站后续 main verify 411 + 1 ACP；Go test/race/build/vet/CUJ、附件回归 race 200、最终 pin packaged 15、飞书五轮 35、LAN 2、市场 offline 1 / real 2、两项 smoke、双树审计通过 |
-| 核心发布 | ✅ Release `38330491175` 三平台安装/升级/来源证明及 publish 通过，tag `93d0f2f`；三平台 packaged 各 15 首过。verify 的既有 worker teardown 告警不隐瞒，见 §79 |
+| 本地门禁 | ✅ 维护候选 verify424 + ACP1、audit、dist、packaged18、五轮关键退出/凭据25、市场 offline1/real2、LAN2、两项 smoke及故障注入/闭包/真实进程退出通过（§80）；已发布基线与 Go 门禁见 §79 |
+| 核心发布 | ✅ 已发布 Release `38330491175` / tag `93d0f2f` 不变；维护候选手动 `38499367065` 三平台构建/安装/升级/来源证明通过，未 publish（§80）；既有 worker teardown 告警仍记录 |
 | 官网数据 | ✅ 线上 release JSON 与实时 API 为 shell.3，6/6 `gitcode_ok=true`；Refresh `38333222697` 成功，bot `d97328a`；中英日志保留完整换行内容，首页 cache 46 |
 | 国内镜像 | ✅ GitCode v2 六资产匿名 Range 内容与 DEB 全量回读一致；release id `57181`，tag 对齐 `93d0f2f`，沿用配额约束下的 unset 标记 |
 | 实时下载统计 | ✅ `/api/downloads` HTTP 200，shell.3；2026-10-13 快照总量 6628（官网现有计数口径，实时变化）；仓库生成的 GitHub 原始下载快照 5805 / 73 个版本，不混称同一计数 |
@@ -2080,3 +2080,44 @@ shell.3 GitHub 原始安装包（GitCode 六项 Range 内容与 DEB 全量已核
 剩余外部条件：#100 需要 Windows 原始提问步骤/renderer 异常和权限证据；mac 稳定分发签名/CI 密钥
 配置仍未提供；sprintf-js 无官方修复版本，保留已有单一例外。没有通过关闭未知白屏 issue 或明文凭据
 缓存来伪造完成。website-only 后续不移动已发布 tag，也不为文案/生成器单独发布 shell.4。
+
+## 80. 桌面可靠性维护候选（2026-10-14，尚未发布）
+
+1. **范围与流程**：按用户认可的建议实现三个目标，采用实现 → 验证 → 修正 → 再验证。
+   原子任务、允许文件、失败与门禁见 `docs/plans/2026-10-14-desktop-reliability.md`。
+   不改真实 profile/凭据、不升级依赖；仅向两远端集成分支推送，不移动 shell.3 tag、不创建 Release。
+2. **关闭即退出**：`68dcc38` 主窗口关闭触发全应用退出，辅助窗口不阻止退出；最小化/第二实例聚焦保留。
+   `57be72b` 修复关机排队等 pending start 的真实进程泄漏；终结 shutdown 不等就绪超时才 stop。
+   独立服务并行停、单项失败仍尝试其余清理，重复 Quit 不能绕过清理；保留原8秒最终兜底。
+   测试同时验证 app exit0、假 Sidecar PID 消失、连接意图未被清空；不是仅断言窗口关闭。
+3. **macOS 飞书 Secret**：`f04e938` 明确改为受限文件（0600、未加密），存于原主进程凭据层。
+   macOS 不探测/调用 safeStorage；旧密文仅识别保留，UI 要求重录一次，无后台解密迁移或反复重试。
+   重新保存成功后才提交替换；Windows 保留 DPAPI，Linux 保留既有策略。不启用 mock keychain。
+   这会降低 macOS 静态加密保护：同用户/管理员/不受限备份仍可能读取，文档与中英 UI 明示。
+   当前 Cookie Encryption fuse 为 disabled；没有证据要修改 cookie 策略。ADRs 0038/0039/0040 记录取舍。
+4. **Windows 安装**：`c4f584b` 仅补删现代声明 `.d.mts/.d.cts`，干净闭包减少1464个此类文件
+   （本地样本7,716,308 B），不裁可执行文件/资源/许可证。NSIS 追加阶段计时，保留只读/占用保护。
+   同 runner shell.3/候选交替三轮真实安装、冒烟、卸载测量：安装中位数165.722s→157.638s，
+   减少8.084s / 4.878%。仍约2.6分钟，只证明该 runner 的改善，不承诺所有电脑；完整样本见安装性能文档。
+5. **打包坑与复用修复**：Xvfb 没有窗口管理器使真实最小化断言不成立，增加测试专用、归属明确的 Openbox；
+   旧第二实例测试准备动作从 close 改为 hide，未移除隐藏/激活断言。NSIS 双 pass 的 installer-only
+   hooks/变量限定为 `!ifndef BUILD_UNINSTALLER`，不关闭 warning-as-error。
+   `256aedf` 仅在手动验证显式接受“已发布同版本号”的候选基线；tag 仍拒绝同版本 fixture。
+   三平台手动模式也执行真实升级数据保持，Linux 强制重装候选 bytes，防止 apt 同版本 no-op。
+   分支手动构建失败不再误报发布故障 issue，实际 CI 失败状态照常保留。
+6. **本地候选门禁**：verify 424 + 1 ACP、audit、dist、两项 smoke 均 exit0；packaged18，开发态29
+   （9个既有环境用例未启用），五轮关键退出/旧凭据25，市场 offline1 / real2，LAN2 均通过。
+   Safe Mode/启动失败/重试/closure 篡改注入及 macOS codesign deep/strict 均通过；整页凭据提示视觉复核通过。
+   额外隔离真实退出探针记录5个归属 PID（含真实 Harness child），主窗口关闭后全退出、端口关闭、exit0。
+   最终本地 sidecar SHA `0b72c6acf3a3a9e5ee022c800cb54955ce8fa74031fa2ea70d3423070a226c0e` 与包内 manifest 一致。
+   未覆盖已安装 shell.2、未发真实飞书消息、未触碰钥匙串授权。
+7. **远端门禁**：手动 `38494099214` 暴露旧 close fixture 与缺 WM；`38497846309` verify 已通过但
+   打包发现 NSIS unused-var 与严格同版本基线拒绝。最终修正头 `256aedf`，手动 run `38499367065`
+   success：verify + 三平台 build 全部通过，packaged各18、offline各1、升级6份用户文件保持、
+   Windows残留3场景与六次对照全通过；Defender RT=false，未人为关闭防护，T6仍需受控真机。
+   publish 正确跳过；#107 已按成功 run 关闭，#100 仍 needs-info。
+   CI开发态26通过/12既有环境未启用，仍有历史worker teardown45000ms和Go cache告警，不称零告警。
+
+本轮公开网站仍准确指向已发布 shell.3；未把维护候选写成公开已发布更新日志。
+外部限制仍包括 #100 用户原始 Windows 白屏证据、稳定签名密钥、第三方 AV 的受控真机 T6；
+这些不通过绕过安全保护或删除真实用户数据来“完成”。
