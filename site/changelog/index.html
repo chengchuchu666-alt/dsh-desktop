@@ -42,6 +42,15 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.2.shell.4 <small>（内核 0.2.1-alpha.2）</small></h2>
+  <ul>
+    <li><strong>关闭即退出</strong>：关闭主窗口现在会退出整个应用，停止 Harness、飞书连接和局域网服务， 不再留在后台。最小化/隐藏启动后仍可用快捷键或托盘唤回；关闭飞书管理小窗口只关闭界面。</li>
+    <li><strong>退出收尾可靠性</strong>：修复连接还在启动时退出会留下 Sidecar 的边界；独立服务并行停止， 单项失败不跳过其余清理，重复退出请求不会抢先绕过清理。连接意图与自动连接选择保留。</li>
+    <li><strong>macOS 飞书不再访问钥匙串</strong>：新 Secret 保存到主进程管理的本机受限文件（权限 <code>0600</code>）， 保存、读取及自动连接都不调用系统安全存储。旧加密 Secret 保留但不后台解密， 设置页提示重新填写一次，保存成功后才替换；不再每次更新反复请求钥匙串访问。</li>
+    <li><strong>Windows 安装精简与计时</strong>：补删不参与运行的 <code>.d.mts</code> / <code>.d.cts</code> 声明文件，维护候选本地闭包 减少1464个文件（约7.7 MB）；保留可执行文件、原生模块、资源及许可证。 同一 Windows runner 三轮安装中位数165.7→157.6秒，改善约4.9%；这是发布前维护候选的 对照结果，不承诺所有电脑同样提速，也不把累计安装阶段冒称纯解压时间。</li>
+    <li><strong>安全边界</strong>：macOS 受限文件是明文，不是加密保险箱；同用户程序、管理员和可读取备份者 仍可能访问。Windows 保留原 DPAPI 策略，Linux 保留原存储策略。不改系统钥匙串、Cookie 或签名策略，不加入 <code>use-mock-keychain</code>。macOS 分发仍为 ad-hoc 签名。</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.3 <small>（内核 0.2.1-alpha.2）</small></h2>
   <ul>
     <li><strong>运行时与安全维护</strong>：Electron 44.7.0、YAML 2.9.1；捆绑闭包更新 proxy-addr 2.0.8、 compression 1.8.2 与 MCP SDK 1.31.0。显式保留原有可选 SDK 功能，不用移除包来消除告警， 不升级 Harness 内核或无关 Web 栈。</li>
@@ -97,15 +106,6 @@
     <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
     <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
     <li><strong>Windows 发布门禁</strong>：每个 NSIS 残留场景验证后停止 dsh-desktop 进程族并运行对应卸载器，清除注册安装路径，避免下一场景的旧版静默安装器阻塞。</li>
-    <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.2 <small>（内核 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：从 0.2.0-rc.2 升级到 0.2.1-alpha.1，同步桌面壳的插件兼容版本与随包依赖。</li>
-    <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
-    <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
-    <li><strong>Windows 发布门禁</strong>：NSIS 残留矩阵在场景之间清理 dsh-desktop 进程族，避免后续静默安装被交互式关闭提示阻塞。</li>
     <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
   </ul>
   <!-- changelog:auto:end -->
