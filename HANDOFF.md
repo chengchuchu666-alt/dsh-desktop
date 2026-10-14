@@ -13,7 +13,7 @@
 | 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ shell.4 verify424 + ACP1、audit、新版dist、packaged18、五轮飞书/退出45、额外manager零重试10、市场 offline1/real2、LAN2、两项smoke均exit0（§81）；维护候选故障注入与真实进程退出见 §80 |
 | 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
-| 官网数据 | ✅ 线上release JSON与实时API为shell.4，6/6 `gitcode_ok=false`并回退GitHub；Refresh `38578510405` success，bot `367b99d`；中英更新日志已生成，cache47文案随本次跟进推送 |
+| 官网数据 | ✅ 线上release JSON与实时API为shell.4，6/6 `gitcode_ok=false`并回退GitHub；Refresh `38578510405` success，bot `367b99d`；中英日志、cache47首页与凭据FAQ上线，八组线上视觉门禁及精确下载入口通过（§81） |
 | 国内镜像 | ⛔ shell.4待GitCode浏览器登录，六资产匿名HTTP404，内容门禁exit1；tag已对齐a57，原始产物保留。shell.3历史成功证据见 §79，不混称shell.4可用 |
 | 实时下载统计 | ✅ `/api/downloads` HTTP200、shell.4、source=github；2026-10-14生成的GitHub原始安装下载快照5972 / 74个版本；官网另含既有GitCode引导计数且实时变化，不混称同一口径 |
 
@@ -2122,7 +2122,7 @@ shell.3 GitHub 原始安装包（GitCode 六项 Range 内容与 DEB 全量已核
 外部限制仍包括 #100 用户原始 Windows 白屏证据、稳定签名密钥、第三方 AV 的受控真机 T6；
 这些不通过绕过安全保护或删除真实用户数据来“完成”。
 
-## 81. shell.4 发布（2026-10-14，GitHub已发布，官网与镜像收尾中）
+## 81. shell.4 发布（2026-10-14，GitHub与官网已交付，国内镜像外部阻塞）
 
 用户已明确授权发版。仅 `node scripts/version.mjs bump shell` → `0.2.1-alpha.2.shell.4`，
 Harness保持 `0.2.1-alpha.2`，cc-connect保持 `a9a936c5102ffa24f8165d74d5199206ba6d724a`。
@@ -2190,3 +2190,24 @@ PowerShell：`$env:DSH_E2E_PACKAGED='1'; pnpm exec playwright test e2e/electron-
 保留首次失败trace与文件持久化证据，再区分界面状态、IPC结果和磁盘写入；不能靠提高超时/重试或跳过来关闭。
 当前未在本机Windows环境复现，根因待确认；与#100用户问答白屏不混称同一个故障。
 发布后仅修正文档/Release正文的验收状态，不移动tag或替换8个已验证资产。
+
+**交付回执**：官网/说明跟进 `7813554d19621981c988fbd04e8ffe46391aba9d` 已向两远端
+main和集成分支正常推送；CI `38583375222` success（verify424 + ACP1，开发态26/既有12未启用，
+历史worker teardown45000ms仍保留）。Production deployment `7068624628` success，
+正式域名已确认cache47、当前版本说明、0600明文/重录提示及中英更新日志。
+线上 `SITE_CHECK_URL=https://dsh-desktop.com node scripts/check-site-ui.mjs` 八组exit0；
+附加中英首页/风险FAQ/下载两组exit0，下载区精确三平台GitHub安装URL与本地发布数据一致、
+六公开资产齐全、六镜像false且不可用资产链接不渲染；两组下载契约exit0。
+线上API快照2026-10-14总下载6809 / GitHub5972 / 74版本（计数实时变化、口径不混用）。
+
+临时网站诊断脚本曾误用英文SEO首页的标题selector，并把六资产目录当成三个安装按钮；
+两次exit1已定位为检查契约错误，按现有页面结构修正后保留精确标题/链接白名单/六资产断言通过，
+未修改生产实现、增大超时或屏蔽产品失败。正式八组视觉门禁一直保留。
+GitHub Release正文同步了实际CI重试与镜像阻塞状态，与main说明同源；正文编辑触发的额外
+Refresh `38581122412`由正常自动队列继续复探，不需要为此重打包或移动tag。
+
+已完成：shell.4版本化、三平台正式构建/安装/升级/来源证明、八资产发布及下载校验、
+中英官网介绍/FAQ/更新日志、线上视觉与下载契约、双远端正常推送。
+未完成：GitCode六资产上传/匿名内容校验与至少一包完整回读，需要维护者在浏览器登录；
+当前不得宣称国内镜像或完整镜像交付成功。#100、Windows manager竞态复现、真机AV与稳定分发签名
+仍按各自证据边界保留，不由本次发版代替。
