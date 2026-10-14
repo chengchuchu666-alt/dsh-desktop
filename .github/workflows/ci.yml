@@ -44,7 +44,7 @@ jobs:
         run: xvfb-run -a pnpm run smoke
         env:
           ELECTRON_DISABLE_SANDBOX: "1"
-      - name: Electron shell E2E (native menu, locale sync, close-to-tray)
+      - name: Electron shell E2E (native menu, locale sync, close-to-quit)
         run: xvfb-run -a node scripts/run-e2e-guarded.mjs
         env:
           ELECTRON_DISABLE_SANDBOX: "1"

@@ -14,7 +14,7 @@ Same kernel, same WebUI — the shell removes the environment work and adds the 
 |---|---|---|
 | Node.js / pnpm | Install and maintain yourself | Bundled, pinned Node.js 24 — zero setup |
 | Launching | Terminal + command | Click the icon, or summon from anywhere (`Ctrl/Cmd + Shift + Space`) |
-| Window & tray | One more browser tab | Native window, hides to the system tray |
+| Window & tray | One more browser tab | Native window; closing quits and stops services |
 | Crash recovery | Restart by hand | Auto-restart with backoff, error-page retry |
 | Broken plugins | Can wedge the WebUI | Safe Mode quarantines third-party plugins and still boots |
 | Diagnostics | Read terminal logs | One-click health check, exportable sanitized report |
@@ -36,7 +36,7 @@ Community plugins are always installed manually by the user. The installer conta
 - **Feishu tasks from chat** — bundled cc-connect connects one saved bot application to a local workspace. Desktop tools → Manage Feishu connections supports QR creation, explicit open/close and message/card preferences; model credentials remain in Harness. Long connections need no public IP or LAN sharing. See the [connection guide](docs/cc-connect.md).
 - **Isolated by default** — its own data home (`~/.dsh-desktop`) keeps settings, sessions, API keys, and plugins away from your CLI. `DSH_HOME=~/.dsh` shares them again.
 - **Dependable** — crash auto-restart with backoff, error-page retry, tray with live harness status, single-instance lock, window geometry persistence, and an exportable diagnostic report. On Windows, desktop actions remain reachable from Desktop tools, the window context menu, or the tray even when the menu bar is hidden.
-- **Quick to return to** — press the configurable summon shortcut from anywhere to show and focus the desktop app after it has been hidden to the tray. It defaults to `Ctrl/Cmd + Shift + Space`; if another app owns it, the tray and context-menu fallbacks remain available.
+- **Quick to return to** — press the configurable summon shortcut from anywhere to show and focus a minimized or startup-hidden desktop app. It defaults to `Ctrl/Cmd + Shift + Space`; if another app owns it, the tray and context-menu fallbacks remain available. Closing the main window quits the app and stops its services, including Feishu and LAN access.
 - **A clear first-success path** — a lightweight, dismissible main-screen guide tracks runtime → workspace → model → first completed task and then gets out of the way. The plugin market is explicitly optional.
 - **One-click health check** — Settings → Desktop settings checks the bundled runtime, writable data folders and disk, Harness loopback, profile, plugins, and versions. Optional proxy/registry/update probes require an explicit opt-in; results stay local and sanitized, with no automatic repair.
 - **Fits your desktop** — Settings → Desktop settings lets you record the shortcut, opt into launch at login and start hidden, and enable local status notices. These preferences stay in the shell's own data file.

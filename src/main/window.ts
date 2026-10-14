@@ -36,12 +36,10 @@ export interface WindowContext {
   harnessUrl?: string
   builtInPage?: BuiltInPage
   quitInProgress: boolean
-  hideOnClose: boolean
   /** Skip the first ready-to-show reveal when the OS launched us to the tray. */
   startHidden?: boolean
   getLocale(): ShellLocale
   onVisibilityChanged?(): void
-  onCloseToTray?(): void
   rendererRecoveryTimes?: number[]
   /** LAN-link entries for the window context menu; discoverable without the native menu bar. */
   lan?: WindowLanApi
@@ -125,10 +123,13 @@ export function createMainWindow(context: WindowContext): BrowserWindow {
   window.on('move', scheduleSave)
   window.on('close', (event) => {
     saveWindowState(window)
-    if (!context.quitInProgress && context.hideOnClose) {
+    if (!context.quitInProgress) {
       event.preventDefault()
-      window.hide()
-      context.onCloseToTray?.()
+      // Closing the main window is an application quit, even while an
+      // auxiliary window is open. before-quit owns service/tree shutdown.
+      // Defer until this cancelled close event finishes; quitting from inside
+      // it can leave Electron's nested window-close sequence incomplete.
+      setImmediate(() => app.quit())
     }
   })
   window.on('show', () => context.onVisibilityChanged?.())

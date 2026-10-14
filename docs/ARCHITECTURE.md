@@ -37,7 +37,7 @@
 
 ```text
 src/main/index.ts           Electron 生命周期、IPC 装配
-src/main/window.ts          窗口、状态持久化、导航守卫、hide-on-close
+src/main/window.ts          窗口、状态持久化、导航守卫、close-to-quit（0038）
 src/main/tray.ts            托盘状态与生命周期入口
 src/main/update-prompt.ts   跨平台更新与 macOS check-only 提示
 src/main/smoke.ts           CI 冒烟断言与退出约定
@@ -63,7 +63,7 @@ src/main/window-state.ts    窗口几何校验纯函数
 src/main/permissions.ts     Electron 会话权限默认拒绝
 src/main/menu.ts            应用菜单、About、诊断入口
 src/main/pages.ts           有 CSP 的加载页与错误恢复页
-src/main/shell-preferences.ts  壳偏好（close-to-tray 与桌面偏好）
+src/main/shell-preferences.ts  桌面偏好（兼容历史关闭提示字段）
 src/preload/index.ts        沙箱桥接：错误恢复与已验证 Harness 来源的窄通道
 plugins/dsh-desktop-controls/  应用内桌面工具、首次成功引导与桌面设置插件（shell.overlay/settings.section）
 ```

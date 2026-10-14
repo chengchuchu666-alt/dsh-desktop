@@ -57,7 +57,6 @@ import { buildPresetPackage, importPresetPackage, listUserPresets, parsePresetPa
 import { ShellLocaleController, shellText, type ShellLocale } from './locale.ts'
 import type { LanMenuActions, LanMenuState, MenuActions } from './menu-template.ts'
 import { DEEPSEEK_PLATFORM_RECHARGE_URL } from './links.ts'
-import { markCloseToTrayExplained, shouldExplainCloseToTray } from './shell-preferences.ts'
 import { isPrivateLanIPv4, lanPairingUrlCandidates, pairingUrlKind, LanService, listPrivateLanIPv4, loadOrCreateLanMasterToken, qrSvgFromText } from './lan.ts'
 import { closeLanPairingWindow, isLanPairingWindow, showLanPairingWindow } from './lan-window.ts'
 import { isMainWindowHarnessSender, isMainWindowSender, isShellOwnedFrame, ShellApp } from './shell-app.ts'
@@ -81,7 +80,6 @@ const MAC_UPDATE_CHECK_DELAY_MS = 15_000
 
 let currentLocale: ShellLocale = 'en'
 let localeController: ShellLocaleController | undefined
-let closeNoticeClaimed = false
 let desktopPreferencesController: DesktopPreferencesController | undefined
 let lastPublicStatus: PublicStatusSnapshot | undefined
 let lastHarnessPhase: HarnessState['phase'] | undefined
@@ -116,10 +114,8 @@ const lanService = new LanService({
 
 const windowContext: WindowContext = {
   quitInProgress: false,
-  hideOnClose: false,
   getLocale: () => currentLocale,
   onVisibilityChanged: refreshTray,
-  onCloseToTray: () => { void explainCloseToTray() },
   onShowAbout: () => { void showAboutDialog(currentLocale, aboutMaintenance()) },
   lan: {
     getState: (): LanMenuState => ({ lanRunning: lanService.isRunning, lanBusy: lanService.isBusy }),
@@ -712,19 +708,6 @@ function notifyHarnessState(state: HarnessState): void {
   } else if (previous === 'crashed' && state.phase === 'ready') {
     showDesktopNotification(shellText(currentLocale, 'notify.harnessRecoveredTitle'), shellText(currentLocale, 'notify.harnessRecoveredBody'))
   }
-}
-
-async function explainCloseToTray(): Promise<void> {
-  if (closeNoticeClaimed || !shouldExplainCloseToTray()) return
-  closeNoticeClaimed = true
-  markCloseToTrayExplained()
-  await dialog.showMessageBox({
-    type: 'info',
-    title: shellText(currentLocale, 'window.closeNoticeTitle'),
-    message: shellText(currentLocale, 'window.closeNoticeMessage'),
-    detail: shellText(currentLocale, 'window.closeNoticeDetail'),
-    buttons: [shellText(currentLocale, 'window.closeNoticeAcknowledge')],
-  })
 }
 
 /** One-time Windows prompt for the VC++ redistributable (#56): sharp's
@@ -1724,9 +1707,7 @@ if (!gotLock) {
     if (!SMOKE_TEST) {
       try {
         createTray(trayActions)
-        windowContext.hideOnClose = true
       } catch (error) {
-        windowContext.hideOnClose = false
         windowContext.startHidden = false
         console.warn(`dsh-desktop: tray unavailable; closing the window will quit: ${error instanceof Error ? error.message : String(error)}`)
       }

@@ -512,11 +512,28 @@ shellTest('desktop shell visual sanity check @visual', async ({ window }, testIn
   await window.screenshot({ path: testInfo.outputPath('shell-visual.png'), animations: 'disabled' })
 })
 
-shellTest('closing hides to tray and a second-instance activation restores the window @smoke @critical', async ({ electronApp, window }) => {
+shellTest('closing the main window quits even with an auxiliary window open @smoke @critical', async ({ electronApp, window }) => {
+  await packagedOrStubHeadline(window)
+  const process = electronApp.process()
+  const mainId = await electronApp.evaluate(({ BrowserWindow }) => {
+    const main = BrowserWindow.getAllWindows()[0]!
+    new BrowserWindow({ show: false })
+    return main.id
+  })
+  const closed = electronApp.waitForEvent('close', { timeout: 10_000 })
+  await electronApp.evaluate(({ BrowserWindow }, id) => {
+    setImmediate(() => BrowserWindow.fromId(id)?.close())
+  }, mainId)
+  await closed
+  expect(process.exitCode).toBe(0)
+  expect(window.isClosed()).toBe(true)
+})
+
+shellTest('a second-instance activation restores the minimized window @smoke @critical', async ({ electronApp, window }) => {
   await packagedOrStubHeadline(window)
   await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true)
-  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close())
-  await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(false)
+  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.minimize())
+  await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isMinimized())).toBe(true)
   await electronApp.evaluate(({ app }) => {
     app.emit('second-instance', {} as Electron.Event, [], process.cwd(), {})
   })
