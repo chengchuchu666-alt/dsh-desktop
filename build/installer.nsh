@@ -21,10 +21,36 @@
 
 !include "LogicLib.nsh"
 
+Var DshInstallStartTick
+Var DshAttributeStartTick
+Var DshProbeStartTick
+Var DshNowTick
+Var DshElapsedMs
+
+!macro DshLogTiming phase startTick
+  System::Call 'kernel32::GetTickCount() i .s'
+  Pop $DshNowTick
+  IntOp $DshElapsedMs $DshNowTick - ${startTick}
+  FileOpen $R8 "$TEMP\dsh-nsis-probe.log" a
+  ${If} $R8 != -1
+    FileSeek $R8 0 END
+    FileWrite $R8 "dsh-timing phase=${phase} elapsed_ms=$DshElapsedMs$\r$\n"
+    FileClose $R8
+  ${EndIf}
+!macroend
+
+!macro preInit
+  System::Call 'kernel32::GetTickCount() i .s'
+  Pop $DshInstallStartTick
+!macroend
+
 !macro customInit
   ; --- attribute clear (best effort): let the old uninstaller fully remove ---
+  System::Call 'kernel32::GetTickCount() i .s'
+  Pop $DshAttributeStartTick
   nsExec::Exec `cmd /c attrib -R -H -S "$INSTDIR\resources\*" /S /D`
   Pop $R7
+  !insertmacro DshLogTiming "attribute-clear" $DshAttributeStartTick
 
   ; --- occupancy probe (INSTDIR may be unfinal for silent /D here: log only) ---
 dsh_init_probe:
@@ -54,6 +80,11 @@ dsh_init_done:
 !macroend
 
 !macro customInstall
+  ; Includes init/UI, old uninstall, extraction and registration. It is NOT
+  ; pure extraction time; the external benchmark measures the whole process.
+  !insertmacro DshLogTiming "install-before-probe" $DshInstallStartTick
+  System::Call 'kernel32::GetTickCount() i .s'
+  Pop $DshProbeStartTick
 dsh_post_probe:
   System::Call 'kernel32::CreateFile(t "$INSTDIR\resources\harness\node\bin\node.exe", i 1073741824, i 0, p 0, i 3, i 0, p 0) i .R0 ?e'
   Pop $R1
@@ -78,4 +109,5 @@ dsh_post_probe:
 dsh_post_close:
   System::Call 'kernel32::CloseHandle(p $R0)'
 dsh_post_done:
+  !insertmacro DshLogTiming "runtime-probe" $DshProbeStartTick
 !macroend

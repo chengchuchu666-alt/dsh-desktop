@@ -10,12 +10,13 @@
  * overwrite, the closest CI can get to a real user upgrade) and smokes again.
  */
 import { execFile } from 'node:child_process'
-import { mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { spawn } from 'node:child_process'
 import { SMOKE_EXIT_OK, SMOKE_FLAG } from '../src/main/smoke-protocol.ts'
+import { parseNsisPhaseTimings } from './nsis-timing.mjs'
 
 const execFileP = promisify(execFile)
 // dpkg -L lists every file of the 160 MB Electron install; the default 1 MB
@@ -92,23 +93,42 @@ if (method === 'dpkg') {
   if (!installerPath.endsWith('.exe')) throw new Error(`nsis: installer exe not found under ${dirOrFile}`)
   const installer = installerPath
   const installDir = await mkdtemp(join(tmpdir(), 'dsh-nsis-install-'))
+  const probeLog = join(tmpdir(), 'dsh-nsis-probe.log')
+  const beforeProbe = await readFile(probeLog, 'utf8').catch(() => '')
+  const timing = { installMs: 0, smokeMs: 0, uninstallMs: 0, phases: [] }
   try {
     // /S = silent, /D = installation directory (NSIS: must be the last switch,
     // no quotes around the path).
+    const installStarted = performance.now()
     await execFileP(installer, ['/S', `/D=${installDir}`], { timeout: 300_000 })
+    timing.installMs = Math.round(performance.now() - installStarted)
+    const afterProbe = await readFile(probeLog, 'utf8').catch(() => '')
+    timing.phases = parseNsisPhaseTimings(afterProbe.startsWith(beforeProbe) ? afterProbe.slice(beforeProbe.length) : afterProbe)
     console.log(`nsis: installed under ${installDir}`)
     const executable = join(installDir, 'dsh-desktop.exe')
+    const smokeStarted = performance.now()
     await smokeRun(executable)
+    timing.smokeMs = Math.round(performance.now() - smokeStarted)
     // Same-version overwrite is not exercised here: the electron-builder NSIS
     // "replace an existing same-version install" path hangs indefinitely on
     // CI runners (observed twice, 150s and 300s timeouts, no output), while
     // the very same overwrite flow works in the deb reinstall smoke. The
     // install → smoke → uninstall round trip above is the release promise.
     const uninstaller = join(installDir, 'Uninstall dsh-desktop.exe')
-    await execFileP(uninstaller, ['/S'], { timeout: 300_000 }).catch(error => {
-      console.warn(`nsis: uninstall did not complete cleanly: ${error instanceof Error ? error.message : String(error)}`)
-    })
+    const uninstallStarted = performance.now()
+    await execFileP(uninstaller, ['/S'], { timeout: 300_000 })
+    // NSIS can relaunch its uninstaller from TEMP. Wait for the full install
+    // directory, not just the first exe or parent exit, before the next run.
+    while (await stat(installDir).catch(error => {
+      if (error.code === 'ENOENT') return undefined
+      throw error
+    })) {
+      if (performance.now() - uninstallStarted > 30_000) throw new Error('NSIS uninstall left the application directory behind')
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    timing.uninstallMs = Math.round(performance.now() - uninstallStarted)
     console.log('nsis: uninstalled')
+    console.log(`nsis-timing: ${JSON.stringify(timing)}`)
   } finally {
     await rm(installDir, { recursive: true, force: true }).catch(() => undefined)
   }

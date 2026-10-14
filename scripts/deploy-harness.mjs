@@ -13,6 +13,7 @@ import { lstat, readdir, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { patchBundledSessionTrash } from './patch-session-trash.mjs'
+import { pruneRuntimeMetadata } from './prune-closure-metadata.mjs'
 
 const ROOT = process.cwd()
 const MANIFEST_DIR = join(ROOT, 'manifest', 'harness')
@@ -92,24 +93,11 @@ async function pruneClosure() {
     }
   }
 
-  // TypeScript-only and source-map content is never imported at runtime.
-  const walk = async (dir) => {
-    for (const entry of await readdir(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        if (entry.name === '@types' || entry.name.endsWith('.d.ts')) {
-          await rm(path, { recursive: true, force: true })
-          removed.push(path.slice(modules.length + 1))
-        } else {
-          await walk(path)
-        }
-      } else if (entry.name.endsWith('.map') || entry.name.endsWith('.d.ts')) {
-        await rm(path, { force: true })
-        removed.push(path.slice(modules.length + 1))
-      }
-    }
-  }
-  await walk(modules)
+  // Modern packages also ship .d.mts/.d.cts declarations. Keep executable
+  // .mts/.cts/.ts files; only declaration suffixes are runtime-irrelevant.
+  const metadataRemoved = await pruneRuntimeMetadata(modules)
+  removed.push(...metadataRemoved)
+  console.log(`deploy-harness: modern declarations removed=${metadataRemoved.filter(path => /\.d\.[cm]ts$/.test(path)).length}`)
   console.log(`deploy-harness: pruned ${removed.length} paths from the closure`)
 }
 

@@ -236,6 +236,26 @@ jobs:
       - name: NSIS silent install smoke (S2)
         if: matrix.os == 'windows-2022'
         run: node scripts/smoke-installed.mjs nsis dist
+      - name: Windows installer baseline benchmark (manual validation only)
+        if: matrix.os == 'windows-2022' && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          New-Item -ItemType Directory -Force test-results/nsis-baseline | Out-Null
+          gh release download v0.2.1-alpha.2.shell.3 --repo citrusli2026/dsh-desktop --pattern '*.exe' --pattern '*.exe.sha256' --dir test-results/nsis-baseline
+          if ($LASTEXITCODE -ne 0) { throw 'Baseline download failed' }
+          $baseline = (Get-ChildItem test-results/nsis-baseline -Filter '*.exe').FullName
+          $expected = (Get-Content ($baseline + '.sha256')).Split()[0].ToLowerInvariant()
+          if ((Get-FileHash $baseline -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Baseline checksum mismatch' }
+          $candidate = (Get-ChildItem dist -Filter '*.exe').FullName
+          node scripts/benchmark-nsis.mjs $baseline $candidate test-results/nsis-benchmark.json
+      - name: Upload Windows installer timing evidence
+        if: always() && matrix.os == 'windows-2022' && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer-timings
+          path: test-results/nsis-benchmark.json
+          if-no-files-found: warn
       - name: Write installer SHA-256
         run: node scripts/write-release-checksum.mjs dist
       - name: Attest macOS installer (build provenance)

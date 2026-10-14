@@ -21,8 +21,8 @@
    门禁：平台策略/零加密调用/旧凭据状态/错误脱敏/QR 与 UI/五轮关键回归。
 3. **REL-03 Windows 安装性能**：`build/installer.nsh`、
    `scripts/{deploy-harness,smoke-installed,smoke-upgrade,smoke-nsis-residue}.mjs`、
-   所需纯函数 `.mjs` / `.d.mts` 与对应单测、`.github/workflows/release.yml`、
-   专用 Windows 验证 workflow、`docs/nsis-upgrade-residue-analysis.md`、本记录。
+   `scripts/benchmark-nsis.mjs`、所需纯函数 `.mjs` / `.d.mts` 与对应单测、
+   `.github/workflows/release.yml` 的手动验证模式、`docs/nsis-upgrade-residue-analysis.md`、本记录。
    先量化分阶段耗时，再仅精简明确不参与运行的资源；保留功能/许可证/残留保护。
    门禁：临时夹具、真实 runtime/bootstrap、Windows 安装与升级 CI；不能把文件数减少冒称已提速。
 4. **REL-04 完整候选与交付**：本记录、`HANDOFF.md`、文档索引、必要版本字段与候选说明；
@@ -55,4 +55,12 @@
   新文件标签、主窗口关闭后 Sidecar PID 消失且连接意图保留。补全整页截图并检查状态区；
   表单占位文字随旧凭据状态刷新，但不覆盖未保存的用户输入。
   本轮全部为临时目录/假 Secret/假 Sidecar，没有读取真实凭据或与系统认证窗口交互。
-- 下一任务：REL-03。子模块不需要生产或测试修改；REL-02 SHA 后续回填。
+- REL-02 提交 `f04e93810e6d4e9e7f37d9d9658d010f52b0ee69`，已推集成分支。
+- 当前任务：REL-03。明确的精简候选为 1,464 个 .d.mts/.d.cts 声明（7,716,308 B）；
+  原脚本仅覆盖 .d.ts。采用窄扩展，不删除包的任意文档/测试/运行资源。
+- REL-03 本地门禁：临时夹具验证删除声明/保留执行 TypeScript、原生模块、资源/许可证；
+  计时 parser、中位数、退出码与禁止分支发版护栏 4/4，typecheck/两轮 bootstrap/full verify
+  419 + 1 ACP 均 exit 0。干净部署实际 modern declarations removed=1464，剩余0；模块文件16195。
+  保留 NSIS UTF-8 BOM、只读/占用保护；卸载等完整安装目录消失，避免 A/B 交叉污染。
+  Windows 编译、三轮对照与三平台整体门禁转入 REL-04 的工作流验证，尚不宣称实际提速。
+- 下一任务：REL-04：隔离候选打包与手动 CI（只构建验证，不创建 Release/tag）。
