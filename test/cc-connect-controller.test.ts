@@ -17,6 +17,10 @@ async function fixture(platform: NodeJS.Platform = process.platform) {
   let startFailure = false
   let living = 0
   let maxLiving = 0
+  let blockStart = false
+  let releaseStart: ((ready: boolean) => void) | undefined
+  let notifyStarted: () => void = () => {}
+  const whenStarted = new Promise<void>(resolve => { notifyStarted = resolve })
   const events: Parameters<ConnectControllerOptions['createProcess']>[2][] = []
   const actions: string[] = []
   const controller = new ConnectController({ store, environment: () => environment, validWorkspace: async path => path === home,
@@ -29,6 +33,8 @@ async function fixture(platform: NodeJS.Platform = process.platform) {
           actions.push(`start:${application.id}`)
           if (startFailure) throw new Error('fake-private-start-error')
           live = true; living++; maxLiving = Math.max(maxLiving, living)
+          notifyStarted()
+          if (blockStart) return new Promise<boolean>(resolve => { releaseStart = resolve })
           callbacks.onState({ phase: 'ready', restartAttempts: 0 })
           return true
         },
@@ -36,6 +42,7 @@ async function fixture(platform: NodeJS.Platform = process.platform) {
           actions.push(`stop:${application.id}`)
           if (stopFailure) throw new Error('fake-private-stop-error')
           if (live) { living--; live = false }
+          releaseStart?.(false)
           callbacks.onState({ phase: 'stopped' })
         },
       }
@@ -44,10 +51,55 @@ async function fixture(platform: NodeJS.Platform = process.platform) {
   return { home, store, environment, controller, events, actions,
     get living() { return living }, get maxLiving() { return maxLiving },
     set stopFailure(value: boolean) { stopFailure = value }, set startFailure(value: boolean) { startFailure = value },
+    set blockStart(value: boolean) { blockStart = value }, whenStarted,
     add: (appId: string) => controller.saveApplication({ name: appId, appId, workspace: home, appSecret: `fake-${appId}` }),
-    close: async () => { stopFailure = false; await controller.pause(); await rm(home, { recursive: true, force: true }) },
+    close: async () => { stopFailure = false; releaseStart?.(false); await controller.pause(); await rm(home, { recursive: true, force: true }) },
   }
 }
+
+test('terminal shutdown preempts a pending start, deduplicates stops, and retains connection intent', async () => {
+  const f = await fixture()
+  try {
+    const app = await f.add('one')
+    await f.store.setIntent({ enabled: true, autoConnect: true })
+    f.blockStart = true
+    const started = f.controller.start('startup', app.id)
+    await f.whenStarted
+    await f.controller.shutdown()
+    assert.equal(await started, false)
+    assert.equal(f.living, 0)
+    assert.equal(f.actions.filter(action => action.startsWith('stop:')).length, 1)
+    assert.equal(await f.controller.start('manual', app.id), false)
+    assert.equal(f.actions.filter(action => action.startsWith('start:')).length, 1)
+    assert.equal((await f.store.read()).enabled, true)
+    assert.equal((await f.store.read()).autoConnect, true)
+  } finally { await f.close() }
+})
+
+test('a process factory that finishes after shutdown is stopped without starting', async () => {
+  const f = await fixture()
+  let releaseFactory: () => void = () => {}
+  let notifyFactory: () => void = () => {}
+  const pending = new Promise<void>(resolve => { releaseFactory = resolve })
+  const entered = new Promise<void>(resolve => { notifyFactory = resolve })
+  let starts = 0; let stops = 0
+  const controller = new ConnectController({ store: f.store, environment: () => f.environment,
+    validWorkspace: async () => true, createProcess: async () => {
+      notifyFactory(); await pending
+      return { start: async () => { starts++; return true }, stop: async () => { stops++ } }
+    } })
+  try {
+    const app = await f.add('one')
+    const started = controller.start('manual', app.id)
+    await entered
+    const stopped = controller.shutdown()
+    releaseFactory()
+    await stopped
+    assert.equal(await started, false)
+    assert.equal(starts, 0); assert.equal(stops, 1)
+    assert.equal(controller.hasProcess, false)
+  } finally { releaseFactory(); await controller.shutdown().catch(() => {}); await f.close() }
+})
 
 test('macOS legacy credentials block startup without spawning or retrying, and explicit re-entry restores the connection', async () => {
   const f = await fixture('darwin')

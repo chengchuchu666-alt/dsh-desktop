@@ -44,8 +44,10 @@ jobs:
         run: xvfb-run -a pnpm run smoke
         env:
           ELECTRON_DISABLE_SANDBOX: "1"
+      - name: Install test window manager (real minimize/restore under Xvfb)
+        run: sudo apt-get update && sudo apt-get install -y openbox x11-utils
       - name: Electron shell E2E (native menu, locale sync, close-to-quit)
-        run: xvfb-run -a node scripts/run-e2e-guarded.mjs
+        run: xvfb-run -a sh scripts/run-e2e-linux.sh
         env:
           ELECTRON_DISABLE_SANDBOX: "1"
       - name: Upload Electron E2E diagnostics

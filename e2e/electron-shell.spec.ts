@@ -83,7 +83,7 @@ const shellTest = test.extend<Fixture & { pathStyle: PathStyle; seedLegacySettin
         "import { readFileSync, appendFileSync } from 'node:fs'",
         "const mode = readFileSync(process.env.DSH_CC_CONNECT_TEST_MODE, 'utf8').trim()",
         "appendFileSync(process.env.DSH_CC_CONNECT_TEST_MODE + '.starts', String(process.pid) + '\\n')",
-        "console.error('fake cc-connect ready projects=1')",
+        "if (mode !== 'waiting') console.error('fake cc-connect ready projects=1')",
         "if (mode === 'health') setTimeout(() => { for (const event of [{version:1,component:'channel',state:'online'},{version:1,component:'agent',state:'unavailable',errorCode:'model-key-missing'}]) console.error('level=INFO msg=\"cc-connect health\" event=' + JSON.stringify(JSON.stringify(event))) }, 30)",
         "if (mode === 'crash') setTimeout(() => { console.error('fake sidecar crash'); process.exit(23) }, 40)",
         'setInterval(() => {}, 1000)',
@@ -525,7 +525,7 @@ shellTest('closing the main window quits even with an auxiliary window open @smo
     setImmediate(() => BrowserWindow.fromId(id)?.close())
   }, mainId)
   await closed
-  expect(process.exitCode).toBe(0)
+  await expect.poll(() => process.exitCode).toBe(0)
   expect(window.isClosed()).toBe(true)
 })
 
@@ -883,7 +883,8 @@ shellTest('window geometry is restored after a restart', async ({ electronApp, w
 
 shellTest('a real second instance is redirected to the already-running app', async ({ electronApp, window, dshHome, userData }) => {
   await expect(window.getByRole('heading', { name: 'Harness test workspace' })).toBeVisible()
-  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close())
+  // Hidden startup remains supported; close now means quit, not hide.
+  await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.hide())
   await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(false)
   const args = ['.', `--user-data-dir=${userData}`]
   if (process.platform === 'linux') args.push('--no-sandbox')
@@ -923,6 +924,38 @@ test.describe('environment edge paths', () => {
 
 shellTest.describe('cc-connect desktop sidecar', () => {
   shellTest.use({ connectSidecar: true })
+
+  shellTest('closing during connection startup leaves no sidecar process @smoke @critical', async ({ electronApp, window, dshHome, connectModePath }) => {
+    await packagedOrStubHeadline(window)
+    await writeFile(connectModePath!, 'waiting\n')
+    expect(await window.evaluate(workspace => (window as any).dshDesktop.saveConnectSettings({ enabled: true, appId: 'cli_pending_fake', workspace, appSecret: 'fake-pending-secret' }), dshHome)).toMatchObject({ ok: true })
+    const start = window.evaluate(() => (window as any).dshDesktop.startConnect()).catch(error => {
+      if (/Target.*closed|Execution context was destroyed/.test(String(error))) return false
+      throw error
+    })
+    await expect.poll(() => readFile(connectModePath! + '.starts', 'utf8').catch(() => '')).not.toBe('')
+    const pid = Number((await readFile(connectModePath! + '.starts', 'utf8')).trim().split('\n').at(-1))
+    expect(Number.isInteger(pid) && pid > 0).toBe(true)
+    try {
+      const main = await electronApp.browserWindow(window)
+      const id = await main.evaluate(main => main.id)
+      const exited = electronApp.waitForEvent('close', { timeout: 10_000 })
+      await electronApp.evaluate(({ BrowserWindow }, id) => { setImmediate(() => BrowserWindow.fromId(id)?.close()) }, id)
+      await exited
+      expect(await start).toBe(false)
+      await expect.poll(() => {
+        try { process.kill(pid, 0); return true } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false
+          throw error
+        }
+      }).toBe(false)
+    } finally {
+      // Only this test's recorded fake PID, never a global node process sweep.
+      try { process.kill(pid, 'SIGKILL') } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
+      }
+    }
+  })
 
   shellTest('close persists across Desktop restart and Safe Mode; autoConnect is startup-only and health is layered @critical', async ({ window, dshHome, userData, connectModePath, relaunch }) => {
     type Bridge = { getConnectState(): Promise<ConnectState | null>; saveConnectSettings(input: ConnectSettingsInput): Promise<ConnectSaveResult | null>;

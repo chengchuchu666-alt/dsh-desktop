@@ -32,6 +32,8 @@ export class ConnectController {
   private queue: Promise<void> = Promise.resolve()
   private process: ConnectProcess | undefined
   private processApplicationId: string | undefined
+  private shutdownRequested = false
+  private stopTask: Promise<void> | undefined
   private generation = 0
   private runtime: RuntimeState = { phase: 'stopped' }
   private health: ConnectHealth = { channel: 'unknown', dsh: 'unknown' }
@@ -64,7 +66,16 @@ export class ConnectController {
       enabled: settings.enabled, autoConnect: settings.autoConnect, connection, health: { ...this.health } }
   }
 
-  private async stop(): Promise<void> {
+  private stop(): Promise<void> {
+    if (this.stopTask !== undefined) return this.stopTask
+    const task = this.stopOwnedProcess()
+    this.stopTask = task
+    const clear = () => { if (this.stopTask === task) this.stopTask = undefined }
+    void task.then(clear, clear)
+    return task
+  }
+
+  private async stopOwnedProcess(): Promise<void> {
     if (this.process === undefined) {
       this.runtime = { phase: 'stopped' }
       this.health = { channel: 'offline', dsh: 'unknown' }
@@ -83,6 +94,7 @@ export class ConnectController {
   }
 
   private async startEligible(reason: ConnectStartReason): Promise<boolean> {
+    if (this.shutdownRequested) return false
     const settings = await this.options.store.read()
     if (!shouldStartConnect(settings, reason, this.options.environment())) return false
     if (this.process !== undefined && this.processApplicationId === settings.activeApplicationId && this.runtime.phase === 'ready') return true
@@ -100,16 +112,19 @@ export class ConnectController {
     const generation = ++this.generation
     this.health = { channel: 'unknown', dsh: 'unknown' }
     try {
-      this.process = await this.options.createProcess(application, secret, {
-        onState: state => { if (generation === this.generation) this.runtime = state },
-        onHealth: health => { if (generation === this.generation) this.health = { ...health } },
+      const process = await this.options.createProcess(application, secret, {
+        onState: state => { if (generation === this.generation && !this.shutdownRequested) this.runtime = state },
+        onHealth: health => { if (generation === this.generation && !this.shutdownRequested) this.health = { ...health } },
       })
+      if (this.shutdownRequested) { await process.stop(); return false }
+      this.process = process
       this.processApplicationId = application.id
-      if (await this.process.start()) return true
+      if (await process.start() && !this.shutdownRequested) return true
     } catch {
       this.runtime = { phase: 'crashed', restartAttempts: 0, lastError: 'cc-connect could not start', logTail: '' }
       this.health = { ...this.health, errorCode: 'sidecar' }
     }
+    if (this.shutdownRequested) { await this.stop(); return false }
     const failed = this.runtime
     await this.stop()
     this.runtime = failed
@@ -119,6 +134,7 @@ export class ConnectController {
 
   start(reason: ConnectStartReason = 'manual', id?: string): Promise<boolean> {
     return this.serial(async () => {
+      if (this.shutdownRequested) return false
       const settings = await this.options.store.read()
       if (id !== undefined && id !== settings.activeApplicationId) {
         if (!settings.applications.some(item => item.id === id)) throw new ConnectOperationError('invalid-input')
@@ -143,6 +159,18 @@ export class ConnectController {
 
   /** Safe Mode, kernel shutdown and quit pause without changing saved intent. */
   pause(): Promise<void> { return this.serial(() => this.stop()) }
+
+  /** Terminal host quit preempts a waiting start instead of queueing behind
+   * its readiness timeout. Late factories are stopped before they can start. */
+  shutdown(): Promise<void> {
+    this.shutdownRequested = true
+    const immediate = this.stop()
+    const queued = this.serial(() => this.stop())
+    return Promise.allSettled([immediate, queued]).then(results => {
+      const failure = results.find(result => result.status === 'rejected')
+      if (failure?.status === 'rejected') throw failure.reason
+    })
+  }
 
   setAutoConnect(autoConnect: boolean): Promise<void> {
     return this.serial(async () => {

@@ -83,6 +83,7 @@ let localeController: ShellLocaleController | undefined
 let desktopPreferencesController: DesktopPreferencesController | undefined
 let lastPublicStatus: PublicStatusSnapshot | undefined
 let lastHarnessPhase: HarnessState['phase'] | undefined
+let shutdownComplete = false
 const sessionTrashClient = new SessionTrashClient()
 let connectController: ConnectController | undefined
 let feishuManager: FeishuManager | undefined
@@ -1605,7 +1606,10 @@ async function boot(): Promise<string> {
 }
 
 app.on('before-quit', (event) => {
-  if (windowContext.quitInProgress) return
+  if (windowContext.quitInProgress) {
+    if (!shutdownComplete) event.preventDefault()
+    return
+  }
   windowContext.quitInProgress = true
   releaseDesktopShortcut()
   closeLanPairingWindow()
@@ -1617,18 +1621,21 @@ app.on('before-quit', (event) => {
     // Absolute quit guard: each stop() already has a SIGKILL fallback, but if
     // something unexpected leaves a promise pending we still force-quit
     // within 8s instead of hanging the app on exit.
-    const forceQuitTimer = setTimeout(() => app.quit(), 8_000)
+    const forceQuitTimer = setTimeout(() => { shutdownComplete = true; app.quit() }, 8_000)
     forceQuitTimer.unref()
     for (const runtimeWindow of runtimeWindows.values()) {
       if (!runtimeWindow.isDestroyed()) runtimeWindow.close()
     }
-    void Promise.all([stopConnectSupervisor().then(() => shellApp.stopHarness()), feishuManager?.cancelQr(), lanService.stop()]).then(() => runtimeManager?.stopAll()).catch(() => {
-      console.warn('dsh-desktop: shutdown incomplete; quitting with process stop errors')
+    // Independent services stop concurrently within the absolute quit budget.
+    // A sidecar failure must not skip Harness or secondary-runtime shutdown.
+    void Promise.allSettled([connectController?.shutdown(), shellApp.stopHarness(), feishuManager?.cancelQr(), lanService.stop(), runtimeManager?.stopAll()]).then(results => {
+      if (results.some(result => result.status === 'rejected')) console.warn('dsh-desktop: shutdown incomplete; quitting with process stop errors')
     }).finally(() => {
       clearTimeout(forceQuitTimer)
+      shutdownComplete = true
       app.quit()
     })
-  }
+  } else shutdownComplete = true
 })
 
 app.on('window-all-closed', () => {

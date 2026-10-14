@@ -44,3 +44,4 @@ This directory records the architecture decisions made while building dsh-deskto
 | 0037 | One Feishu application manager with persistent intent and layered health / 统一飞书应用管理、持久连接意图与分层健康状态 | [EN](0037-feishu-application-manager.md) · [中文](0037-feishu-application-manager.zh.md) | Accepted / 已接受 |
 | 0038 | Closing the main window quits / 关闭主窗口即退出 | [EN](0038-close-main-window-quits.md) · [中文](0038-close-main-window-quits.zh.md) | Accepted / 已接受 |
 | 0039 | macOS Feishu credentials without keychain access / macOS 飞书凭据不访问钥匙串 | [EN](0039-macos-file-credentials.md) · [中文](0039-macos-file-credentials.zh.md) | Accepted / 已接受 |
+| 0040 | Terminal host shutdown preempts start / 应用退出抢占未完成启动 | [EN](0040-terminal-shutdown-preempts-start.md) · [中文](0040-terminal-shutdown-preempts-start.zh.md) | Accepted / 已接受 |

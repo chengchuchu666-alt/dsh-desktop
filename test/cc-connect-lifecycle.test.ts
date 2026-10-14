@@ -6,7 +6,7 @@ const source = readFileSync('src/main/index.ts', 'utf8')
 
 test('cc-connect lifecycle is wired after Harness readiness and before quit completes', () => {
   assert.match(source, /const url = await boot\(\)[\s\S]*?await startConnectAfterHarness\('startup'\)/)
-  assert.match(source, /stopConnectSupervisor\(\)\.then\(\(\) => shellApp\.stopHarness\(\)\)/)
+  assert.match(source, /app.on\('before-quit'[\s\S]*?Promise.allSettled\(\[connectController\?\.shutdown\(\), shellApp.stopHarness\(\)/)
 })
 
 test('Safe Mode and kernel changes refresh the sidecar configuration', () => {

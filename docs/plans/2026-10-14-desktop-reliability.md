@@ -64,3 +64,17 @@
   保留 NSIS UTF-8 BOM、只读/占用保护；卸载等完整安装目录消失，避免 A/B 交叉污染。
   Windows 编译、三轮对照与三平台整体门禁转入 REL-04 的工作流验证，尚不宣称实际提速。
 - 下一任务：REL-04：隔离候选打包与手动 CI（只构建验证，不创建 Release/tag）。
+- REL-03 提交 `c4f584b58a4ed51a6345c6f2f31ae82ea1383b87` 已推两远端。
+- REL-04 验证发现 REL-01 收尾边界，新增原子修正范围：`src/main/index.ts`、
+  `src/main/cc-connect-controller.ts`、对应 controller/lifecycle/window-close 单测、同一 E2E、
+  `scripts/run-e2e-linux.sh`、`test/linux-e2e.test.ts`、两份 CI workflow、ADR0040/索引与本记录。
+  新 pending-start 场景在旧实现 exit1：壳已退出但记录的假 Sidecar PID 仍活着；
+  finally 仅回收本测试 PID。终结 shutdown 与独立服务并行停止后五轮5/5 exit0。
+  最初手动 CI `38494099214` verify 失败（未构建/发布）：还有旧单实例测试使用 close=hide，
+  且 Xvfb 没有 WM 导致 minimize 不成立。保留真实最小化断言，增加测试专用 Openbox；
+  真实单实例用例只将准备动作改为显式 hide，保留隐藏/激活/第二进程退出全部断言。
+  原报告器错误创建“分支 Release 失败”issue107；手动验证仍保留 CI 失败状态，但不再
+  创建发布故障 issue。#107 仅在最终验证成功后按已恢复历史告警关闭。
+- REL-01 收尾修正：pending-start 修复后5/5；正常/辅助窗口退出、最小化激活、真实第二实例、
+  旧凭据恢复与 Sidecar PID 退出合计五轮25/25 exit0。增加 terminal shutdown / 迟到 factory /
+  单项失败仍停所有服务的单测；重复 Quit 不能抢先绕过清理，保持原8秒绝对兜底。
