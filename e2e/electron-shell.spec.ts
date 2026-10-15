@@ -1351,6 +1351,7 @@ shellTest.describe('Feishu extension setup', () => {
     await manager.getByText('Existing application (advanced)', { exact: true }).click()
     await manager.getByLabel('App ID', { exact: true }).fill('cli_manager_second')
     await manager.getByLabel('App Secret', { exact: true }).fill('fake-manager-second')
+    await manager.getByText('Message styles / noise reduction', { exact: true }).click()
     await manager.getByRole('combobox', { name: 'Message detail', exact: true }).selectOption('quiet')
     await manager.getByRole('combobox', { name: 'Refresh interval', exact: true }).selectOption('5000')
     await manager.getByRole('checkbox', { name: 'Streaming preview', exact: true }).uncheck()

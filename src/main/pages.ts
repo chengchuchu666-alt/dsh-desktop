@@ -11,10 +11,10 @@ import type { HarnessStartupStage } from './supervisor.ts'
 
 const STYLE = `
   :root { color-scheme: light dark; --bg: #f9f8f8; --panel: #ffffff; --line: #e7e7e9;
-          --text: #202123; --muted: #676b73; --signal: #4d6bfe; --signal-soft: #eef1ff; --danger: #d14343; }
+          --text: #202123; --muted: #676b73; --signal: #4d6bfe; --signal-soft: #eef1ff; --danger: #d14343; --button-bg: #435fe9; --button-text: #fff; }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #0e0f12; --panel: #17181c; --line: #2b2d34; --text: #f4f4f5;
-            --muted: #a6a9b0; --signal: #7690ff; --signal-soft: #202846; --danger: #ff8585; }
+            --muted: #a6a9b0; --signal: #7690ff; --signal-soft: #202846; --danger: #ff8585; --button-bg: #7690ff; --button-text: #0e0f12; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; padding: 32px; font-family: -apple-system, BlinkMacSystemFont,
@@ -44,8 +44,8 @@ const STYLE = `
   pre { margin: 8px 0 0; text-align: left; background: var(--bg); color: var(--text); padding: 16px;
         border: 1px solid var(--line); border-radius: 8px; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
         max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-  button { padding: 10px 18px; font-size: 13px; font-weight: 700; background: var(--signal); color: #fff;
-           border: 1px solid var(--signal); border-radius: 7px; cursor: pointer; }
+  button { padding: 10px 18px; font-size: 13px; font-weight: 700; background: var(--button-bg); color: var(--button-text);
+           border: 1px solid var(--button-bg); border-radius: 7px; cursor: pointer; }
   button:hover { filter: brightness(1.06); }
   button:disabled { opacity: .55; cursor: wait; }
   button.secondary { background: transparent; color: var(--muted); border-color: var(--line); }

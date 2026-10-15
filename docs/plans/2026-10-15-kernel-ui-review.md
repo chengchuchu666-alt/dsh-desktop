@@ -5,14 +5,15 @@
 用户授权升级内核、审查全部壳自定义扩展 UI，并补齐设置主列表及桌面工具浮窗中的飞书入口。
 采用实现 → 验证 → 修正 → 再验证；不发布新 tag/Release，不改已发布 shell.4，不覆盖已安装应用。
 维护当前集成分支；保留上游网站机器人提交，不重写既有任务 SHA。
-测试仅用临时 profile、假 Secret/Sidecar、模拟 ACP；不读取真实凭据，不发真实消息或开启真实 LAN。
+测试仅用临时 profile、假 Secret/Sidecar、模拟 ACP；不读取真实凭据、不发真实消息，
+不启动用户正式 profile 的 LAN。既有 LAN E2E 只临时共享隔离测试页面，结束关闭并清理。
 
 ## 有序原子任务
 
 | ID | 目标 / 允许修改 | 门禁 | 状态 |
 |---|---|---|---|
-| KUI-01 | Harness 升至官方已发布 alpha.3；package.json、manifest/harness 的清单/锁/工作区/兼容补丁、scripts/patch-session-trash.mjs 等内核闭包适配、对应单测与版本说明 | 官方 registry 检查；冻结安装；bootstrap/peer 审计；verify；ACP 凭据策略核验 | 已完成，提交待回填 |
-| KUI-02 | 盘点、补齐并修正自定义入口/排版；plugins/dsh-desktop-controls、src/main 的自定义页面与其原生窗口、相应单测/E2E、用户文档 | 真实新内核界面；设置主列表、浮窗、原生菜单进入同一飞书管理器；状态/安全边界；中英文、亮暗、窄宽窗口与键盘/溢出检查 | 待执行 |
+| KUI-01 | Harness 升至官方已发布 alpha.3；package.json、manifest/harness 的清单/锁/工作区/兼容补丁、scripts/patch-session-trash.mjs 等内核闭包适配、对应单测与版本说明 | 官方 registry 检查；冻结安装；bootstrap/peer 审计；verify；ACP 凭据策略核验 | 完成：8e89ab302e096e1cdc243ff4b87dbfda98f6931f，两远端已推送 |
+| KUI-02 | 盘点、补齐并修正自定义入口/排版；plugins/dsh-desktop-controls、src/main 的自定义页面与其原生窗口、相应单测/E2E、用户文档 | 真实新内核界面；设置主列表、浮窗、原生菜单进入同一飞书管理器；状态/安全边界；中英文、亮暗、窄宽窗口与键盘/溢出检查 | 已完成，本次提交；SHA 由下一记录回填 |
 | KUI-03 | 新版打包与完整回归、记录视觉证据；E2E/文档/本文件与 HANDOFF/架构版本头，构建产生的 sidecar manifest | verify/audit；顺序完成 dist 后两项 smoke、packaged 全集及关键飞书五轮、市场 offline/real、LAN 临时模拟；干净工作区及分支推送 | 待执行 |
 
 每项完成后单独提交，精确暂存，回填 SHA、命令/退出码、未覆盖项与下一任务。
@@ -36,5 +37,13 @@
   `node --test test/kernel-account-patch.test.ts test/session-trash-patch.test.ts` exit0（12项）；
   发布说明check/diff check均exit0。新内核尚未执行真实界面、打包/安装、真人飞书往返；这些不冒充已覆盖。
   垃圾桶红色反馈为0.13秒稳定锚点不匹配，适配claim/claims后所有原断言保留并增加pending claim/resume保护。
-- 下一任务：KUI-02，盘点与修正入口及布局，真实新内核视觉验证。
+- KUI-02：`pnpm verify` exit0（428单测 + ACP1），`pnpm test:e2e` exit0（35通过/9既有条件未启用，未新增跳过）；
+  六组真实内核 UI `pnpm exec playwright test e2e/desktop-ui-review.spec.ts --output=/tmp/dsh-kui02-visual-evidence` exit0；
+  三项真实会话生命周期聚焦回归 exit0；`git diff --check`、client.js 语法检查、release-notes check均exit0。
+  审查发现与视觉边界见 `2026-10-15-custom-ui-audit.md`。中间真实红色反馈：边缘菜单裁切、长名称溢出；
+  截图另发现新分区缺主题域。全部修正，未删除/放宽原断言。
+  完整 E2E 另暴露alpha.3持久化构造器转为私有；三个辅助脚本改挂载公开插件服务并有序dispose，
+  保留数据读回、活动turn拒删及外部写锁断言。初次清理误用ctx.dispose，改用公开fork.dispose后三项及完整回归通过。
+  未覆盖：Windows/Linux原生控件视觉、真实飞书往返；打包门禁留给KUI-03。
+- 下一任务：KUI-03，新打包与完整回归，回填KUI-02 SHA并推送。
 - 最新已发布仍是 `0.2.1-alpha.2.shell.4`；GitCode 镜像登录阻塞属于既有发布交付，不在此处冒称解决。

@@ -86,8 +86,10 @@ window.__ModuleLoader__.load({
         border: 1px solid var(--dsh-controls-border);
         border-radius: 18px;
         box-shadow: 0 18px 48px rgba(31, 35, 43, .2);
-        margin-top: 8px;
-        overflow: hidden;
+        margin: 0;
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        position: fixed;
         pointer-events: auto;
         width: min(340px, calc(100vw - 32px));
       }
@@ -250,7 +252,10 @@ window.__ModuleLoader__.load({
         border: 1px solid color-mix(in srgb, var(--dsh-controls-accent) 24%, var(--dsh-controls-border));
         border-radius: 16px;
         box-shadow: 0 14px 38px rgba(31, 35, 43, .17);
-        margin-top: 8px;
+        margin: 0;
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        position: fixed;
         padding: 15px 16px 14px;
         pointer-events: auto;
         width: min(310px, calc(100vw - 32px));
@@ -914,6 +919,7 @@ window.__ModuleLoader__.load({
       zh: {
         trigger: "桌面工具", title: "桌面工具", panelEyebrow: "DSH DESKTOP", panelCopy: "连接移动设备、调整桌面习惯，或在异常时恢复 Harness。", ready: "已就绪",
         panelConnect: "连接", panelRecovery: "恢复", panelMaintenance: "维护", panelInfo: "信息",
+        feishuEntry: "飞书连接", feishuEntryDetail: "扫码创建、管理应用与消息样式", feishuBoundary: "在独立管理窗口中保存应用、开启或关闭连接。关闭窗口不会关闭连接；进入此页不会自动连接。",
         about: "关于",
         aboutDetail: "版本、运行时与项目来源",
         checkUpdates: "检查更新", checkUpdatesDetail: "检查 dsh-desktop 新版本",
@@ -975,6 +981,7 @@ window.__ModuleLoader__.load({
       en: {
         trigger: "Desktop tools", title: "Desktop tools", panelEyebrow: "DSH DESKTOP", panelCopy: "Connect a device, tune desktop habits, or recover Harness when needed.", ready: "Ready",
         panelConnect: "Connect", panelRecovery: "Recovery", panelMaintenance: "Maintenance", panelInfo: "Information",
+        feishuEntry: "Feishu connections", feishuEntryDetail: "QR setup, applications and message styles", feishuBoundary: "Save applications and open or close connections in the manager. Closing its window does not disconnect. Visiting this page does not connect automatically.",
         about: "About",
         aboutDetail: "Version, runtime, and project source",
         checkUpdates: "Check for updates", checkUpdatesDetail: "Check for a new dsh-desktop release",
@@ -2017,6 +2024,30 @@ window.__ModuleLoader__.load({
       });
     }
 
+    function FeishuSettingsSection() {
+      const copy = useChinese() ? COPY.zh : COPY.en;
+      const bridge = typeof window !== "undefined" ? window.dshDesktop : undefined;
+      const [busy, setBusy] = react.useState(false);
+      const [message, setMessage] = react.useState("");
+      const openManager = async () => {
+        setBusy(true);
+        setMessage("");
+        try {
+          if (await bridge?.openConnectManager?.() !== true) setMessage(copy.connectUnavailable);
+        } catch { setMessage(copy.connectUnavailable); }
+        finally { setBusy(false); }
+      };
+      return react_jsx_runtime.jsx("div", { "data-dsh-desktop-settings-section": true, "data-dsh-desktop-settings": true, "data-dsh-feishu-settings": true, children:
+        react_jsx_runtime.jsxs("section", { "data-dsh-desktop-settings-group": true, style: { gridColumn: "1 / -1" }, children: [
+          react_jsx_runtime.jsx("h4", { "data-dsh-desktop-settings-group-title": true, children: copy.feishuEntry }),
+          react_jsx_runtime.jsx("p", { children: copy.feishuEntryDetail }),
+          react_jsx_runtime.jsx("button", { type: "button", "data-dsh-connect-manager": true, "data-primary": true, disabled: busy || typeof bridge?.openConnectManager !== "function", onClick: () => void openManager(), children: copy.connectManage }),
+          react_jsx_runtime.jsx("p", { children: copy.feishuBoundary }),
+          message ? react_jsx_runtime.jsx("p", { "data-dsh-desktop-status": true, role: "status", children: message }) : null,
+        ] }),
+      });
+    }
+
     function guideProgressOf(state, startup, preferences) {
       const sessions = Object.values(state?.byId ?? {});
       return [
@@ -2027,9 +2058,9 @@ window.__ModuleLoader__.load({
       ];
     }
 
-    function FirstSuccessGuide({ copy, progress, onDismiss }) {
+    function FirstSuccessGuide({ copy, progress, onDismiss, floatingRef, floatingStyle }) {
       const labels = [copy.guideRuntime, copy.guideWorkspace, copy.guideModel, copy.guideTask];
-      return react_jsx_runtime.jsxs("section", { "data-dsh-first-success-guide": true, "aria-label": copy.guideTitle, children: [
+      return react_jsx_runtime.jsxs("section", { ref: floatingRef, style: floatingStyle, "data-dsh-first-success-guide": true, "aria-label": copy.guideTitle, children: [
         react_jsx_runtime.jsxs("div", { "data-dsh-guide-head": true, children: [
           react_jsx_runtime.jsxs("span", { children: [
             react_jsx_runtime.jsx("span", { "data-dsh-controls-eyebrow": true, children: copy.guideEyebrow }),
@@ -2149,11 +2180,50 @@ window.__ModuleLoader__.load({
       const [entryPosition, setEntryPosition] = react.useState(loadEntryPosition);
       const [dragging, setDragging] = react.useState(false);
       const dragRef = react.useRef(null);
+      const triggerRef = react.useRef(null);
+      const floatingRef = react.useRef(null);
+      const [floatingStyle, setFloatingStyle] = react.useState(undefined);
       const suppressClickRef = react.useRef(false);
       const [startup, setStartup] = react.useState(null);
       const sessionState = useSessions((state) => state);
       const status = react.useMemo(() => publicStatusOf(sessionState), [sessionState]);
       const guideProgress = react.useMemo(() => guideProgressOf(sessionState, startup, preferences), [sessionState, startup, preferences]);
+
+      react.useLayoutEffect(() => {
+        if (entryPosition === null) return undefined;
+        const keepEntryVisible = () => {
+          const bounds = triggerRef.current?.getBoundingClientRect();
+          if (!bounds) return;
+          const left = clamp(bounds.left, 8, window.innerWidth - bounds.width - 8);
+          const top = clamp(bounds.top, 8, window.innerHeight - bounds.height - 8);
+          if (left !== bounds.left || top !== bounds.top) {
+            setEntryPosition({ left: left, top: top });
+            saveEntryPosition({ left: left, top: top });
+          }
+        };
+        keepEntryVisible();
+        window.addEventListener("resize", keepEntryVisible);
+        return () => window.removeEventListener("resize", keepEntryVisible);
+      }, [entryPosition]);
+
+      react.useLayoutEffect(() => {
+        const place = () => {
+          const trigger = triggerRef.current, panel = floatingRef.current;
+          if (!trigger || !panel) return;
+          const anchor = trigger.getBoundingClientRect(), bounds = panel.getBoundingClientRect();
+          const margin = 8;
+          const left = clamp(anchor.right - bounds.width, margin, window.innerWidth - bounds.width - margin);
+          const below = anchor.bottom + margin;
+          const top = clamp(below + bounds.height <= window.innerHeight - margin ? below : anchor.top - bounds.height - margin,
+            margin, window.innerHeight - bounds.height - margin);
+          setFloatingStyle({ left: left + "px", top: top + "px" });
+        };
+        place();
+        const observer = new ResizeObserver(place);
+        if (floatingRef.current) observer.observe(floatingRef.current);
+        window.addEventListener("resize", place);
+        return () => { observer.disconnect(); window.removeEventListener("resize", place); };
+      }, [open, entryPosition, preferences?.firstRunGuideDismissed, preferences?.firstTaskCompleted]);
 
       react.useEffect(() => {
         if (typeof bridge?.reportSessionStatus !== "function" || status === undefined) return;
@@ -2189,7 +2259,7 @@ window.__ModuleLoader__.load({
       react.useEffect(() => {
         if (!open) return undefined;
         const onKeyDown = (event) => {
-          if (event.key === "Escape") setOpen(false);
+          if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
         };
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
@@ -2205,6 +2275,13 @@ window.__ModuleLoader__.load({
         } finally {
           setBusy("");
         }
+      };
+
+      const openConnectManager = async () => {
+        setBusy("connectManager");
+        try {
+          if (await bridge.openConnectManager() === true) setOpen(false);
+        } finally { setBusy(""); }
       };
 
       const onEntryPointerDown = (event) => {
@@ -2283,6 +2360,7 @@ window.__ModuleLoader__.load({
         style: entryStyle,
         children: [
           react_jsx_runtime.jsxs("button", {
+            ref: triggerRef,
             type: "button", "data-dsh-controls-trigger": true, "aria-expanded": open,
             "aria-controls": "dsh-desktop-controls-panel", "aria-label": copy.trigger,
             "data-dsh-controls-dragging": dragging || null,
@@ -2294,9 +2372,9 @@ window.__ModuleLoader__.load({
             ],
           }),
           !open && preferences !== null && preferences.firstRunGuideDismissed !== true && preferences.firstTaskCompleted !== true
-            ? react_jsx_runtime.jsx(FirstSuccessGuide, { copy: copy, progress: guideProgress, onDismiss: () => void dismissGuide() })
+            ? react_jsx_runtime.jsx(FirstSuccessGuide, { copy: copy, progress: guideProgress, onDismiss: () => void dismissGuide(), floatingRef: floatingRef, floatingStyle: floatingStyle })
             : null,
-          open ? react_jsx_runtime.jsxs("section", { id: "dsh-desktop-controls-panel", "data-dsh-controls-panel": true, role: "dialog", "aria-label": copy.title, children: [
+          open ? react_jsx_runtime.jsxs("section", { ref: floatingRef, style: floatingStyle, id: "dsh-desktop-controls-panel", "data-dsh-controls-panel": true, role: "dialog", "aria-label": copy.title, children: [
             react_jsx_runtime.jsxs("header", { "data-dsh-controls-panel-head": true, children: [
               react_jsx_runtime.jsx("span", { "data-dsh-controls-eyebrow": true, children: copy.panelEyebrow }),
               react_jsx_runtime.jsxs("div", { "data-dsh-controls-title-row": true, children: [
@@ -2309,6 +2387,7 @@ window.__ModuleLoader__.load({
               react_jsx_runtime.jsxs("section", { "data-dsh-controls-group": "connect", children: [
                 react_jsx_runtime.jsx("h3", { "data-dsh-controls-group-label": true, children: copy.panelConnect }),
                 react_jsx_runtime.jsxs("div", { "data-dsh-controls-actions": true, children: [
+                  typeof bridge?.openConnectManager === "function" ? react_jsx_runtime.jsx(PanelAction, { mark: "FS", label: copy.feishuEntry, detail: copy.feishuEntryDetail, disabled: busy !== "", onClick: () => void openConnectManager() }) : null,
                   lanState?.running === true ? react_jsx_runtime.jsxs(react.Fragment, { children: [
                     react_jsx_runtime.jsx(PanelAction, { mark: "QR", label: copy.lanShowQr, detail: copy.lanActiveDetail, primary: true, disabled: busy !== "", onClick: () => void invoke("showLanPairing") }),
                     react_jsx_runtime.jsx(PanelAction, { mark: "OFF", label: copy.lanStop, detail: copy.lanStopDetail, disabled: busy !== "", onClick: () => void invoke("stopLanPairing") }),
@@ -2363,6 +2442,10 @@ window.__ModuleLoader__.load({
         name: "settings.section", id: "dsh-desktop-controls", order: 20,
         label: () => document.documentElement.lang.toLowerCase().startsWith("zh") ? "桌面设置" : "Desktop settings",
       }, DesktopSettingsSection));
+      ctx.slots.inject("settings.section", () => ctx.slots.register({
+        name: "settings.section", id: "dsh-desktop-feishu", order: 22,
+        label: () => document.documentElement.lang.toLowerCase().startsWith("zh") ? "飞书连接" : "Feishu connections",
+      }, FeishuSettingsSection));
       // 桌面垃圾桶分区：删除资源的查看 / 还原 / 清除。
       ctx.slots.inject("settings.section", () => ctx.slots.register({
         name: "settings.section", id: "dsh-desktop-trash", order: 21,

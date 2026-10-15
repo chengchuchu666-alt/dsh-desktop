@@ -2235,5 +2235,16 @@ KUI-01：官方registry确认最新已发布alpha.3，候选版本0.2.1-alpha.3.
 新增3项上游实际bundle/组合测试验证登录拒绝预开fallback、已拥有popup取消清理，以及ACP保留Models凭据。
 headless专用关闭credentials的patch不应用于ACP；无需为此次升级更改飞书TOML或导出用户真实API Key。
 
-首次完整verify428 + ACP1、audit均exit0；移除过期direct peer后的最终完整回归结果在任务记录中回填。
-后续KUI-02补齐设置主列表/桌面浮窗飞书入口并做真实新内核视觉审查，KUI-03再新打包及完整回归。
+KUI-01最终verify428 + ACP1、audit均exit0；提交8e89ab302e096e1cdc243ff4b87dbfda98f6931f已推两远端集成分支。
+
+KUI-02补齐设置主列表/桌面浮窗飞书入口，复用同一个安全管理窗口，不隐式开启连接。
+消息样式独立于手动凭据区、保存按钮常显；真实视觉发现并修复边缘菜单裁切、长名称溢出及新分区主题变量遗漏。
+独立页面改善主按钮对比度，保留既有字体/蓝色强调；Escape返回入口焦点、缩窗钳制位置。
+审查清单及验证边界见docs/plans/2026-10-15-custom-ui-audit.md。
+
+六组真实内核视觉/交互exit0（zh/en × light/dark四组 + 首次引导/Safe Mode两组）；
+截图/tmp/dsh-kui02-visual-evidence。完整verify428 + ACP1 exit0、开发态E2E35通过/9既有条件未启用exit0。
+旧E2E脚本调用alpha.3已私有化的Persistence构造器报错；改挂载公开插件及有序fork.dispose后，
+三项真实会话删除/恢复、活动turn和外部writer锁保护均通过，未降低断言。
+开发态LAN两项在隔离profile短期代理测试页面并完成移动浏览器配对，结束清理，不涉及用户真实数据。
+下一项KUI-03：新dist完整生成后顺序跑两项smoke、打包全集、关键飞书重复回归与市场测试；不发布。
