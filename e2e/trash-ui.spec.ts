@@ -140,7 +140,7 @@ async function openTrashSection(window: Page): Promise<ReturnType<Page['locator'
 
 trashTest.describe('packaged trash resources', () => {
 trashTest.skip(process.env.DSH_E2E_PACKAGED !== '1' && process.env.DSH_E2E_TRASH !== '1', 'runs in the packaged suite (DSH_E2E_PACKAGED=1) or via DSH_E2E_TRASH=1')
-trashTest('trash UI restores and purges through the design system @smoke', async ({ window, dshHome }) => {
+trashTest('trash UI restores and purges through the design system @smoke', async ({ window, dshHome }, testInfo) => {
   const trash = await openTrashSection(window)
 
   // Design system + tab semantics + retention countdown on the fresh entry.
@@ -153,6 +153,7 @@ trashTest('trash UI restores and purges through the design system @smoke', async
   await expect(freshRow.locator('[data-dsh-trash-detail]')).toContainText(/删除于\s+20\d{2}\/\d{1,2}\/\d{1,2}/)
   await expect(trash.locator('[data-dsh-trash-badge]', { hasText: '预设' })).toBeVisible()
   await expect(freshRow.getByText(/天后自动清除|今日自动清除/)).toBeVisible()
+  await window.screenshot({ path: testInfo.outputPath('trash-resources-populated.png') })
 
   // Boot retention sweep: the entry seeded past the 30-day window was purged
   // by the shell at start-up, before this UI ever rendered.
@@ -176,6 +177,7 @@ trashTest('trash UI restores and purges through the design system @smoke', async
   const liveRow = trash.locator('[data-dsh-session-id="session-livesession1"]')
   await expect(archivedRow).toBeVisible()
   await expect(liveRow).toBeVisible()
+  await window.screenshot({ path: testInfo.outputPath('trash-sessions-populated.png') })
   await liveRow.getByRole('button', { name: '删除（入桶）', exact: true }).click()
   await expect(liveRow).toHaveCount(0, { timeout: 15_000 })
   const indexAfterSession = await readFile(join(dshHome, 'trash', 'index.json'), 'utf8')

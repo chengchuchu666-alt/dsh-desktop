@@ -9,9 +9,9 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | 候选 `0.2.1-alpha.3.shell.0`，内核升级与自定义UI审查进行中，未发布；最新公开下载仍为shell.4，见 §82 |
+| 最新代码基线 | 候选 `0.2.1-alpha.3.shell.0`，内核/UI修正、本地门禁及三平台构建验收完成；未发布，最新公开下载仍为shell.4，见 §82 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ shell.4 verify424 + ACP1、audit、新版dist、packaged18、五轮飞书/退出45、额外manager零重试10、市场 offline1/real2、LAN2、两项smoke均exit0（§81）；维护候选故障注入与真实进程退出见 §80 |
+| 本地门禁 | ✅ alpha.3候选verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、登录三轮3、市场offline1/real2、打包LAN1、两项smoke及codesign deep/strict均exit0（§82）；已发布shell.4证据见§81 |
 | 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
 | 官网数据 | ✅ 线上release JSON与实时API为shell.4，6/6 `gitcode_ok=false`并回退GitHub；Refresh `38578510405` success，bot `367b99d`；中英日志、cache47首页与凭据FAQ上线，八组线上视觉门禁及精确下载入口通过（§81） |
 | 国内镜像 | ⛔ shell.4待GitCode浏览器登录，六资产匿名HTTP404，内容门禁exit1；tag已对齐a57，原始产物保留。shell.3历史成功证据见 §79，不混称shell.4可用 |
@@ -2263,3 +2263,28 @@ KUI-03首轮新包两项smoke及codesign deep/strict exit0，24项打包回归23
 后续补丁不能为消除diff空白警告改成无锚点插入；替换hunk同时满足精确匹配与diff检查。
 修正后的冻结安装/bootstrap、verify429 + ACP1、audit均exit0；重新打包后登录E2E连续三轮exit0（14.9s），
 原精确授权URL断言不变。KUI-02A单独提交后恢复KUI-03完整打包/市场/三平台构建验证。
+
+KUI-02A提交13e4ca77bc80faef1257f1147f39dd3172092831已推两远端集成分支，产品代码以它为构建验证基线。
+KUI-03本地收尾：最终verify429 + ACP1、audit、registry最新检查、两项smoke、codesign deep/strict均exit0。
+新包24项全集exit0（3.2m），关键飞书5用例×5轮、retries=0共25通过exit0（3.3m）；
+市场offline1/real2、打包LAN移动浏览器配对1均exit0。市场成功态补充完整入屏断言与截图，原断言保留。
+本机候选为dist/mac-arm64/dsh-desktop.app，CFBundle版本0.2.1-alpha.3.shell.0；不覆盖/Applications。
+cc-connect源pin仍a9a936c5102ffa24f8165d74d5199206ba6d724a；重编译嵌入构建时间，最终manifest/binary SHA均为
+dfad3191a54c784ecf4d4f2f6d16497b2d638cc36e4f190d56f46c4263643126。只更新生成manifest，不改子模块源码。
+
+视觉证据：/tmp/dsh-kui03-packaged-evidence保留63文件；市场居中成功态截图位于/tmp/dsh-kui03-market-centered。
+全部使用临时profile/假Secret/模拟ACP，无真实飞书消息；设置/浮窗/原生菜单共用管理器，Secret仍不回显。
+垃圾桶非空资源及归档/未归档会话截图另在/tmp/dsh-kui03-trash-visuals，原完整还原/彻底删除流程保持通过。
+三平台分支构建验证[38688036508](https://github.com/citrusli2026/dsh-desktop/actions/runs/38688036508) success，
+head=13e4ca77bc80faef1257f1147f39dd3172092831，verify与macOS/Windows/Linux build均成功。
+三平台packaged各24首过（3.3m/4.5m/3.4m）、offline各1；升级各保持6份用户文件，Windows残留3场景、
+静默安装、Linux真实sandbox安装、故障恢复/闭包篡改/来源证明与工件上传通过。
+verify429 + ACP1、Linux开发态E2E32通过/12既有条件未启用；保留原有worker teardown45000ms告警/错误注释，
+原守护器收尾，未改断言/跳过或超时。publish按无tag规则跳过；未创建tag/Release，官网仍指实际发布的shell.4。
+
+Windows安装计时证据已上传windows-installer-timings工件：候选单次install111995ms、smoke3437ms、uninstall5976ms；
+与alpha.2.shell.3交错各三轮，中位数baseline104281ms、candidate112563ms（慢7.94%），不称为提速或跨机器结论。
+候选安装器SHA-256为3dc4cdb8b3a853d85a4d9d9ec3802e15b9606167aac601acf5938112aa030c00。
+Defender RT=false为runner原状态，未关闭防护；第三方AV、稳定签名、Windows/Linux人工原生视觉及真实飞书往返
+仍是未覆盖边界。没有新增真实凭据/钥匙串访问，没有改/Applications或用户正式profile。
+KUI-01/02/02A/03全部实现与验证完成；最终提交仅补E2E证据/更强入屏断言、文档及生成manifest，不改变CI产品代码基线。

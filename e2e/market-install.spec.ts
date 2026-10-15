@@ -188,7 +188,10 @@ marketTest('real market install survives unicode paths, zh/dark, minimum width, 
   }).dshDesktop?.getBundledPlugins())
   expect(status?.dshMarket.state).toBe('installed')
   expect(status?.dshMarket.version).toMatch(/^\d+\.\d+\.\d+/)
-  await expect(settings.getByText(new RegExp(`已安装.*${status?.dshMarket.version ?? ''}`))).toBeVisible()
+  const installed = settings.getByText(new RegExp(`已安装.*${status?.dshMarket.version ?? ''}`))
+  await expect(installed).toBeVisible()
+  await installed.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }))
+  await expect(installed).toBeInViewport({ ratio: 1 })
 
   const overflow = await settings.evaluate(element => Array.from(element.querySelectorAll('button, small, code'))
     .filter(node => (node as HTMLElement).scrollWidth > (node as HTMLElement).clientWidth)
