@@ -2288,3 +2288,6 @@ Windows安装计时证据已上传windows-installer-timings工件：候选单次
 Defender RT=false为runner原状态，未关闭防护；第三方AV、稳定签名、Windows/Linux人工原生视觉及真实飞书往返
 仍是未覆盖边界。没有新增真实凭据/钥匙串访问，没有改/Applications或用户正式profile。
 KUI-01/02/02A/03全部实现与验证完成；最终提交仅补E2E证据/更强入屏断言、文档及生成manifest，不改变CI产品代码基线。
+KUI-03提交05f53c98d5b51fabed79e95f0bf27ec74c26c86e已推送origin与gitcode的codex/cc-connect-dsh-integration。
+随后仅追加本回执，不改产品代码或重建应用。最终release-notes check、diff check与本机codesign deep/strict复检均exit0。
+GitHub推送仍提示默认分支1项moderate Dependabot告警；未隐去，双树audit按现有例外策略通过，不宣称零漏洞。
