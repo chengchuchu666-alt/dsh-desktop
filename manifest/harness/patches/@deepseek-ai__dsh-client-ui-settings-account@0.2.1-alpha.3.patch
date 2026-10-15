@@ -1,0 +1,6 @@
+diff --git a/lib/client.js b/lib/client.js
+index c63e2e0202f95da477d5b8a86e7e3db0ae12f93a..1bc1c5e91dcca62db3f2713a78fd5922e501ad6c 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -1033,0 +1034 @@ window.__ModuleLoader__.load({
++				else window.open(this.destination(attempt.authorizeUrl), "_blank", "noopener,noreferrer");

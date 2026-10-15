@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-14。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-15。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,7 +9,7 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.2.shell.4`：主窗口关闭退出、macOS 飞书无钥匙串凭据、Windows 安装精简；内核 `0.2.1-alpha.2` 与子模块 pin 不变，见 §81 |
+| 最新代码基线 | 候选 `0.2.1-alpha.3.shell.0`，内核升级与自定义UI审查进行中，未发布；最新公开下载仍为shell.4，见 §82 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ shell.4 verify424 + ACP1、audit、新版dist、packaged18、五轮飞书/退出45、额外manager零重试10、市场 offline1/real2、LAN2、两项smoke均exit0（§81）；维护候选故障注入与真实进程退出见 §80 |
 | 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
@@ -2211,3 +2211,29 @@ Refresh `38581122412`由正常自动队列继续复探，不需要为此重打�
 未完成：GitCode六资产上传/匿名内容校验与至少一包完整回读，需要维护者在浏览器登录；
 当前不得宣称国内镜像或完整镜像交付成功。#100、Windows manager竞态复现、真机AV与稳定分发签名
 仍按各自证据边界保留，不由本次发版代替。
+
+## 82. alpha.3 内核升级与自定义界面审查（2026-10-15，未发布）
+
+用户授权更新内核并完善全部壳自定义UI。范围、原子任务与门禁见
+`docs/plans/2026-10-15-kernel-ui-review.md`；仅推集成分支，不发tag/Release，不覆盖已安装应用。
+公开官网继续指向实际已发布的shell.4；cc-connect pin a9保持不变。
+
+KUI-01：官方registry确认最新已发布alpha.3，候选版本0.2.1-alpha.3.shell.0。
+32个内核同族直接peer同步；供应链release-age条目仅对实际发布的包重锁，不盲指不存在版本。
+新版已移除旧in-process-driver入口，`pnpm why`证明旧alpha.1仅由本清单直接引入，
+删除该过期直接pin与其exclude；官方新spawn/fork组合及peer完整性必须在bootstrap后验证。
+
+兼容补丁：上游登录改为BrowserLogin预开about:blank；保留其生命周期，仅在Electron拒绝预开窗口时
+用实际授权URL一次性打开系统浏览器。旧alpha.2补丁移除，新alpha.3补丁精确绑定版本。
+补丁迁移先遇到unused旧patch、patch-version-not-found（锁尚未切换），临时解除旧注册完成锁定后重新注册。
+`pnpm -C ... patch-commit --patches-dir patches` 生成文件后出现相对路径ENOENT；随后从正确项目目录
+冻结安装验证patch已真实应用，不把该次失败算成成功。
+
+垃圾桶补丁的alpha.3版本保护和0.13秒单测真实报错暴露createSession/claim/claims替代ensureSession/creations。
+逐处核对3个create/resume与fork句柄取得点、释放与writer所有权后适配；继续精确版本保护、唯一锚点检查。
+9项生命周期单测通过，新增pending claim/resume不得删除、删除期间不得创建的断言，未放宽原断言。
+新增3项上游实际bundle/组合测试验证登录拒绝预开fallback、已拥有popup取消清理，以及ACP保留Models凭据。
+headless专用关闭credentials的patch不应用于ACP；无需为此次升级更改飞书TOML或导出用户真实API Key。
+
+首次完整verify428 + ACP1、audit均exit0；移除过期direct peer后的最终完整回归结果在任务记录中回填。
+后续KUI-02补齐设置主列表/桌面浮窗飞书入口并做真实新内核视觉审查，KUI-03再新打包及完整回归。

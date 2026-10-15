@@ -13,7 +13,7 @@ const lifecycle = `
 	}
 	async withIdleSession(sessionId, operation) {
 		const busy = () => new RemoteError("session/agent-busy", "session is active or owned by another client", { reason: "active or writer-held" });
-		if (this.trashBlocked.has(sessionId) || this.resumes.has(sessionId) || this.creations.has(sessionId)) throw busy();
+		if (this.trashBlocked.has(sessionId) || this.resumes.has(sessionId) || this.claims.has(sessionId)) throw busy();
 		this.trashBlocked.add(sessionId);
 		try {
 			if (this.ctx.agents.list().some(child => child.session.header.parentSession === sessionId) ||
@@ -55,7 +55,9 @@ export function patchSessionTrash(source) {
   let patched = replaceOnce(source, 'var ApiSessionAgentController = class {', 'var ApiSessionAgentController = class {' + lifecycle)
   patched = replaceOnce(patched, '\t\t\t"sessions",\n\t\t\t"sessionProjections",', '\t\t\t"sessions",\n\t\t\t"sessionPersistence",\n\t\t\t"sessionProjections",')
   patched = replaceOnce(patched, '\tasync resolve(sessionId, observation) {', '\tasync resolve(sessionId, observation) {\n\t\tif (this.trashBlocked.has(sessionId)) return { error: new RemoteError("session/agent-busy", "session trash operation in progress", { reason: "trash operation in progress" }) };')
-  patched = replaceOnce(patched, '\tasync ensureSession(sessionId, cwd, checkPersistedIdentity, presetId) {', '\tasync ensureSession(sessionId, cwd, checkPersistedIdentity, presetId) {\n\t\tif (this.trashBlocked.has(sessionId)) throw new RemoteError("session/agent-busy", "session trash operation in progress", { reason: "trash operation in progress" });')
+  // alpha.3 replaced ensureSession/creations with createSession → inOrder →
+  // claim/claims. Guard the named admission and its actual serialization map.
+  patched = replaceOnce(patched, '\tasync claim(sessionId, request) {', '\tasync claim(sessionId, request) {\n\t\tif (this.trashBlocked.has(sessionId)) throw new RemoteError("session/agent-busy", "session trash operation in progress", { reason: "trash operation in progress" });')
   // Preserve disposer capabilities at the owning create/resume sites, not by
   // looking up or mutating another owner's bare Agent/session registry.
   let handles = 0
@@ -90,7 +92,7 @@ export async function patchBundledSessionTrash(root, upstreamRoot = root) {
   ]) {
     const packageRoot = join(root, 'node_modules', '@deepseek-ai', name)
     const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'))
-    if (manifest.version !== '0.2.1-alpha.2') throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
+    if (manifest.version !== '0.2.1-alpha.3') throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
     const file = join(packageRoot, 'lib', bundle)
     const upstreamFile = join(upstreamRoot, 'node_modules', '@deepseek-ai', name, 'lib', bundle)
     const source = await readFile(upstreamFile, 'utf8')

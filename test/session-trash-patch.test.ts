@@ -42,7 +42,7 @@ function fixture({ status = 'idle', queued = false, owned = true, maintenance = 
 
 test('pinned lifecycle patch is idempotent and fails closed on changed upstream anchors', () => {
   assert.equal(patchSessionTrash(patched), patched)
-  assert.throws(() => patchSessionTrash(upstream.replace('async ensureSession(', 'async changedEnsureSession(')), /anchor changed/)
+  assert.throws(() => patchSessionTrash(upstream.replace('async claim(', 'async changedClaim(')), /anchor changed/)
   assert.match(patched, /this\.agents\.keepTrashHandle\(await this\.ctx\.agents\.create/)
   assert.match(patched, /"sessions",\s+"sessionPersistence",\s+"sessionProjections"/)
 })
@@ -52,7 +52,7 @@ test('owned idle removal holds maintenance, flushes, blocks admission, then disp
   const result = await controller.withIdleSession('session-real', async (header: { id: string }) => {
     assert.equal(header.id, 'session-real')
     assert.equal((await controller.resolveAgent('session-real')).error.code, 'session/agent-busy')
-    await assert.rejects(controller.ensureSession('session-real', '/test-workspace', true), /in progress/)
+    await assert.rejects(controller.createSession({ sessionId: 'session-real', cwd: '/test-workspace' }), /in progress/)
     await assert.rejects(controller.withIdleSession('session-real', async () => {}), /active or owned/)
     events.push('move')
     return 42
@@ -67,6 +67,16 @@ test('running, queued, foreign-owned, and maintenance-active sessions are refuse
   for (const options of [{ status: 'running' }, { queued: true }, { owned: false }, { maintenance: true }]) {
     const { controller, events } = fixture(options)
     await assert.rejects(controller.withIdleSession('session-real', async () => { throw new Error('must not touch disk') }))
+    assert.deepEqual(events, [])
+    assert.equal(controller.trashBlocked.size, 0)
+  }
+})
+
+test('in-flight resumes and alpha.3 named claims both prevent deletion', async () => {
+  for (const collection of ['resumes', 'claims']) {
+    const { controller, events } = fixture()
+    controller[collection].set('session-real', Promise.resolve())
+    await assert.rejects(controller.withIdleSession('session-real', async () => { throw new Error('must not touch disk') }), /active or owned/)
     assert.deepEqual(events, [])
     assert.equal(controller.trashBlocked.size, 0)
   }
