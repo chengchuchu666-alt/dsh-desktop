@@ -1,6 +1,10 @@
 diff --git a/lib/client.js b/lib/client.js
-index c63e2e0202f95da477d5b8a86e7e3db0ae12f93a..1bc1c5e91dcca62db3f2713a78fd5922e501ad6c 100644
 --- a/lib/client.js
 +++ b/lib/client.js
-@@ -1033,0 +1034 @@ window.__ModuleLoader__.load({
+@@ -1033 +1033,2 @@ window.__ModuleLoader__.load({
+-				if (this.popup && !this.popup.closed) this.popup.location.replace(this.destination(attempt.authorizeUrl));
++				if (this.popup && !this.popup.closed) this.popup.location.replace(this.destination(attempt.authorizeUrl));
 +				else window.open(this.destination(attempt.authorizeUrl), "_blank", "noopener,noreferrer");
+@@ -4379 +4380 @@ window.__ModuleLoader__.load({
+-			const desktop = "dshDesktop" in globalThis;
++			const desktop = "dshDesktop" in globalThis && typeof globalThis.dshOnboarding?.hasApiKey === "function";

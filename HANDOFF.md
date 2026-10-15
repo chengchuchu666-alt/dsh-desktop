@@ -2248,3 +2248,18 @@ KUI-02补齐设置主列表/桌面浮窗飞书入口，复用同一个安全管�
 三项真实会话删除/恢复、活动turn和外部writer锁保护均通过，未降低断言。
 开发态LAN两项在隔离profile短期代理测试页面并完成移动浏览器配对，结束清理，不涉及用户真实数据。
 下一项KUI-03：新dist完整生成后顺序跑两项smoke、打包全集、关键飞书重复回归与市场测试；不发布。
+
+KUI-03首轮新包两项smoke及codesign deep/strict exit0，24项打包回归23通过/1失败，
+失败为登录授权URL未交给系统浏览器；不以单测或smoke通过代替登录E2E。
+新增原子修正KUI-02A，KUI-03暂停后重跑：alpha.3用dshDesktop命名判断官方桌面版，
+与本壳Web组合的同名窄桥碰撞，跳过BrowserLogin；改为同时确认官方dshOnboarding.hasApiKey能力。
+保留官方完整桥场景，不伪造桥、不放松外链安全，Web壳继续走系统浏览器。
+
+构建验证38687284942只运行分支，publish按tag保护未执行。Linux干净安装另暴露零上下文插入hunk
+被pnpm插到if之前；改为含原语句精确删除锚点的替换hunk，不再依赖裸行号插入。
+本机原manifest的hoisted目录旧文件掩盖了问题；保留旧生成依赖目录到临时位置后干净冻结安装，
+并从正常bootstrap生成的真实resources闭包读取4项account测试。保留本次所有失败日志，
+不把直接pnpm -C的isolated目录当成应用最终hoisted闭包；完整verify现为429 + ACP1 exit0。
+后续补丁不能为消除diff空白警告改成无锚点插入；替换hunk同时满足精确匹配与diff检查。
+修正后的冻结安装/bootstrap、verify429 + ACP1、audit均exit0；重新打包后登录E2E连续三轮exit0（14.9s），
+原精确授权URL断言不变。KUI-02A单独提交后恢复KUI-03完整打包/市场/三平台构建验证。

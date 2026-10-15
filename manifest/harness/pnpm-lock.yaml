@@ -23,7 +23,7 @@ overrides:
 
 patchedDependencies:
   '@deepseek-ai/dsh-client-ui-settings-account@0.2.1-alpha.3':
-    hash: c5fdbeb156c52502c93045dc7d501cadae68cd2ae5dcef22167f49e42fce815d
+    hash: 5c12488704861385726a021bc0307b217a7db8d7996ee7acd36081d10746458a
     path: patches/@deepseek-ai__dsh-client-ui-settings-account@0.2.1-alpha.3.patch
 
 importers:
@@ -5173,7 +5173,7 @@ snapshots:
     dependencies:
       '@deepseek-ai/cordis': 4.0.5-alpha.2(@deepseek-ai/cordis-plugin-include@1.0.10-alpha.2)(@deepseek-ai/cordis-plugin-loader@1.0.6-alpha.2)
 
-  '@deepseek-ai/dsh-client-ui-settings-account@0.2.1-alpha.3(patch_hash=c5fdbeb156c52502c93045dc7d501cadae68cd2ae5dcef22167f49e42fce815d)(@deepseek-ai/cordis@4.0.5-alpha.2)':
+  '@deepseek-ai/dsh-client-ui-settings-account@0.2.1-alpha.3(patch_hash=5c12488704861385726a021bc0307b217a7db8d7996ee7acd36081d10746458a)(@deepseek-ai/cordis@4.0.5-alpha.2)':
     dependencies:
       '@deepseek-ai/cordis': 4.0.5-alpha.2(@deepseek-ai/cordis-plugin-include@1.0.10-alpha.2)(@deepseek-ai/cordis-plugin-loader@1.0.6-alpha.2)
       '@deepseek-ai/schemastery': 3.18.5-alpha.2
@@ -7356,7 +7356,7 @@ snapshots:
       '@deepseek-ai/dsh-client-ui-secret-mask': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)
       '@deepseek-ai/dsh-client-ui-session': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)
       '@deepseek-ai/dsh-client-ui-settings': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)
-      '@deepseek-ai/dsh-client-ui-settings-account': 0.2.1-alpha.3(patch_hash=c5fdbeb156c52502c93045dc7d501cadae68cd2ae5dcef22167f49e42fce815d)(@deepseek-ai/cordis@4.0.5-alpha.2)
+      '@deepseek-ai/dsh-client-ui-settings-account': 0.2.1-alpha.3(patch_hash=5c12488704861385726a021bc0307b217a7db8d7996ee7acd36081d10746458a)(@deepseek-ai/cordis@4.0.5-alpha.2)
       '@deepseek-ai/dsh-client-ui-settings-agent-loop': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)
       '@deepseek-ai/dsh-client-ui-settings-general': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)
       '@deepseek-ai/dsh-client-ui-settings-models': 0.2.1-alpha.3(@deepseek-ai/cordis@4.0.5-alpha.2)

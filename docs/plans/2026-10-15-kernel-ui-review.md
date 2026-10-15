@@ -13,8 +13,9 @@
 | ID | 目标 / 允许修改 | 门禁 | 状态 |
 |---|---|---|---|
 | KUI-01 | Harness 升至官方已发布 alpha.3；package.json、manifest/harness 的清单/锁/工作区/兼容补丁、scripts/patch-session-trash.mjs 等内核闭包适配、对应单测与版本说明 | 官方 registry 检查；冻结安装；bootstrap/peer 审计；verify；ACP 凭据策略核验 | 完成：8e89ab302e096e1cdc243ff4b87dbfda98f6931f，两远端已推送 |
-| KUI-02 | 盘点、补齐并修正自定义入口/排版；plugins/dsh-desktop-controls、src/main 的自定义页面与其原生窗口、相应单测/E2E、用户文档 | 真实新内核界面；设置主列表、浮窗、原生菜单进入同一飞书管理器；状态/安全边界；中英文、亮暗、窄宽窗口与键盘/溢出检查 | 已完成，本次提交；SHA 由下一记录回填 |
-| KUI-03 | 新版打包与完整回归、记录视觉证据；E2E/文档/本文件与 HANDOFF/架构版本头，构建产生的 sidecar manifest | verify/audit；顺序完成 dist 后两项 smoke、packaged 全集及关键飞书五轮、市场 offline/real、LAN 临时模拟；干净工作区及分支推送 | 待执行 |
+| KUI-02 | 盘点、补齐并修正自定义入口/排版；plugins/dsh-desktop-controls、src/main 的自定义页面与其原生窗口、相应单测/E2E、用户文档 | 真实新内核界面；设置主列表、浮窗、原生菜单进入同一飞书管理器；状态/安全边界；中英文、亮暗、窄宽窗口与键盘/溢出检查 | 完成：5ba5a8f298b35b6e275b29e9baa66a12de7da74f，两远端已推送 |
+| KUI-02A | 打包门禁暴露的官方桌面桥命名碰撞：仅调整alpha.3 account补丁、manifest锁与对应测试/任务记录；若CI还暴露闭包检查问题，同样限于内核适配检查 | 保留登录E2E原断言；能力识别单测；冻结安装/bootstrap/verify；新包登录检查 | 完成，本次提交；KUI-03恢复 |
+| KUI-03 | 新版打包与完整回归、记录视觉证据；E2E/文档/本文件与 HANDOFF/架构版本头，构建产生的 sidecar manifest | verify/audit；顺序完成 dist 后两项 smoke、packaged 全集及关键飞书五轮、市场 offline/real、LAN 临时模拟；干净工作区及分支推送 | 新dist已生成，门禁执行中 |
 
 每项完成后单独提交，精确暂存，回填 SHA、命令/退出码、未覆盖项与下一任务。
 只推送集成分支，不将未发布候选写成官网已发布版本。
@@ -45,5 +46,9 @@
   完整 E2E 另暴露alpha.3持久化构造器转为私有；三个辅助脚本改挂载公开插件服务并有序dispose，
   保留数据读回、活动turn拒删及外部写锁断言。初次清理误用ctx.dispose，改用公开fork.dispose后三项及完整回归通过。
   未覆盖：Windows/Linux原生控件视觉、真实飞书往返；打包门禁留给KUI-03。
-- 下一任务：KUI-03，新打包与完整回归，回填KUI-02 SHA并推送。
+- KUI-02A：冻结安装/bootstrap exit0；真实resources闭包的4项account测试exit0；verify429 + ACP1 exit0；
+  audit exit0；新dist exit0；打包登录原断言连续三轮exit0（14.9s）。首次CI38687284942和首轮打包失败如实保留，
+  修正精确补丁锚点与官方桥能力识别后才恢复门禁。中间直接读取isolated manifest路径的ENOENT检查不算通过，
+  测试现统一核验bootstrap产出的真实resources，不依赖残留hoisted目录。未覆盖：完整重跑及三平台新CI，归KUI-03。
+- 下一任务：KUI-03，新包完整回归，回填KUI-02A SHA并推送。
 - 最新已发布仍是 `0.2.1-alpha.2.shell.4`；GitCode 镜像登录阻塞属于既有发布交付，不在此处冒称解决。
