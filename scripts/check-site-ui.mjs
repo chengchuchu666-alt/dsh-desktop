@@ -5,6 +5,7 @@ import { mkdtemp, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium, expect } from '@playwright/test'
+import { I18N } from '../site/assets/data-model.js'
 
 const origin = process.env.SITE_CHECK_URL || 'http://127.0.0.1:4173'
 const output = await mkdtemp(join(tmpdir(), 'dsh-site-ui-'))
@@ -41,9 +42,25 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'FAQ overflow')
       await page.goto(origin + (lang === 'en' ? '/en/changelog/' : '/changelog/'), { waitUntil: 'domcontentloaded' })
       await expect(page.getByRole('heading', { level: 2 }).first()).toContainText(release.release.tag)
+      await page.goto(origin + home, { waitUntil: 'domcontentloaded' })
+      const focus = page.locator(lang === 'en' ? '#release-focus-title' : '#latest-title')
+      await expect(focus).toContainText(I18N[lang]['latest.title'])
+      await focus.scrollIntoViewIfNeeded()
+      await page.screenshot({ path: join(output, `${lang}-${width}-${theme}-release-focus.png`), animations: 'disabled' })
+      await page.goto(origin + (lang === 'en' ? '/en/download/' : '/download/'), { waitUntil: 'domcontentloaded' })
+      const installers = release.release.assets.filter(asset => asset.kind === 'installer')
+      const links = page.locator('#platform-rows').getByRole('link', { name: / · GitHub$/ })
+      await expect(links).toHaveCount(installers.length)
+      for (const asset of installers) {
+        const link = links.and(page.locator(`[href="${asset.url}"]`))
+        await expect(link).toHaveCount(1)
+        await expect(link).toBeVisible()
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'download page overflow')
+      await page.screenshot({ path: join(output, `${lang}-${width}-${theme}-downloads.png`), fullPage: true, animations: 'disabled' })
       assert.deepEqual(errors, [], 'browser page errors')
       cases++
     } finally { await context.close() }
   }
-  console.log(`site-ui: ${cases} passed (zh/en × mobile/desktop × light/dark); screenshots: ${output}`)
+  console.log(`site-ui: ${cases} passed (release focus, Feishu, changelog, downloads; zh/en × mobile/desktop × light/dark); screenshots: ${output}`)
 } finally { await browser.close() }

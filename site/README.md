@@ -53,7 +53,7 @@ cd site && python3 -m http.server 8080
 ```
 
 预览端口 4173 时可运行 `node scripts/check-site-ui.mjs`，检查中英、390/1280 宽度、
-明暗主题、飞书介绍/FAQ/已发布更新日志。也可通过 `SITE_CHECK_URL` 检查部署后的站点；
+明暗主题、版本重点、飞书介绍/FAQ/已发布更新日志及精确安装包下载链接。也可通过 `SITE_CHECK_URL` 检查部署后的站点；
 使用隔离 Chrome context，不读取登录会话，截图保存在打印出的临时目录。
 
 `assets/` 的 css/js 带 `?v=N` 版本号,使用一年 immutable;图片类一小时
