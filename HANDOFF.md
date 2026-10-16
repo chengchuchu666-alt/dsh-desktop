@@ -2316,3 +2316,16 @@ GitCode WebBridge已连通，当前浏览器页面未登录，已非阻塞提示
 /tmp/dsh-release-alpha3-lan-dev.log、/tmp/dsh-release-alpha3-verify-final.log。双smoke/codesign、packaged24、
 飞书五轮25、市场offline1/real2均exit0，本地门禁齐备。无新增skip或超时放宽。
 LAN测试修正提交ccda157e5ed9520901a9f17f67d9997fcff9eda6；随后发布准备只更新正式说明与生成manifest。
+正式tag v0.2.1-alpha.3.shell.0固定13a964f8c7056d0d1007698954db2686697033e4，已快进推送双远端main/集成分支及精确tag，
+两个远端ls-remote均核对一致。Release run38831713638执行中；main CI38831693178、CodeQL38831693180另行跟踪。
+GitCode公开v2预检被CloudWAF返回418，不能据此判断release存在或声称404；创建前仍需登录浏览器鉴权精确检查。
+首轮Release38831713638与main CI38831693178在凭据组合测试失败，CodeQL38831693180成功；构建与publish未执行，
+自动失败issue为#109。Linux闭包peer审计通过，但transitive dsh-base未提升到顶层，测试硬编码顶层路径报ENOENT。
+用真实三个bundle文件复制为嵌套闭包，在隔离cwd运行原ACP组合测试，149ms复现相同ENOENT；
+改为createRequire锚定实际部署的dsh/package.json后解析bundle导出，嵌套闭包1项、实际平铺闭包4项均exit0。
+三条原始凭据组合断言完全保留；只改测试路径，不改产品、依赖或dist。日志/tmp/dsh-release-alpha3-composition-{nested-red,nested-green,flat}.log。
+v2无登录预检不可用后，公开v5只读接口确认目标release404；对照历史shell.3同接口200（不是用已知失效的v5上传）。
+GitHub目标release同样404，旧run已completed/failure；只允许在完整复验后以exact-tag force-with-lease更新本次未发布候选，
+禁止改历史tag或强推main。网站跟版内容已在本地准备并通过八组视觉检查，尚未推送，不提前宣传不可下载版本。
+完整复验首轮另捕获网站跟版遗漏旧“管理飞书连接”入口说明；补回真实仍保留的原生菜单及桌面设置入口，未改文档断言。
+最终完整verify429 + ACP1 exit0（/tmp/dsh-release-alpha3-verify-retag-final.log）；修正仅涉及测试路径，产品包与运行门禁结果保持有效。
