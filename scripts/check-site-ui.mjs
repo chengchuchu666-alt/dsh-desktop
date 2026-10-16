@@ -10,6 +10,7 @@ import { I18N } from '../site/assets/data-model.js'
 const origin = process.env.SITE_CHECK_URL || 'http://127.0.0.1:4173'
 const output = await mkdtemp(join(tmpdir(), 'dsh-site-ui-'))
 const release = JSON.parse(await readFile(new URL('../site/data/release.json', import.meta.url), 'utf8'))
+const installers = release.release.assets.filter(asset => asset.kind === 'installer')
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 let cases = 0
 try {
@@ -22,6 +23,7 @@ try {
       const home = lang === 'en' ? '/en/' : '/'
       const sectionTitle = lang === 'en' ? 'Send tasks to this computer from Feishu' : '在飞书里，把任务交给这台电脑'
       await page.goto(origin + home + '#feishu', { waitUntil: 'domcontentloaded' })
+      if (lang === 'zh') await expect(page.locator('#platform-rows').getByRole('link', { name: / · GitHub$/ })).toHaveCount(installers.length)
       const section = page.getByRole('region', { name: sectionTitle, exact: true })
       await expect(section).toBeVisible()
       await expect(section.getByRole('article')).toHaveCount(3)
@@ -43,12 +45,22 @@ try {
       await page.goto(origin + (lang === 'en' ? '/en/changelog/' : '/changelog/'), { waitUntil: 'domcontentloaded' })
       await expect(page.getByRole('heading', { level: 2 }).first()).toContainText(release.release.tag)
       await page.goto(origin + home, { waitUntil: 'domcontentloaded' })
+      // The Chinese homepage loads a download panel above the focus card;
+      // English uses a static landing page and a separate download page.
+      if (lang === 'zh') await expect(page.locator('#platform-rows').getByRole('link', { name: / · GitHub$/ })).toHaveCount(installers.length)
       const focus = page.locator(lang === 'en' ? '#release-focus-title' : '#latest-title')
       await expect(focus).toContainText(I18N[lang]['latest.title'])
       await focus.scrollIntoViewIfNeeded()
+      await expect(focus).toBeInViewport({ ratio: 1 })
+      await expect.poll(() => focus.evaluate(element => {
+        for (let current = element; current; current = current.parentElement) {
+          if (getComputedStyle(current).opacity !== '1') return false
+        }
+        return true
+      })).toBe(true)
       await page.screenshot({ path: join(output, `${lang}-${width}-${theme}-release-focus.png`), animations: 'disabled' })
+      await expect(focus).toBeInViewport({ ratio: 1 })
       await page.goto(origin + (lang === 'en' ? '/en/download/' : '/download/'), { waitUntil: 'domcontentloaded' })
-      const installers = release.release.assets.filter(asset => asset.kind === 'installer')
       const links = page.locator('#platform-rows').getByRole('link', { name: / · GitHub$/ })
       await expect(links).toHaveCount(installers.length)
       for (const asset of installers) {
