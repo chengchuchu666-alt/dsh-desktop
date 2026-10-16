@@ -10,12 +10,12 @@
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
 | 最新代码基线 | `0.2.1-alpha.3.shell.0`，GitHub预览版已发布；内核/UI与三平台门禁完成，官网/镜像交付收尾（§83） |
-| 已发布 | ✅ GitHub `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产）；官网切换仍在同步，不混称镜像已完成 |
+| 已发布 | ✅ GitHub `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），官网发布数据已同版；文案部署收尾，不混称镜像已完成 |
 | 本地门禁 | ✅ verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、市场offline1/real2、打包LAN三轮6/开发2、双smoke/codesign与网站八组视觉均exit0（§83）；候选历史见§82 |
 | 核心发布 | ✅ Release `38832434323` / 不可变 tag `63e5236`，三平台各24项packaged首过，安装/升级/残留/八文件/来源证明与publish通过；保留既有worker收尾告警，见 §83 |
-| 官网数据 | ⏳ Refresh `38836268677`等待镜像重探测；当前线上仍shell.4。cache48双语新入口/版本重点已准备，待同步后上线；不抢写生成JSON（§83） |
+| 官网数据 | ⏳ Refresh `38836268677` success，bot `7eb4e65`已合并；线上JSON为alpha.3.shell.0、6/6镜像不可用并回退GitHub。cache48双语新入口/版本重点待部署验收（§83） |
 | 国内镜像 | ⛔ alpha.3.shell.0 tag已对齐63e，六资产缺失、内容检查exit1；浏览器未登录且检测时Mac锁屏，需本人解锁登录GitCode。不是飞书Secret或钥匙串授权（§83） |
-| 实时下载统计 | ✅ `/api/downloads` HTTP200、shell.4、source=github；2026-10-14生成的GitHub原始安装下载快照5972 / 74个版本；官网另含既有GitCode引导计数且实时变化，不混称同一口径 |
+| 实时下载统计 | GitHub原始安装下载快照6184（mac766 / Windows4803 / Linux615），75版本，生成于2026-10-16T02:09:45.605Z；实时API另含既有GitCode引导计数，最终线上验收见§83 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2376,3 +2376,9 @@ WebBridge连通，但无可复用登录态；检测时Mac锁屏。已提示本�
 初次增补截图改变滚动起点，触发原有标题避让断言；改为独立导航场景后，所有原断言与新断言均通过，未放宽超时。
 `node scripts/check-site-ui.mjs` exit0（/tmp/dsh-release-alpha3-site-expanded-local-fixed.log）；Node既有ESM类型探测提示保留，不为消除提示更改站点模块策略。
 官网QA改进提交cf75a4e573679840212ec9da9f234901c79eb17b；只改发布验收脚本/说明，不影响已发布应用包或tag。
+自动Refresh38836268677最终success，镜像重试耗尽后如实回退GitHub，bot提交7eb4e65a0fa7293e8daf30e79173ee8485d14a1e。
+等待其完成后才正常merge，提交fd0c4f27d7e10041b4b9e016928da23457ff0bc6；未抢推生成JSON或重写任务SHA。
+新发布数据下完整verify429 + ACP1、扩展网站八组均exit0（/tmp/dsh-release-alpha3-website-final-{verify,local}.log）。
+线上/data/release.json已读回alpha.3.shell.0、6/6 gitcode_ok=false、生成时间2026-10-16T02:09:45.605Z；
+该快照GitHub原始安装下载6184（mac766 / Windows4803 / Linux615，75版本），不混称实时API合并统计。
+随后正常快进推送cache48文案/新QA脚本与回执到生产主干，等待Vercel及最终线上视觉验收；发布tag保持63e。
