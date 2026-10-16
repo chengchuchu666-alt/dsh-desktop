@@ -9,12 +9,12 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.3.shell.0`，内核/UI实现与候选验收完成；用户已授权正式发布，发布流程执行中（§83），完成前公开下载仍为shell.4 |
-| 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
-| 本地门禁 | ✅ alpha.3候选verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、登录三轮3、市场offline1/real2、打包LAN1、两项smoke及codesign deep/strict均exit0（§82）；已发布shell.4证据见§81 |
-| 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
-| 官网数据 | ✅ 线上release JSON与实时API为shell.4，6/6 `gitcode_ok=false`并回退GitHub；Refresh `38578510405` success，bot `367b99d`；中英日志、cache47首页与凭据FAQ上线，八组线上视觉门禁及精确下载入口通过（§81） |
-| 国内镜像 | ⛔ shell.4待GitCode浏览器登录，六资产匿名HTTP404，内容门禁exit1；tag已对齐a57，原始产物保留。shell.3历史成功证据见 §79，不混称shell.4可用 |
+| 最新代码基线 | `0.2.1-alpha.3.shell.0`，GitHub预览版已发布；内核/UI与三平台门禁完成，官网/镜像交付收尾（§83） |
+| 已发布 | ✅ GitHub `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产）；官网切换仍在同步，不混称镜像已完成 |
+| 本地门禁 | ✅ verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、市场offline1/real2、打包LAN三轮6/开发2、双smoke/codesign与网站八组视觉均exit0（§83）；候选历史见§82 |
+| 核心发布 | ✅ Release `38832434323` / 不可变 tag `63e5236`，三平台各24项packaged首过，安装/升级/残留/八文件/来源证明与publish通过；保留既有worker收尾告警，见 §83 |
+| 官网数据 | ⏳ Refresh `38836268677`等待镜像重探测；当前线上仍shell.4。cache48双语新入口/版本重点已准备，待同步后上线；不抢写生成JSON（§83） |
+| 国内镜像 | ⛔ alpha.3.shell.0 tag已对齐63e，六资产缺失、内容检查exit1；浏览器未登录且检测时Mac锁屏，需本人解锁登录GitCode。不是飞书Secret或钥匙串授权（§83） |
 | 实时下载统计 | ✅ `/api/downloads` HTTP200、shell.4、source=github；2026-10-14生成的GitHub原始安装下载快照5972 / 74个版本；官网另含既有GitCode引导计数且实时变化，不混称同一口径 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
@@ -2292,7 +2292,7 @@ KUI-03提交05f53c98d5b51fabed79e95f0bf27ec74c26c86e已推送origin与gitcode的
 随后仅追加本回执，不改产品代码或重建应用。最终release-notes check、diff check与本机codesign deep/strict复检均exit0。
 GitHub推送仍提示默认分支1项moderate Dependabot告警；未隐去，双树audit按现有例外策略通过，不宣称零漏洞。
 
-## 83. v0.2.1-alpha.3.shell.0 正式发布（2026-10-16，执行中）
+## 83. v0.2.1-alpha.3.shell.0 正式发布（2026-10-16，GitHub完成／镜像与官网收尾）
 
 用户明确要求完成版本发布，覆盖§82此前“不发布”的本轮交付边界。沿用已验收alpha.3候选，不再升级其他依赖。
 起点f38673ec560b925990ac00ea1f56647bea408138；保留KUI各原子SHA，正常merge最新origin/main的站点机器人提交422d1d9，
@@ -2316,7 +2316,7 @@ GitCode WebBridge已连通，当前浏览器页面未登录，已非阻塞提示
 /tmp/dsh-release-alpha3-lan-dev.log、/tmp/dsh-release-alpha3-verify-final.log。双smoke/codesign、packaged24、
 飞书五轮25、市场offline1/real2均exit0，本地门禁齐备。无新增skip或超时放宽。
 LAN测试修正提交ccda157e5ed9520901a9f17f67d9997fcff9eda6；随后发布准备只更新正式说明与生成manifest。
-正式tag v0.2.1-alpha.3.shell.0固定13a964f8c7056d0d1007698954db2686697033e4，已快进推送双远端main/集成分支及精确tag，
+首轮未发布候选tag v0.2.1-alpha.3.shell.0指向13a964f8c7056d0d1007698954db2686697033e4，已快进推送双远端main/集成分支及精确tag，
 两个远端ls-remote均核对一致。Release run38831713638执行中；main CI38831693178、CodeQL38831693180另行跟踪。
 GitCode公开v2预检被CloudWAF返回418，不能据此判断release存在或声称404；创建前仍需登录浏览器鉴权精确检查。
 首轮Release38831713638与main CI38831693178在凭据组合测试失败，CodeQL38831693180成功；构建与publish未执行，
@@ -2329,3 +2329,50 @@ GitHub目标release同样404，旧run已completed/failure；只允许在完整�
 禁止改历史tag或强推main。网站跟版内容已在本地准备并通过八组视觉检查，尚未推送，不提前宣传不可下载版本。
 完整复验首轮另捕获网站跟版遗漏旧“管理飞书连接”入口说明；补回真实仍保留的原生菜单及桌面设置入口，未改文档断言。
 最终完整verify429 + ACP1 exit0（/tmp/dsh-release-alpha3-verify-retag-final.log）；修正仅涉及测试路径，产品包与运行门禁结果保持有效。
+修正提交63e5236512b6f281e0429027168f9a466f9ced78已正常推送双远端main/集成分支。
+确认未发布后，精确tag以13a964f租约更新为63e5236，双远端ls-remote相同；新Release38832434323执行中，
+main CI38832404324、CodeQL38832404345同步跟踪。任何发布成功后的tag保持不可变，不以网站或镜像跟进为由再次移动。
+
+### GitHub正式交付
+
+Release [38832434323](https://github.com/citrusli2026/dsh-desktop/actions/runs/38832434323) success，
+[预览版](https://github.com/citrusli2026/dsh-desktop/releases/tag/v0.2.1-alpha.3.shell.0)于2026-10-16T01:38:52Z公开，draft=false、prerelease=true。
+最终发布tag固定63e5236512b6f281e0429027168f9a466f9ced78，两远端一致；main CI38832404324与CodeQL38832404345均success。
+三平台packaged各24首过（Linux3.3m、macOS3.4m、Windows5.0m），offline各1；升级各保持6份用户文件。
+Windows损坏/只读/占用矩阵、静默安装通过；Defender RT=false是runner原状态，未关闭防护。
+本次正式安装118123ms、smoke4539ms、uninstall8145ms，不用单次跨runner数据宣称提速；候选同机对照见§82。
+Linux verify为429 + ACP1，开发E2E32通过/12既有条件未启用；既有worker teardown45000ms告警/错误注释保留，未改守护器、超时或断言。
+
+八个公开资产均uploaded，完整下载文件严格八文件契约、三个SHA-256与Windows updater SHA-512校验exit0。
+macOS/Linux安装包在Windows门禁期间由同tag的CI工件预取，Windows四文件由公开Release下载；
+八文件逐项与公开Release API的size/digest核对相等，六个用户下载URL另以匿名Range GET核对尺寸与首字节（exit0）。
+三份安装器gh attestation verify另绑定source-digest=63e5236与signer-workflow=.github/workflows/release.yml，
+JSON验证结果非空，subject SHA与各安装包相符（均exit0），不只依赖命令无输出时的退出码。
+公开产物证据保存在/tmp/dsh-release-alpha3.eT0Z5F，严格八文件目录为assets，日志/JSON另放evidence，不混入资产校验。
+
+| 安装包 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 289582679 | fea3580b693226fe70343664c53002c8ea1e8c56aac3b47a3162b8a8579416db |
+| Windows EXE | 266844651 | 91cff56193c0a50cbd8fde7c8df612dcf66f4b319294a95b176c81a959ff12f9 |
+| Linux DEB | 232047772 | 9040c6b4f179611608e114b1caa475214d0bd08e3cba00f4b1175fc859583e94 |
+
+#108旧登录补丁未迁移告警与#109本次发布失败告警，均在核对原失败日志及正式成功证据后回复关闭。
+仅关闭alpha.3目标告警，不宣称未来自动升级可免除补丁兼容审查；#100等其他问题不混称本版已修复。
+
+### 镜像与官网后续交付
+
+GitCode六URL内容检查exit1（实际404），不降低断言或把HTTP成功误当内容通过；check-only回执见evidence。
+WebBridge连通，但无可复用登录态；检测时Mac锁屏。已提示本人解锁并登录，不请求飞书或系统钥匙串授权。
+浏览器登录入口续登检查未恢复会话，未扩大浏览器权限、代确认验证码或绕过系统认证；当前未上传或创建新GitCode Release。
+认证恢复后需先核对origin/login和现有release，再按六资产白名单上传/创建或修复，完成六项内容检查及至少一个安装包全量匿名回读。
+不得用未经用户授权的另一种凭据替代浏览器登录，不能将GitHub发布成功写成整轮镜像交付完成。
+
+发布前的旧官网同步38831914927成功，bot6b2152f已正常merge，未抢写生成文件。
+本版自动Refresh38836268677正在镜像重探测；新主页文案27224a2仅本地提交、未提前上线。
+本地双语八组视觉复验exit0（/tmp/dsh-release-alpha3-site-ui-local-final.log），README/飞书指南同步新入口；
+待bot完成后合并其JSON/双语日志，推送并验证线上版本、下载入口与介绍，不重打发布tag。
+官网QA脚本新增源码字典与实际版本重点的一致性、全部平台GitHub精确安装URL/可见性和下载页零横溢出断言，
+仍按zh/en × 390/1280 × light/dark八组运行并保存重点/飞书/完整下载页截图。
+初次增补截图改变滚动起点，触发原有标题避让断言；改为独立导航场景后，所有原断言与新断言均通过，未放宽超时。
+`node scripts/check-site-ui.mjs` exit0（/tmp/dsh-release-alpha3-site-expanded-local-fixed.log）；Node既有ESM类型探测提示保留，不为消除提示更改站点模块策略。
+官网QA改进提交cf75a4e573679840212ec9da9f234901c79eb17b；只改发布验收脚本/说明，不影响已发布应用包或tag。
