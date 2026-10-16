@@ -203,7 +203,7 @@
           <h3 data-i18n="ext.title">扫码，把 Harness 带到手机或平板</h3>
           <p class="boundary-grid__body" data-i18n="ext.body">从「桌面工具」启动局域网 Web 代理，手机与电脑同网后扫码即可进入 Harness。</p>
           <p class="boundary-grid__note" data-i18n="ext.note">不需要单独的 Android / iOS 应用。</p>
-          <p class="boundary-grid__note" data-i18n="ext.feishu">同一菜单打开「管理飞书连接」：扫码保存应用后再显式开启 cc-connect，可编辑降噪设置、关闭连接或移除本地配置。</p>
+          <p class="boundary-grid__note" data-i18n="ext.feishu">打开「设置 → 飞书连接」或「桌面工具 → 连接 → 飞书连接」：扫码保存应用后再显式开启 cc-connect，可编辑降噪设置、关闭连接或移除本地配置。</p>
         </article>
       </div>
     </div>
@@ -215,7 +215,7 @@
       <h2 class="sec-title sec-title--wide" id="feishu-title">在飞书里，把任务交给这台电脑</h2>
       <p class="sec-lead">内置 cc-connect 将机器人消息交给本机 Harness，在选定工作区执行任务。电脑和 Desktop 需要保持运行；飞书使用长连接，不需要公网 IP，也不必开启局域网共享。</p>
       <div class="workflow-grid">
-        <article><span>01</span><h3>扫码创建，保存应用</h3><p>打开「桌面工具 → 管理飞书连接」或「设置 → 桌面设置 → 飞书消息连接」。扫码授权后，等 Desktop 显示凭据已收到，再保存具名应用；已有应用也能手动添加。</p></article>
+        <article><span>01</span><h3>扫码创建，保存应用</h3><p>打开「设置 → 飞书连接」或「桌面工具 → 连接 → 飞书连接」，原「扩展 → 管理飞书连接」及桌面设置入口仍可用。扫码授权后，等 Desktop 显示凭据已收到，再保存具名应用；已有应用也能手动添加。</p></article>
         <article><span>02</span><h3>选工作区，显式开启</h3><p>可保存多份配置，但一次只连接一个应用。先在 Harness 模型设置中配置模型凭据，再开启连接；“服务已启动”“飞书在线”和“任务完成”是不同状态。</p></article>
         <article><span>03</span><h3>少刷消息，随时关闭</h3><p>默认精简消息、3 秒流式预览；可选择完整/精简/静默、经典/富卡片和进度展示。在同一窗口关闭连接、设置启动时自动连接或移除本地配置。</p></article>
       </div>
@@ -283,10 +283,10 @@
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">关闭即退出，飞书凭据不再访问 macOS 钥匙串</h3>
-          <p data-i18n="latest.lead">shell.4 停止关闭后的后台服务，改用 macOS 本机受限凭据文件，并精简 Windows 安装；内置 Harness 版本不变。</p>
+          <h3 id="latest-title" data-i18n="latest.title">Harness alpha.3，飞书连接入口更完整</h3>
+          <p data-i18n="latest.lead">升级内置 Harness，适配登录与会话垃圾桶；从设置主列表或桌面工具直接管理飞书应用，消息样式不再藏在手动凭据区。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>完整退出：</b>关闭主窗口会停止 Harness、飞书和局域网服务，保留自动连接选择。</li><li><b>凭据边界：</b>macOS 文件权限为 0600、未加密；旧加密 Secret 需重填一次，Windows 策略不变。</li><li><b>安装优化：</b>维护候选同机三轮安装中位数改善约 4.9%，不承诺所有电脑相同提速。<a href="/changelog">查看完整更新日志 →</a></li></ul>
+        <ul data-i18n="latest.items"><li><b>统一入口：</b>设置与浮窗复用同一个管理器，进入页面不会自动开启连接。</li><li><b>消息样式：</b>降噪选项独立展示，保存按钮常显，长应用名可换行。</li><li><b>界面修正：</b>浮窗贴边展开仍可操作，独立窗口主按钮改善亮暗对比度。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>
@@ -436,7 +436,7 @@
   </div>
 </footer>
 
-<script type="module" src="/assets/app.js?v=47"></script>
+<script type="module" src="/assets/app.js?v=48"></script>
 
 <!-- 下载后提示(校验方式 + 未签名处理 + GitHub Star 邀请),由 app.js 填充 -->
 <div class="download-toast" id="download-toast" role="status" aria-live="polite" hidden></div>
