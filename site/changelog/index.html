@@ -42,6 +42,17 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.3.shell.0 <small>（内核 0.2.1-alpha.3）</small></h2>
+  <ul>
+    <li><strong>内核升级</strong>：升级到官方已发布的 alpha.3，同步依赖闭包与兼容补丁；历史 shell.4 tag 保持不可变。</li>
+    <li><strong>桌面登录兼容</strong>：适配新版登录预开窗口流程，继续把实际授权页面交给系统浏览器， 避免壳的同名桥被误判为官方桌面组合；不放开桌面窗口的导航、Node 权限或外链协议限制。</li>
+    <li><strong>垃圾桶兼容</strong>：适配新内核会话创建/串行化入口，保留运行中、排队中、跨客户端所有权与子会话保护。</li>
+    <li><strong>飞书凭据边界</strong>：核对 ACP 仍加载 Models 已保存的模型凭据，不将 headless 专用凭据策略套到机器人连接。 飞书 App Secret 与模型 API Key 仍分离，不新增凭据导出或系统钥匙串访问。</li>
+    <li><strong>飞书更容易找到</strong>：设置主列表、桌面工具展开菜单新增入口；原有入口保留并复用同一个管理窗口。</li>
+    <li><strong>消息样式独立入口</strong>：降噪与卡片选项不再藏在手动凭据区；保存按钮常显，长应用名不会撑出窗口。</li>
+    <li><strong>界面边缘修正</strong>：浮窗菜单按可用空间展开并滚动，缩窗保持入口可达，Escape 返回焦点； 独立窗口主按钮改善亮暗主题文字对比度。</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.4 <small>（内核 0.2.1-alpha.2）</small></h2>
   <ul>
     <li><strong>关闭即退出</strong>：关闭主窗口现在会退出整个应用，停止 Harness、飞书连接和局域网服务， 不再留在后台。最小化/隐藏启动后仍可用快捷键或托盘唤回；关闭飞书管理小窗口只关闭界面。</li>
@@ -98,15 +109,6 @@
     <li><strong>供应链安全</strong>：将 sharp 提升到 <code>0.35.5</code>，修复 <code>GHSA-wq5f-xc86-pv6w</code>；<code>sprintf-js</code> 的 <code>CVE-2026-97058</code> 目前无上游修复，审计仅对这一条公告做了显式临时忽略。</li>
     <li><strong>cc-connect × DSH Desktop</strong>：安装包携带受主进程监管的 cc-connect Sidecar，设置页支持飞书凭证、工作区、启动/停止/重连和 Safe Mode 生命周期；Secret 不写入 TOML，用户文档补充了飞书后台要求、脱敏日志和凭证清理步骤。</li>
     <li><strong>边界说明</strong>：内置官方 Harness 内核版本不变；不新增权限，不改变用户数据目录或垃圾桶保留规则。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.3 <small>（内核 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：从 0.2.0-rc.2 升级到 0.2.1-alpha.1，同步桌面壳的插件兼容版本与随包依赖。</li>
-    <li><strong>局域网配对</strong>：记住用户选择的网络地址；多网卡环境中先核对二维码所指向的地址，避免二维码指向不可用网卡。</li>
-    <li><strong>桌面垃圾桶</strong>：卡片、操作按钮和页签与设置页视觉风格一致；中文界面按中文格式显示日期，运行中的会话被拒绝删除时显示正确原因。</li>
-    <li><strong>Windows 发布门禁</strong>：每个 NSIS 残留场景验证后停止 dsh-desktop 进程族并运行对应卸载器，清除注册安装路径，避免下一场景的旧版静默安装器阻塞。</li>
-    <li><strong>数据边界</strong>：不新增权限，不改变用户数据目录或垃圾桶的 30 天保留规则。</li>
   </ul>
   <!-- changelog:auto:end -->
 
