@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.3.shell.0`，GitHub预览版已发布；内核/UI与三平台门禁完成，官网/镜像交付收尾（§83） |
-| 已发布 | ✅ GitHub `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），官网发布数据已同版；文案部署收尾，不混称镜像已完成 |
+| 最新代码基线 | `0.2.1-alpha.3.shell.0`，GitHub预览版与官网交付完成；GitCode登录外部阻塞（§83） |
+| 已发布 | ✅ GitHub `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），官网发布数据、双语更新日志及新入口介绍已同版；镜像仍未完成 |
 | 本地门禁 | ✅ verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、市场offline1/real2、打包LAN三轮6/开发2、双smoke/codesign与网站八组视觉均exit0（§83）；候选历史见§82 |
 | 核心发布 | ✅ Release `38832434323` / 不可变 tag `63e5236`，三平台各24项packaged首过，安装/升级/残留/八文件/来源证明与publish通过；保留既有worker收尾告警，见 §83 |
-| 官网数据 | ⏳ Refresh `38836268677` success，bot `7eb4e65`已合并；线上JSON为alpha.3.shell.0、6/6镜像不可用并回退GitHub。cache48双语新入口/版本重点待部署验收（§83） |
+| 官网数据 | ✅ Refresh `38836268677` success；后续统计bot `c6d2ffc`已合并。线上JSON为alpha.3.shell.0，cache48双语新入口/版本重点已部署并通过八组自动检查及抽图复核；6/6镜像不可用，如实回退GitHub（§83） |
 | 国内镜像 | ⛔ alpha.3.shell.0 tag已对齐63e，六资产缺失、内容检查exit1；浏览器未登录且检测时Mac锁屏，需本人解锁登录GitCode。不是飞书Secret或钥匙串授权（§83） |
-| 实时下载统计 | GitHub原始安装下载快照6184（mac766 / Windows4803 / Linux615），75版本，生成于2026-10-16T02:09:45.605Z；实时API另含既有GitCode引导计数，最终线上验收见§83 |
+| 实时下载统计 | GitHub原始安装下载快照6219（mac768 / Windows4834 / Linux617），75版本，生成于2026-10-16T07:42:27.604Z；2026-10-16T10:52:01.961Z实时API为7068（含既有GitCode引导计数），不是镜像完成证明 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2292,7 +2292,7 @@ KUI-03提交05f53c98d5b51fabed79e95f0bf27ec74c26c86e已推送origin与gitcode的
 随后仅追加本回执，不改产品代码或重建应用。最终release-notes check、diff check与本机codesign deep/strict复检均exit0。
 GitHub推送仍提示默认分支1项moderate Dependabot告警；未隐去，双树audit按现有例外策略通过，不宣称零漏洞。
 
-## 83. v0.2.1-alpha.3.shell.0 正式发布（2026-10-16，GitHub完成／镜像与官网收尾）
+## 83. v0.2.1-alpha.3.shell.0 正式发布（2026-10-16，GitHub与官网完成／GitCode登录外部阻塞）
 
 用户明确要求完成版本发布，覆盖§82此前“不发布”的本轮交付边界。沿用已验收alpha.3候选，不再升级其他依赖。
 起点f38673ec560b925990ac00ea1f56647bea408138；保留KUI各原子SHA，正常merge最新origin/main的站点机器人提交422d1d9，
@@ -2368,7 +2368,7 @@ WebBridge连通，但无可复用登录态；检测时Mac锁屏。已提示本�
 不得用未经用户授权的另一种凭据替代浏览器登录，不能将GitHub发布成功写成整轮镜像交付完成。
 
 发布前的旧官网同步38831914927成功，bot6b2152f已正常merge，未抢写生成文件。
-本版自动Refresh38836268677正在镜像重探测；新主页文案27224a2仅本地提交、未提前上线。
+当时本版自动Refresh38836268677正在镜像重探测；新主页文案27224a2仅本地提交、未提前上线。
 本地双语八组视觉复验exit0（/tmp/dsh-release-alpha3-site-ui-local-final.log），README/飞书指南同步新入口；
 待bot完成后合并其JSON/双语日志，推送并验证线上版本、下载入口与介绍，不重打发布tag。
 官网QA脚本新增源码字典与实际版本重点的一致性、全部平台GitHub精确安装URL/可见性和下载页零横溢出断言，
@@ -2382,3 +2382,32 @@ WebBridge连通，但无可复用登录态；检测时Mac锁屏。已提示本�
 线上/data/release.json已读回alpha.3.shell.0、6/6 gitcode_ok=false、生成时间2026-10-16T02:09:45.605Z；
 该快照GitHub原始安装下载6184（mac766 / Windows4803 / Linux615，75版本），不混称实时API合并统计。
 随后正常快进推送cache48文案/新QA脚本与回执到生产主干，等待Vercel及最终线上视觉验收；发布tag保持63e。
+
+### 官网最终验收与剩余外部阻塞
+
+Vercel对de5bed78624448d61214a191c725454915249434部署success；对应main CI38839320379与CodeQL38839320393均success。
+线上cache48新文案、双语飞书入口介绍、两份更新日志与三平台精确GitHub下载链接已验证。
+初次文字断言通过后，抽图仍发现版本重点空白/错位，未按“截图存在”放行：
+通过拦住真实首页的下载响应再释放，复现标题top由458移至1092、入屏比例0（聚焦检查exit1），
+字体已loaded且祖先opacity=1，定位为下载矩阵异步展开在截图前改变页面高度。
+QA提交6cc558c7be7a631e2e1eb026bfba43fb0550bf22先等待中文首页真实三平台下载内容，再滚动；
+截图前后均检查标题完整入屏，另检查所有祖先不透明度为1。英文是静态首页，下载矩阵只在独立下载页检查。
+保留全部原几何/链接/溢出/错误断言，未延长超时或增加固定sleep；不修改网站CSS/产品代码，也不重发tag。
+修正后本地、生产各八组均exit0，日志为/tmp/dsh-release-alpha3-site-focus-{local,live}-final.log；
+生产截图在/var/folders/wf/6qt496h52ws3z7j49rz19ylw0000gn/T/dsh-site-ui-sRy8Th，
+已抽图复核中英手机亮暗版本重点、桌面版本重点、飞书介绍和完整下载页，无空白/横向溢出。
+完整pnpm verify再次exit0（429单测 + ACP1；/tmp/dsh-release-alpha3-final-delivery-verify.log），
+严格八文件校验、release-notes check及diff check亦exit0；本轮没有覆盖用户安装或正式profile。
+
+期间统计bot提交c6d2ffcb20e13306cac2b586fc8ece84fdfb03c3到main，已正常merge为835821ff6590b8c2a9863a9e8514145f93d8d0b0，
+未覆盖生成数据；c6d2ffc的Vercel状态success。最后线上静态快照6219与实时API7068均为alpha.3.shell.0，
+六镜像标记均false；实时API包括既有GitCode引导计数，不将其混称GitHub原始下载。
+最终线上JSON回执在/tmp/dsh-release-alpha3.eT0Z5F/evidence/live-{release,downloads}-final.json。
+
+未完成项仅为GitCode六资产上传/挂链、匿名内容校验与至少一包完整回读，以及镜像可用后的站点刷新。
+最后复查WebBridge真实origin为https://gitcode.com，登录按钮仍在、hasLogin=false；没有可用登录态，不能继续上传。
+已备齐并校验八文件及六文件镜像白名单，不重新下载、不读取旧认证缓存、不替换凭据路径、不再次请求钥匙串。
+下一步需本人解锁并登录任务浏览器中的GitCode；之后先检查目标release是否已存在，再继续v2上传/创建与内容门禁。
+本次GitHub发布点固定63e5236512b6f281e0429027168f9a466f9ced78；cc-connect仍为a9a936c5102ffa24f8165d74d5199206ba6d724a，子模块远端已同版且干净。
+Windows安装性能对照未证明提速、macOS未公证/Windows未签名、既有单一CVE例外及真实飞书/跨平台人工视觉覆盖边界均保留，见§82及本章正式门禁。
+不把GitHub与官网成功写成整轮镜像交付完成；不为镜像/文档收尾移动已发布tag。
