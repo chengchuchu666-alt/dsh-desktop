@@ -63,10 +63,17 @@ try {
       await page.goto(origin + (lang === 'en' ? '/en/download/' : '/download/'), { waitUntil: 'domcontentloaded' })
       const links = page.locator('#platform-rows').getByRole('link', { name: / · GitHub$/ })
       await expect(links).toHaveCount(installers.length)
+      const mirrors = page.locator('#platform-rows').getByRole('link', { name: / · GitCode (镜像|mirror)$/ })
+      await expect(mirrors).toHaveCount(installers.filter(asset => asset.gitcode_ok).length)
       for (const asset of installers) {
         const link = links.and(page.locator(`[href="${asset.url}"]`))
         await expect(link).toHaveCount(1)
         await expect(link).toBeVisible()
+        if (asset.gitcode_ok) {
+          const mirror = mirrors.and(page.locator(`[href="${asset.gitcode_url}"]`))
+          await expect(mirror).toHaveCount(1)
+          await expect(mirror).toBeVisible()
+        }
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'download page overflow')
       await page.screenshot({ path: join(output, `${lang}-${width}-${theme}-downloads.png`), fullPage: true, animations: 'disabled' })
