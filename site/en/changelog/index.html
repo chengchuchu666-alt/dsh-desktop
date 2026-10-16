@@ -42,6 +42,17 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.3.shell.0 <small>（kernel 0.2.1-alpha.3）</small></h2>
+  <ul>
+    <li>Upgrades to Harness 0.2.1-alpha.3, with version-bound Desktop login and session-trash compatibility.</li>
+    <li>Keeps system-browser authorization, busy-session and ownership protections, and the ACP saved-credential composition.</li>
+    <li>Adds Feishu entries to the main settings list and floating Desktop tools menu, separates message styles from manual credentials, and fixes edge-positioned menus, long application names and standalone button contrast.</li>
+    <li>UI review, both local packaged smokes, all 24 packaged cases and 25 repeated Feishu checks passed.</li>
+    <li>macOS, Windows and Linux build/install/upgrade gates passed, with 24 packaged cases on each platform.</li>
+    <li>The existing Linux worker teardown warning remains; Windows installation timing was 7.94% slower than the fixed older baseline.</li>
+    <li>Published installers must also pass the gated tag pipeline. Live Feishu delivery and manual native-control review on Windows/Linux are outside this validation.</li>
+  </ul>
+
   <h2>v0.2.1-alpha.2.shell.4 <small>（kernel 0.2.1-alpha.2）</small></h2>
   <ul>
     <li>Closing the main window now exits the application and stops its owned services. Minimize/start-hidden activation remains supported; closing the Feishu manager alone does not close a saved connection.</li>
@@ -104,15 +115,6 @@
     <li>Upgrade sharp to 0.35.5 for GHSA-wq5f-xc86-pv6w; explicitly track the unfixable sprintf-js CVE-2026-97058 until upstream publishes a fix.</li>
     <li>Local verification passed typecheck, runtime checks, 305 unit tests, site/API checks, LAN pairing, offline market install, and packaged smoke. The current dshmarket release does not yet declare compatibility with the bundled prerelease kernel, so peer and publish-age safety gates remain unchanged.</li>
     <li>Add the bundled cc-connect sidecar and the Desktop Feishu settings surface: main-process supervision, start/stop/reconnect, Safe Mode handling, protected local Secret storage, and a documented cleanup path. Automated coverage uses fake sidecars and local ACP/HTTP mocks; real Feishu acceptance still requires user credentials and organization approval.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.3 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Upgrade the bundled kernel from 0.2.0-rc.2 to 0.2.1-alpha.1 and sync the packaged dependency closure.</li>
-    <li>Persist the chosen LAN address and validate pairing URLs on multi-interface hosts.</li>
-    <li>Match the trash page to the settings design, localize Chinese dates, and report active-session deletion failures accurately.</li>
-    <li>Stop the dsh-desktop process family and uninstall each upgraded tree between Windows NSIS residue scenarios so the next installer cannot block on a registered installation.</li>
-    <li>No new permissions or user-data changes. The release includes the downstream <code>http-cache-semantics</code> security patch and passed both dependency audits.</li>
   </ul>
   <!-- changelog:auto:end -->
 
