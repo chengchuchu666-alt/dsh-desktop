@@ -2315,3 +2315,4 @@ GitCode WebBridge已连通，当前浏览器页面未登录，已非阻塞提示
 开发态两项通过（5.4s），完整pnpm verify429 + ACP1再次exit0；日志为/tmp/dsh-release-alpha3-lan-fixed.log、
 /tmp/dsh-release-alpha3-lan-dev.log、/tmp/dsh-release-alpha3-verify-final.log。双smoke/codesign、packaged24、
 飞书五轮25、市场offline1/real2均exit0，本地门禁齐备。无新增skip或超时放宽。
+LAN测试修正提交ccda157e5ed9520901a9f17f67d9997fcff9eda6；随后发布准备只更新正式说明与生成manifest。
