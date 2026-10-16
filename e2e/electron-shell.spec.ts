@@ -1533,7 +1533,7 @@ shellTest('a plugin crash auto-quarantines the suspect and boots again', async (
 
 shellTest('LAN pairing shows a scannable QR link for the private address', async ({ electronApp, window }, testInfo) => {
   testInfo.setTimeout(120_000)
-  await expect(window.getByRole('heading', { name: 'Harness test workspace' })).toBeVisible()
+  await packagedOrStubHeadline(window)
   const { networkInterfaces } = await import('node:os')
   const hasPrivateLan = Object.values(networkInterfaces())
     .flat()

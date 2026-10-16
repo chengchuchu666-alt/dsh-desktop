@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-15。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-16。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,7 +9,7 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | 候选 `0.2.1-alpha.3.shell.0`，内核/UI修正、本地门禁及三平台构建验收完成；未发布，最新公开下载仍为shell.4，见 §82 |
+| 最新代码基线 | `0.2.1-alpha.3.shell.0`，内核/UI实现与候选验收完成；用户已授权正式发布，发布流程执行中（§83），完成前公开下载仍为shell.4 |
 | 已发布 | ✅ `0.2.1-alpha.2.shell.4`（Linux deb、macOS dmg、Windows exe；8 个 GitHub Release 资产） |
 | 本地门禁 | ✅ alpha.3候选verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、登录三轮3、市场offline1/real2、打包LAN1、两项smoke及codesign deep/strict均exit0（§82）；已发布shell.4证据见§81 |
 | 核心发布 | ✅ Release `38573030445` / 不可变 tag `a57ee80`，三平台构建/安装/升级/来源证明及publish通过；Windows manager首次超时后重试通过，既有worker teardown告警保留，见 §81 |
@@ -2291,3 +2291,27 @@ KUI-01/02/02A/03全部实现与验证完成；最终提交仅补E2E证据/更强
 KUI-03提交05f53c98d5b51fabed79e95f0bf27ec74c26c86e已推送origin与gitcode的codex/cc-connect-dsh-integration。
 随后仅追加本回执，不改产品代码或重建应用。最终release-notes check、diff check与本机codesign deep/strict复检均exit0。
 GitHub推送仍提示默认分支1项moderate Dependabot告警；未隐去，双树audit按现有例外策略通过，不宣称零漏洞。
+
+## 83. v0.2.1-alpha.3.shell.0 正式发布（2026-10-16，执行中）
+
+用户明确要求完成版本发布，覆盖§82此前“不发布”的本轮交付边界。沿用已验收alpha.3候选，不再升级其他依赖。
+起点f38673ec560b925990ac00ea1f56647bea408138；保留KUI各原子SHA，正常merge最新origin/main的站点机器人提交422d1d9，
+合并提交7ecd61baa20ac20fb955d1ba6eb0510c5f2fc02b。待本地复验后正常快进推送main与精确新tag到双远端。
+禁止移动既有发布tag、强推main或覆盖用户安装；测试仍用临时profile、假Secret与模拟ACP。
+
+顺序：本地verify/audit及新dist → 双smoke/packaged/飞书五轮/市场/LAN → 正式tag三平台CI与八文件/来源证明 →
+GitCode六资产内容验证与至少一个安装包完整回读 → 等待站点bot、双语日志/介绍与线上数据验收 → 双远端最终回执。
+GitCode WebBridge已连通，当前浏览器页面未登录，已非阻塞提示用户登录；GitHub发布与本地门禁继续，不冒称镜像完成。
+发布日version check退出3：官方npm和上游Release已确认2026-10-15发布alpha.4。
+本次用户要求继续发布已验收alpha.3，因此固定alpha.3完成交付，不在发布中临时切换内核；alpha.4留待后续兼容与全量验收。
+本地pnpm verify（429单测 + ACP1）及security:audit均exit0，沿用既有单一CVE例外；新dist:dir exit0。
+本次mac-arm64 sidecar生成SHA为532a748fe508cd7ad32183cc142dd3f3021a7d3017ddea7baf945ec4237ae472，源码pin仍a9a936c。
+打包运行门禁执行中，日志前缀/tmp/dsh-release-alpha3-；不并发覆盖运行中的dist。
+首轮本地packaged24、飞书五轮25（retries=0）、市场offline1/real2均exit0；LAN两项1通过/1失败。
+失败定位：二维码显示用例在PACKAGED=1仍断言开发stub专用标题，而截图已显示正常真实Harness；
+聚焦重复复现同一红色反馈（另一次带^的筛选未找到用例，不算通过）。仅改用同文件现有packagedOrStubHeadline，
+开发态仍精确检查原stub标题，打包态检查真实控件挂载且无插件失败；二维码/地址/倒计时/关闭断言全部不变。
+本修正只影响测试，不改dist或产品代码，保留失败日志。修正后打包LAN两项×3轮、retries=0共6通过（31.4s），
+开发态两项通过（5.4s），完整pnpm verify429 + ACP1再次exit0；日志为/tmp/dsh-release-alpha3-lan-fixed.log、
+/tmp/dsh-release-alpha3-lan-dev.log、/tmp/dsh-release-alpha3-verify-final.log。双smoke/codesign、packaged24、
+飞书五轮25、市场offline1/real2均exit0，本地门禁齐备。无新增skip或超时放宽。
