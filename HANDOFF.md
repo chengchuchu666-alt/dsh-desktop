@@ -13,9 +13,9 @@
 | 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.0`（Linux deb、macOS dmg、Windows exe；8资产）；`v0.2.1-alpha.5.shell.0`（6/6 镜像）为其上一版 |
 | 本地门禁 | ✅ verify440 + ACP1、audit、bootstrap/peer、内核28项、新dist、双smoke、packaged24、飞书五轮25、市场offline1/real2、打包LAN1、codesign deep/strict均exit0（§85） |
 | 核心发布 | ✅ Release `39005920031` / 不可变 tag `7bd642d`，verify + 三平台build + publish success，八文件与来源证明通过（§85） |
-| 官网数据 | ✅ 自动 Refresh `39008439689` success，bot `8f52335` 已合并；线上 JSON 为 rc.1、六镜像 `gitcode_ok=false`（镜像阻塞）；首页重点已更新，本地八组通过、线上复验见 §85 |
-| 国内镜像 | ⛔ GitCode 目标 release 404；kimi-webbridge 扩展未连接，无法借用登录态上传；不得宣称镜像完成（§85） |
-| 实时下载统计 | GitHub 安装快照 6316（mac 776 / Windows 4913 / Linux 627），77 版本，生成于 2026-10-17T06:33:18.345Z |
+| 官网数据 | ✅ 镜像后 Refresh `39012258106` success，bot `0b1ea1b` 已合并；线上 JSON/API 六资产 `gitcode_ok=true`，中英八组双源下载与视觉检查 exit0（§85） |
+| 国内镜像 | ✅ GitCode release `58776` / tag `7bd642d`；六资产匿名内容 6/6，DEB 完整回读 228655036 字节、cmp 与 SHA 一致（§85） |
+| 实时下载统计 | GitHub 安装快照 6316（mac 776 / Windows 4913 / Linux 627），77 版本；2026-10-17T07:04Z 实时 API 为 7165（mac 842 / Windows 5631 / Linux 692，含既有 GitCode 引导计数），两种统计不混用 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2542,11 +2542,16 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    线上 `/data/release.json` 为 rc.1、生成于 2026-10-17T06:33:18.345Z，六镜像标记 `gitcode_ok=false`
    （镜像未交付），`/api/downloads` 实时计数可用。首页中英「当前版本重点」已改为 rc.1 内核升级与
    可复现构建，本地八组 `check-site-ui` exit0，推送后线上八组复验。
-7. **国内镜像（阻塞）**：GitCode 目标 release 仍为 HTTP 404；本机 kimi-webbridge 守护进程在运行，
-   但扩展 `extension_connected=false`（浏览器侧未连接），无法借用登录态执行 v2 上传/创建/校验。
-   未使用个人令牌替代浏览器授权，也未把 GitHub 成功写成镜像完成。解除后需：上传六资产 →
-   创建 release（沿用 `--status unset`）→ 六项匿名内容校验 + 至少一个安装包完整回读 →
-   在镜像可用后重新触发站点刷新并复验八组。当前线上按 GitHub 回退展示。
+7. **国内镜像（已完成）**：浏览器扩展恢复连接后按 v2 管道执行：六资产上传 → 创建 release `58776`
+   （tag `v0.2.1-rc.1.shell.0` 对齐 `7bd642dc2231d967dadb9aeee2ace8b5e92c86fe`、asset_count=6，
+   沿用 `--status unset`，未删改其他 release/tag）。六项匿名 Range 内容校验 `contentVerified=true`
+   6/6、`mirror-gitcode-v2 --check-only` 6/6 present；DEB 稳定 URL 完整回读 228655036 字节、
+   `cmp` exit0、SHA-256 `708420d4b8b8de1c8f47385dcf39ac103a67cff9aa23836b68c02412bf000bf2`
+   与 GitHub 一致。镜像后手动派发 Site Data Refresh `39012258106` success，bot `0b1ea1b` 已快进合并；
+   线上 JSON/API 六资产 `gitcode_ok=true`，`SITE_CHECK_URL=https://dsh-desktop.com` 八组再次 exit0
+   （截图 `/var/folders/wf/6qt496h52ws3z7j49rz19ylw0000gn/T/dsh-site-ui-7OTUCA`）。
+   过程记录：镜像前扩展曾长时间 `extension_connected=false`，未用个人令牌替代浏览器授权、
+   未把 GitHub 成功写成镜像完成；本轮由用户恢复扩展连接后完成。
 8. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
    macOS 公证与 Windows 商业签名仍未覆盖；上游 rc.1 说明汇总整条 0.2.1 变更线，本页与发布说明
    只记录可核验事实、不逐条代替上游文档；Linux worker teardown 既有告警保留，审计例外不变。

@@ -110,7 +110,7 @@ Site Data Refresh `39001837976` success，bot `cb8acb1` 合并；线上 JSON 同
 | RC-01 | 版本与闭包：`package.json`、`manifest/harness` 清单/锁/工作区/豁免、账户补丁版本迁移、`scripts/patch-session-trash.mjs` 版本保护 | 冻结安装（两种 pnpm 读取路径）、bootstrap/peer 审计、补丁在部署闭包中生效 | 完成（见回执） |
 | RC-02 | 构建可复现性：`scripts/deploy-harness.mjs`、`test/ci-bootstrap-order.test.ts` | pnpm 10.33.2 写出的锁文件可被 10/11 两种读取路径冻结安装；hoisted 布局不依赖外层环境注入 | 完成（见回执） |
 | RC-03 | 本地全量门禁与新 dist | verify/audit、双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN、codesign | 完成（见回执） |
-| RC-04 | 文档与发布：release notes、README/ARCHITECTURE 版本示例、本文、HANDOFF；tag 与三平台 CI、GitHub 资产、GitCode 镜像、官网数据 | 八文件与来源证明、六镜像内容与一包全量回读、官网八组、双远端干净 | GitHub/官网完成；GitCode 镜像阻塞（浏览器扩展未连接） |
+| RC-04 | 文档与发布：release notes、README/ARCHITECTURE 版本示例、本文、HANDOFF；tag 与三平台 CI、GitHub 资产、GitCode 镜像、官网数据 | 八文件与来源证明、六镜像内容与一包全量回读、官网八组、双远端干净 | 完成：7bd642dc2231d967dadb9aeee2ace8b5e92c86fe |
 
 ## 验收与回执
 
@@ -152,9 +152,11 @@ Release `39005920031` success（verify + macOS/Windows/Linux build + publish）�
 三安装包 `gh attestation verify` 绑定本 tag；安装包 SHA-256 见 HANDOFF §85。
 自动 Site Data Refresh `39008439689` success，bot `8f52335` 合并；线上 JSON 为 rc.1、
 `gitcode_ok=false`×6、`/api/downloads` 可用；首页中英「当前版本重点」改为 rc.1，本地八组 exit0。
-GitCode 镜像未完成：目标 release 404，kimi-webbridge 守护进程在运行但扩展 `extension_connected=false`，
-无法借用登录态；未用个人令牌替代、未把 GitHub 成功写成镜像完成。解除后按 v2 管道上传→创建→
-六项匿名内容校验→至少一包完整回读，并重新触发站点刷新复验线上八组。
+GitCode 镜像：扩展恢复连接后完成——release `58776`（tag 对齐 `7bd642dc2231d967dadb9aeee2ace8b5e92c86fe`、
+asset_count=6、`--status unset`），六项匿名内容校验 6/6、mirror-v2 --check-only 6/6，
+DEB 完整回读 228655036 字节且 `cmp` exit0、SHA 与 GitHub 一致；镜像后 Site Data Refresh
+`39012258106` success、bot `0b1ea1b` 合并，线上 JSON/API 六资产 `gitcode_ok=true`，
+线上八组 exit0。镜像前扩展长时间未连接期间，未用个人令牌替代、未把 GitHub 成功写成镜像完成。
 上游随后补发 rc.1 官方说明（dsh-v0.2.1-rc.1，2026-10-17T05:22Z）：已按该说明更新发布说明与
 GitHub Release 正文（不改 tag、不换资产），并复核其移除/变更接口——全仓检索确认本壳未使用
 `./invariant` 导出、`both` 工具展示、`stats` 统计行或 `--from-default-profile`，
