@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-rc.1.shell.0`，GitHub预览版已发布（`7bd642d`）；国内镜像阻塞与官网状态见 §85 |
-| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.0`（Linux deb、macOS dmg、Windows exe；8资产）；`v0.2.1-alpha.5.shell.0`（6/6 镜像）为其上一版 |
-| 本地门禁 | ✅ verify440 + ACP1、audit、bootstrap/peer、内核28项、新dist、双smoke、packaged24、飞书五轮25、市场offline1/real2、打包LAN1、codesign deep/strict均exit0（§85） |
-| 核心发布 | ✅ Release `39005920031` / 不可变 tag `7bd642d`，verify + 三平台build + publish success，八文件与来源证明通过（§85） |
-| 官网数据 | ✅ 镜像后 Refresh `39012258106` success，bot `0b1ea1b` 已合并；线上 JSON/API 六资产 `gitcode_ok=true`，中英八组双源下载与视觉检查 exit0（§85） |
-| 国内镜像 | ✅ GitCode release `58776` / tag `7bd642d`；六资产匿名内容 6/6，DEB 完整回读 228655036 字节、cmp 与 SHA 一致（§85） |
-| 实时下载统计 | GitHub 安装快照 6316（mac 776 / Windows 4913 / Linux 627），77 版本；2026-10-17T07:04Z 实时 API 为 7165（mac 842 / Windows 5631 / Linux 692，含既有 GitCode 引导计数），两种统计不混用 |
+| 最新代码基线 | `0.2.1-rc.1.shell.1`（壳修复：插件崩溃自愈、profile 可写性预检、渲染进程错误捕获），GitHub预览版已发布（tag `d087ebd`）；国内镜像待浏览器扩展连接，见 §86 |
+| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.1`（Linux deb、macOS dmg、Windows exe；8资产）；GitCode 镜像**未交付**（扩展未连接），`v0.2.1-rc.1.shell.0`（6/6 镜像）为其上一版 |
+| 本地门禁 | ✅ verify466 + ACP1、audit、bootstrap/peer、新 dist:dir、四项 packaged smoke（plain/UI/故障注入/Safe Mode S2.5）、打包 LAN pairing 2、市场 offline1/real2 均 exit0（§86） |
+| 核心发布 | ✅ Release `39038167498` / tag `d087ebd`，verify + 三平台build + publish success，八文件与来源证明通过（§86） |
+| 官网数据 | ⏳ Refresh `39041080613` success，bot `61dfc2b` 已合并；线上 JSON 为 `v0.2.1-rc.1.shell.1`、六资产 `gitcode_ok=false`（镜像待补，补后需再刷一次）（§86） |
+| 国内镜像 | ⏳ **未交付**：webbridge 报 `no extension connected`；GitCode tag 已对齐 `d087ebdd`，`mirror-gitcode-v2 --check-only` 0/6 present；未用个人令牌替代浏览器授权（§86） |
+| 实时下载统计 | GitHub 安装快照 6460（mac 778 / Windows 5049 / Linux 633），78 版本（2026-10-17T15:01Z bot 生成）；两种统计不混用 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2565,3 +2565,51 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 | macOS DMG | 285649520 | `fd581b12dba38f0b56e73004b75e22e8df7f54080f148c7ed7b7482ebb18bea7` |
 | Windows EXE | 260273571 | `d088d724ca8ba511abc1d579db1ef10c5d41eedc84fb87a1694f425b8d5ad43d` |
 | Linux DEB | 228655036 | `708420d4b8b8de1c8f47385dcf39ac103a67cff9aa23836b68c02412bf000bf2` |
+
+## 86. v0.2.1-rc.1.shell.1 发布（2026-10-17；GitHub 已交付，国内镜像待扩展连接）
+
+1. **范围（壳修订，内核不变）**：内置内核保持 `@deepseek-ai/dsh` `0.2.1-rc.1`，只递增壳修订号；
+   上游 `0.2.1-rc.2` 未纳入，避免借壳发布做隐式内核升级。本版修复三个真实故障面：
+   ① 插件加载行引用内核不提供的包时（#115）安全模式与自动隔离都覆盖不到 → 新增 `missing-package`
+   分类、安全模式覆盖 profile/home 的 `cordis.patch.yml` 及其 include、非 bundle 失败行写入持久
+   禁用 overlay（可在错误页/「桌面工具」菜单/升级插件后解除）；② profile 根配置不可写导致的
+   EPERM 启动死循环（#100/#116）→ 启动前文件级写权限预检 + 一键清除只读并重启 + 体检同源探测
+   + 诊断 `profile_write=`；③ 白屏无法取证（#100）→ 渲染进程 error/warning 与 unresponsive
+   进诊断 `renderer_errors`。issue 处理与证据链见 `docs/plans/2026-10-17-open-issue-triage.md`。
+2. **首个候选失败与根因（未发布，已按规重指）**：首轮 tag 指向 `2b570b8`，release `39035468118`
+   的 verify 通过、三平台 build 失败于 S2.5「Safe Mode recovers from a broken plugin」。
+   本机复现并定位：安全模式新增的补丁层扫描把**官方行**当成用户行——壳自身的 locale 覆盖写在
+   `profiles/web/cordis.patch.yml`，而官方 bundle 只从 profile 查找（内核实际从安装闭包解析），
+   于是 `locale` 被禁用、Web UI 报 "Failed to load plugins"。修复 `e66ce72`：官方 bundle 先按
+   安装闭包解析（`harnessRoot()` 贯穿调用方），并在官方组合无法完整解析时**不从用户补丁层禁用
+   任何行**（退回 bundle 行恢复行为）；补两条回归测试。重指前已确认 GitHub 无 Release、GitCode
+   无资产、旧 run 已结束，随后 `git tag -f` + 两远端 `--force-with-lease` 到 `d087ebd`。
+3. **发布**：tag `v0.2.1-rc.1.shell.1` → `d087ebdda21d4eeb4dd503bd61fac70cf8c50a98`（peeled 核对一致，
+   GitHub/GitCode 同 SHA）。Release run `39038167498`：verify（含 security:audit、bootstrap、
+   `pnpm run verify`、Linux Electron E2E 门禁、tag/version 匹配）+ macos-14 / windows-2022 /
+   ubuntu-24.04 三平台 build（含 packaged smoke 与 S2.5 全部变体）+ publish 全绿；八文件契约齐全。
+4. **本机门禁**：`pnpm run verify` exit0（466 单测 + ACP1，覆盖率 89.98/82.76/86.89，site 检查与
+   构建通过）；`dist:dir` 后四项 packaged smoke（plain、UI、`DSH_DESKTOP_TEST_FAIL_HARNESS`、
+   `DSH_DESKTOP_TEST_RETRY_FAIL`）与 S2.5 `DSH_DESKTOP_SAFE_BREAK` 全部 exit0；打包 LAN pairing 2、
+   市场 offline1/real2 exit0。本机 Playwright 的 `read-only DSH_HOME` 与 `auto-quarantines` 两条
+   在改动前的干净树上同样失败（A/B 验证），属本机环境问题，由 CI 的 Linux E2E 门禁覆盖。
+5. **官网数据**：Release 后自动 Refresh `39041080613` success，bot `61dfc2b` 已合并；线上
+   `/data/release.json` 为 `v0.2.1-rc.1.shell.1`（生成于 2026-10-17T15:01:38Z），六资产
+   `gitcode_ok=false`（镜像未交付），`/api/downloads` 实时计数可用（6460 / 78 版本）。
+6. **国内镜像（未完成，阻塞在浏览器扩展）**：`mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1 --check-only`
+   显示 tag 对齐 `d087ebdd`、6 个公共资产、**0/6 present**；实际镜像需要借用登录态，
+   而 webbridge 返回 `no extension connected`（daemon 已在运行）。未用个人令牌替代浏览器授权，
+   也未把 GitHub 成功写成镜像完成。恢复扩展连接后执行：
+   `node scripts/mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1`，随后重新派发 Site Data Refresh
+   把六资产 `gitcode_ok` 刷为 true，并做一次安装包完整回读比对（沿用 §85 的口径）。
+7. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
+   macOS 公证与 Windows 商业签名仍未覆盖；`docs/plans/2026-10-17-boundary-verification.md`
+   是这三项的验证计划，本版未执行。
+
+公开安装包（GitHub Release `v0.2.1-rc.1.shell.1`）：
+
+| 安装包 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 285666284 | `3187d04ce50ce74f840d13858b5e4dd8d44de50ecaa8bc641766b3cc4c5af59d` |
+| Windows EXE | 260291984 | `29a0b3c8ab45a0e5bc6da986ce4169ee72beacdecca0a318184e8ceee0b8f0a8` |
+| Linux DEB | 228672000 | `bb59298515ffa91867d9769734323547660c249fd1dd47792eb7c1f847fdda10` |
