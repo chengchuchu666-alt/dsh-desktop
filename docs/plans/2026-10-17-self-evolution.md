@@ -27,7 +27,7 @@
 | EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 完成：48d07bb3a42460066306842d0e2b1155eef21428，双远端集成分支已推送 |
 | EV-02A | 新上游预发布暴露的部署漂移：scripts/deploy-harness.mjs、CI bootstrap 顺序回归、本文 | 非 legacy deploy 使用共享锁文件；冻结安装后闭包仍为 alpha.5 且无 rc.1；peer 审计与构建通过 | 完成：9e057c748438175a8fedadfb0d7d9f82633fe2f1 |
 | EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、cc-connect-types/controller 的只读当前应用名及测试、必要的纯 UI helper/测试、e2e 桌面控件用例（含 trash-harness 假 Sidecar 支持）、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 完成：b442d88227761f454183cbfcfd15790ab18f6c07 |
-| EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 待执行 |
+| EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 进行中 |
 
 ## 验收与回执
 
@@ -68,7 +68,12 @@ DSH unavailable 分开、崩溃恢复、Safe Mode 只读、0 次隐式 sidecar �
 438 单测 + ACP1 零跳过 exit0（`/tmp/dsh-ev03-verify2.log`），audit exit0（`/tmp/dsh-ev03-audit.log`）。
 首轮完整 verify 另暴露 process-lifecycle 150ms 启动竞态 1 次，edd962cb91e4e831fc73c5e134770a978f8a0730
 改为子进程 ready 信号，原断言语义不变，随后 5 次单测与完整 verify 均通过。
-下一任务 EV-04；后续同样回填提交 SHA、命令和退出码。
+EV-04（本地）：新 dist `dist/mac-arm64/dsh-desktop.app` 版本 `0.2.1-alpha.5.shell.0`，sidecar commit `a9a936c`、
+manifest SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428` 与包内一致。
+两项 smoke、packaged 24/24（3.1m）、飞书 5×5=25（4.2m，retries=0）、市场 offline1/real2、
+打包 LAN 1、`codesign --verify --deep --strict` 均 exit0（`/tmp/dsh-ev04-*.log`）。
+真实手机飞书往返、Windows/Linux 人工原生视觉、三平台 tag CI/镜像/官网仍待完成。
+后续同样回填提交 SHA、命令和退出码。
 新版本目标为 `0.2.1-alpha.5.shell.0`，在门禁完成前仅为候选，不提前改官网已发布口径。
 未覆盖的真实飞书、物理异机网络、Windows/Linux 人工原生控件及第三方防病毒测试须明确列出，
 不能以模拟环境或 runner 推断这些场景已完成。既有签名/审计例外不暗中改变。

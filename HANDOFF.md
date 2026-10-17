@@ -2438,3 +2438,30 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 线上截图在/var/folders/wf/6qt496h52ws3z7j49rz19ylw0000gn/T/dsh-site-ui-Tm5jtv，抽图复核中文手机暗色、英文桌面浅色三平台双源按钮与布局正常。
 完整pnpm verify再次exit0（429单测 + ACP1；/tmp/dsh-release-alpha3-mirror-verify.log）；未新增依赖/运行时代码或放宽任何门禁。
 本版GitHub、GitCode与官网发布工作全部完成，先前登录外部阻塞解除；应用安装/profile未改，原签名、审计例外、性能和未覆盖验收边界仍保留。
+
+## 84. v0.2.1-alpha.5.shell.0 发布（2026-10-17）
+
+1. **范围与固定点**：按 `docs/plans/2026-10-17-self-evolution.md` 交付 alpha.5 内核升级与桌面工具浮窗
+   飞书快捷控制。已发布 `v0.2.1-alpha.3.shell.0`（tag `63e5236`）保持不可变；本轮只新增 alpha.5 候选，
+   不覆盖 `/Applications`、用户真实 profile 或凭据，所有 UI/E2E 使用临时 profile、假 Secret 与假 Sidecar。
+2. **内核与供应链**：官方 npm 与 GitHub Release 确认 alpha.5；32 个内核同族直接依赖与锁文件同步，
+   账户补丁和垃圾桶补丁按精确版本复核（alpha.3→alpha.5 的两个上游 bundle 逐字节一致）。
+   验收期间上游于 2026-10-17T03:02Z 发布 `0.2.1-rc.1`，本轮仍固定已审查 alpha.5，不临时切换内核；
+   `version:check` 因此按预期返回 3（发现更新，不是测试失败）。
+3. **部署可复现性修复**：`pnpm deploy --legacy` 会忽略锁文件重新解析范围，rc.1 发布后请求新预发布并因
+   companion `dsh-session-format-v0-to-v1@0.2.1-rc.1` 缺失而失败。改为共享锁文件 deploy
+   （`inject-workspace-packages=true`、不覆盖 auto-install-peers），并移除闭包中指向仓库的相对补丁元数据。
+   重建后 299 个 dsh 包均为 alpha.5、无 rc.1，闭包 peer 审计通过；静态回归禁止回到 legacy 部署。
+4. **飞书快捷控制**：浮窗「连接」分组显示当前应用、桌面进程、飞书通道和 DSH 任务四行只读状态，
+   并提供显式开启/关闭/重连。打开或轮询只读，不启动 Sidecar、不发消息、不调用模型；无应用、
+   旧凭据需重录、Safe Mode 时按钮禁用并说明；显式关闭后仍可从同一按钮手动开启，关闭连接的持久禁用意图不变。
+   控制器快照只读暴露 `applicationName`，不包含 Secret。
+5. **本地完整门禁**：`pnpm verify` 438 单测 + ACP1、零跳过，`pnpm security:audit` 未新增忽略；
+   两项 packaged smoke、packaged 24/24（3.1m）、关键飞书 5 用例 ×5 轮 25（4.2m，retries=0）、
+   市场 offline1/real2、打包 LAN 配对 1 均 exit0；`codesign --verify --deep --strict` 通过。
+   `dist/mac-arm64/dsh-desktop.app` 版本 `0.2.1-alpha.5.shell.0`；sidecar commit `a9a936c`，
+   manifest SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428` 与包内一致。
+   首轮完整 verify 曾因当前 PATH 缺 Go 与 process-lifecycle 150ms 启动竞态各失败一次；补 Go 路径、
+   改为子进程 ready 信号后原断言不变，重跑通过，日志保留。
+6. **发布与外部交付**：待 tag/三平台 CI、GitHub Release 八文件、GitCode 六镜像内容与官网刷新完成后
+   在本节回填；未完成前不把候选写成已发布下载。

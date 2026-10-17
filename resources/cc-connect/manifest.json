@@ -4,5 +4,5 @@
   "platform": "darwin",
   "arch": "arm64",
   "binary": "bin/cc-connect",
-  "sha256": "532a748fe508cd7ad32183cc142dd3f3021a7d3017ddea7baf945ec4237ae472"
+  "sha256": "6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428"
 }
