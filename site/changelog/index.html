@@ -42,6 +42,16 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.1.shell.1 <small>（内核 0.2.1-rc.1）</small></h2>
+  <ul>
+    <li><strong>插件崩溃后能自愈（#115 一类）</strong>：当某个加载行引用了内置内核不提供的包时，以前只有 &quot;启动失败&quot;和一个反复重启的循环——安全模式也救不回来（安全模式只收集用户 bundle 插入的行， 而失败行常常来自 <code>cordis.patch.yml</code> 或它 include 的文件）。本版：失败分类新增&quot;找不到包&quot;， 错误页直接给出&quot;升级到最新版 / 禁用该插件&quot;的方向；安全模式开始覆盖 profile 与 home 两层的 <code>cordis.patch.yml</code> 及其 <code>include</code> 文件（用户对<strong>官方行</strong>的配置覆盖仍保持启用，不会被误禁用）； 自动隔离不再只认 bundle 名，非 bundle 的失败行会被记入壳自有的禁用 overlay，下次启动自动 绕开它，并可在错误页、「桌面工具」菜单或升级/禁用该插件后一键解除。</li>
+    <li><strong>profile 文件不可写不再死循环（#100/#116）</strong>：内置内核每次启动都会重写 <code>profiles/web/cordis.yml</code>，该文件只读、ACL 拒绝写入或被 Windows&quot;受控文件夹访问&quot;拦截时， 以前表现为&quot;白屏后怎么重启都起不来&quot;，而体检仍显示&quot;数据目录可写&quot;。本版在启动前做<strong>文件级</strong> 写权限预检：预检失败不再空转重启，而是给出带具体路径的错误页与&quot;修复文件权限并重启&quot;按钮 （清除只读属性后自动重试）；体检的&quot;数据目录与磁盘&quot;项改用同一探测；诊断报告新增 <code>profile_write=</code> 一行。</li>
+    <li><strong>白屏可诊断（#100）</strong>：渲染进程没有崩溃但页面空白时，以前没有任何线索，只能请用户手工开 开发者工具。本版采集渲染进程的 error/warning 控制台消息与&quot;无响应&quot;事件（环形缓冲、限长、 导出时脱敏），写入诊断报告的 <code>renderer_errors</code> 段；渲染进程恢复失败时也会把首条异常并入 错误页日志尾部。</li>
+    <li><strong>诊断更完整</strong>：插件清单新增 <code>patch_layers</code>（读到的用户补丁层）与 <code>unkeyed_rows</code> （无法按 id 禁用的&quot;隐形行&quot;）——以前这两类信息在报告里完全看不到。</li>
+    <li><strong>内核未变</strong>：仍打包 <code>@deepseek-ai/dsh</code> <code>0.2.1-rc.1</code>，只递增壳修订号；上游 <code>0.2.1-rc.2</code> 不在本次范围内，不借壳发布做隐式内核升级。</li>
+    <li><strong>边界说明</strong>：所有修复都在本机完成，不改变隐私边界——诊断报告仍只在本地生成、不自动上传； 一键修复只清除只读属性，不修改 ACL、不调整安全软件设置、不删除用户数据。</li>
+  </ul>
+
   <h2>v0.2.1-rc.1.shell.0 <small>（内核 0.2.1-rc.1）</small></h2>
   <ul>
     <li><strong>内核升级</strong>：把内置 Harness 从 alpha.5 升到 <code>0.2.1-rc.1</code>（上游 <code>next</code> 通道），同步 32 个 内核同族直接依赖、锁文件与 <code>minimumReleaseAgeExclude</code>。上游随后发布了 <a href="https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1" target="_blank" rel="noopener">官方预览版说明</a> （2026-10-17T05:22Z）。</li>
@@ -107,14 +117,6 @@
     <li><strong>完整飞书应用管理</strong>：设置和原生菜单打开同一独立窗口；默认扫码创建，支持取消、过期重试、多份本地应用、编辑、开启、持久关闭和确认移除。扫码保存不隐式开启或切换，关闭窗口不关闭连接。</li>
     <li><strong>消息降噪与卡片</strong>：默认精简 + 3 秒预览；可选完整/精简/静默、流式预览、经典/富卡片和进度样式。修复 ACP 思考被重复映射成正文的问题；旧配置和凭据无损迁移。</li>
     <li><strong>可靠状态与安全边界</strong>：捆绑 cc-connect 提供真实长连接健康信号，分别显示服务启动、飞书通道在线和 DSH 实际任务成功；缺模型 key 指向 Models。Secret 不回读、不进入 TOML/日志；Safe Mode 暂停和持久关闭保持独立。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.0 <small>（内核 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li><strong>飞书消息连接</strong>：从原生「扩展 / Desktop tools」菜单打开独立二维码配置窗口，完成回调后由受监督的 cc-connect Sidecar 将飞书消息接入 DSH；设置页支持启动、停止、重连和 Safe Mode 生命周期。</li>
-    <li><strong>一键 CLI 与 skills</strong>：新增 <code>pnpm run feishu:setup</code>，调用官方 Lark CLI 完成用户 OAuth，并可安装官方 <code>lark-*</code> skills；用户 CLI 身份与 cc-connect 机器人身份明确分离。</li>
-    <li><strong>运行时与可靠性</strong>：升级内置 DSH 到 <code>0.2.1-alpha.2</code>，同步 32 个 peer pin，并按新内核重建登录自动打开补丁；新增多运行时管理面板及更严格的运行时路径校验。</li>
-    <li><strong>安全边界</strong>：二维码配置使用临时目录，Secret 只进入受保护凭证存储或权限为 <code>0600</code> 的文件，不写入日志、仓库或普通设置文件。</li>
   </ul>
   <!-- changelog:auto:end -->
 

@@ -42,6 +42,16 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.1.shell.1 <small>（kernel 0.2.1-rc.1）</small></h2>
+  <ul>
+    <li><strong>Plugin crashes now self-heal (#115 family)</strong>: a loader row that imports a package the bundled kernel does not carry used to leave only &quot;startup failed&quot; and a restart loop — Safe Mode could not help because it only collected rows inserted by user bundles, while the failing row usually comes from <code>cordis.patch.yml</code> or a file it includes. This release classifies that failure as <code>missing-package</code>, points the error page at the fix (update the app or disable the plugin), extends Safe Mode over the profile/home patch layers and their includes (user overrides of *official* rows stay enabled), and records non-bundle failing rows in a shell-owned quarantine overlay that skips them on the next start — reversible from the error page, the extensions menu, or by updating or disabling the plugin.</li>
+    <li><strong>An unwritable profile no longer loops (#100/#116)</strong>: the kernel rewrites <code>profiles/web/cordis.yml</code> on every start, so a read-only file (or an ACL/Controlled Folder Access block) used to look like &quot;blank screen, then it never starts again&quot; while the health check still reported the data folder as writable. The shell now probes the profile *files* before spawning, refuses to spin on a doomed boot, and shows a page with the concrete path and a one-click &quot;repair file permissions and restart&quot; action; the storage health check uses the same probe and the diagnostic report gained a <code>profile_write=</code> line.</li>
+    <li><strong>Blank renderers are diagnosable (#100)</strong>: renderer console errors/warnings and unresponsive events are captured into a bounded, redacted <code>renderer_errors</code> section of the diagnostic report, and the renderer-failure page now carries the first exception.</li>
+    <li><strong>More complete diagnostics</strong>: the plugin inventory reports <code>patch_layers</code> and <code>unkeyed_rows</code>.</li>
+    <li>The bundled kernel is unchanged at <code>@deepseek-ai/dsh</code> <code>0.2.1-rc.1</code>; only the shell revision moves, so upstream <code>0.2.1-rc.2</code> is deliberately not pulled in by a shell release.</li>
+    <li>Everything stays local-first: the diagnostic report is still generated on-device and never uploaded automatically, and the repair only clears the read-only attribute — it does not touch ACLs, security-software settings, or user data.</li>
+  </ul>
+
   <h2>v0.2.1-rc.1.shell.0 <small>（kernel 0.2.1-rc.1）</small></h2>
   <ul>
     <li>Upgrades the bundled Harness from alpha.5 to <code>0.2.1-rc.1</code> (the <code>next</code> channel); upstream published its <a href="https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1" target="_blank" rel="noopener">release notes</a> afterwards.</li>
@@ -109,15 +119,6 @@
     <li>Adds quieter compact/3-second preview defaults and bounded card/progress preferences; fixes ACP reasoning leaking into answer text. Existing settings and credentials migrate without loss.</li>
     <li>Separates service, channel and completed-task health. Secrets remain main-process-only; Safe Mode does not override explicit close.</li>
     <li>Local unit, Go/race, packaged UI, market and controlled live Feishu gates passed. Release CI validates all three installers and provenance; domestic mirrors require anonymous verification.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.0 <small>（kernel 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li>Upgrades the bundled <code>@deepseek-ai/dsh</code> runtime to <code>0.2.1-alpha.2</code>, synchronizes 32 kernel peer pins, and rebuilds the sign-in auto-open patch for the new package.</li>
-    <li>Adds a native Feishu setup flow with a QR window, supervised cc-connect sidecar, lifecycle controls, and a one-command official Lark CLI skill installer.</li>
-    <li>Adds the multi-runtime dashboard and tightens runtime version/path validation.</li>
-    <li>Temporary setup files and credentials stay isolated and permission-protected; secrets are never written to logs or ordinary settings.</li>
-    <li>Verification passed: 341 tests, typecheck, coverage, site checks, build, LAN pairing 2/2, market offline 1/1, market real 2/2, packaged smoke, and a live Feishu message round trip.</li>
   </ul>
   <!-- changelog:auto:end -->
 
