@@ -1,0 +1,38 @@
+# 2026-10-17 自主版本进化
+
+目标：交付一个完成代码、回归、三平台发布、国内镜像和官网同步的新版本，
+至少包含一个实际可操作的桌面扩展功能，不以版本号或文档更新代替功能进化。
+起点 `aae9c6d503f4a6929f703e0d95ff352cf4dab769`，先快进合并统计 bot `a3e09bc`。
+当前已发布 `0.2.1-alpha.3.shell.0` 的 tag 保持不可变。
+
+## 选择依据与边界
+
+- 官方 npm 与 [Harness Release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.5)
+  已确认 alpha.5。上游包含技能列表同步、终端重复查询和 Windows/Linux 输入框 Page Up 布局修复。
+- #113 的 run `38860789986` 首次失败为 `ERR_PNPM_UNUSED_PATCH`：账户补丁仍绑定 alpha.3，
+  不能将其误判为依赖年龄限制或通过禁用补丁门禁处理。
+- 用户补充要求至少一个扩展功能：新增桌面工具浮窗的飞书状态与快捷开关。
+  复用已有主进程权限和连接生命周期；打开菜单不启动连接，实际操作才发送命令。
+- 采用实现 → 验证 → 修正；每项单独提交，精确暂存、推双远端并回填证据。
+  不升级无关依赖，不覆盖 Applications 或真实 profile，不读取/记录真实 Secret，不请求钥匙串。
+  所有本地 UI/E2E 使用临时 profile、假 Secret/Sidecar、模拟 ACP。
+
+## 有序原子任务
+
+| ID | 目标与允许修改 | 门禁 | 状态 |
+|---|---|---|---|
+| EV-01 | 自动升级补丁版本迁移：scripts/version.mjs、专用 kernel-patches helper、相应单测、发布技能、本文 | 临时目录中的迁移/幂等/冲突/无关补丁保护；补丁内容不变，应用失败仍阻断；verify | 完成，提交后回填 SHA |
+| EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 待执行 |
+| EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、必要的纯 UI helper/测试、e2e 桌面控件用例、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 待执行 |
+| EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 待执行 |
+
+## 验收与回执
+
+EV-01：`node --test test/kernel-patches.test.ts` 四项通过 exit0，包含真实 version CLI 的临时目录迁移；
+`pnpm verify` exit0（433单测 + ACP1，零跳过），日志为临时目录中的 dsh-evolve-ev01-verify.log。
+保留补丁 bytes、无关 YAML 注释与策略，已有候选文件/自定义或重复映射均拒绝且保持原文件；幂等用例通过。
+本项不改运行时或当前版本，不以四项单测代替后续真实 pnpm 补丁应用与新包门禁。
+下一任务 EV-02；后续同样回填提交 SHA、命令和退出码。
+新版本目标为 `0.2.1-alpha.5.shell.0`，在门禁完成前仅为候选，不提前改官网已发布口径。
+未覆盖的真实飞书、物理异机网络、Windows/Linux 人工原生控件及第三方防病毒测试须明确列出，
+不能以模拟环境或 runner 推断这些场景已完成。既有签名/审计例外不暗中改变。

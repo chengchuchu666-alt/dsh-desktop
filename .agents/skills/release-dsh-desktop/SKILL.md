@@ -60,8 +60,8 @@ temporary credential copies and cleanup; verify thoughts cannot enter answer tex
 1. `node scripts/version.mjs check` → exit 3 with `update available: <v>`.
 2. `node scripts/version.mjs bump dsh <v>` → prints `synced N dsh-* peer pins`.
 3. `node scripts/sync-release-age-excludes.mjs <v>` → `241 -> 229 pinned entries` (numbers vary).
-4. `pnpm -C manifest/harness install --lockfile-only --no-frozen-lockfile --reporter=append-only` → if it exits with
-   `ERR_PNPM_UNUSED_PATCH`, rebuild the login patch for the new kernel
+4. `pnpm -C manifest/harness install --lockfile-only --no-frozen-lockfile --reporter=append-only` → if the reviewed
+   account patch no longer applies, rebuild it for the new kernel
    version (see the patch-regeneration fault-table row), then re-run.
 5. `pnpm -C manifest/harness install --frozen-lockfile` → `Done`.
 6. `pnpm run bootstrap` → `audit-harness-peers: closure satisfied`; fix
@@ -123,7 +123,12 @@ node scripts/version.mjs bump dsh <version|latest>
 `bump dsh` rewrites `manifest/harness/package.json` pin and
 `package.json` version (shell rev resets to 0). Since shell.5 it also
 auto-syncs every `@deepseek-ai/dsh-*` peer range that contained the
-previous kernel (`scripts/kernel-peers.mjs`). What it does NOT touch is
+previous kernel (`scripts/kernel-peers.mjs`). It also carries the reviewed
+account patch filename and pnpm mapping to the new version without changing
+the diff (`scripts/kernel-patches.mjs`); existing candidate files or unexpected
+mappings stop the bump for review. pnpm must still apply the patch successfully:
+an upstream context change requires the manual regeneration below, never
+`allowUnusedPatches` or removing the patch gate. What it does NOT touch is
 the release-age exclude list in `manifest/harness/pnpm-workspace.yaml`
 (~190 entries pinned to exact kernel versions) — re-pin it with:
 

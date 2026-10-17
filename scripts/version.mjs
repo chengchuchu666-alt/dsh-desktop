@@ -15,6 +15,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { compareSemver, isSemver, parseCompositeVersion } from './release-shape.mjs'
 import { fetchPublishedVersion, resolvedVersionsFromLockfile, syncKernelPeerPins } from './kernel-peers.mjs'
+import { syncKernelAccountPatch } from './kernel-patches.mjs'
 
 const ROOT = process.cwd()
 const PKG_PATH = join(ROOT, 'package.json')
@@ -131,6 +132,7 @@ async function main() {
     const dsh = target === 'latest' ? (await latestUpstream()).latest : target
     if (!isSemver(dsh)) fail(`not a semver: ${dsh}`)
     const previous = state.pinned
+    if (await syncKernelAccountPatch(ROOT, previous, dsh)) console.log(`version: carried reviewed account patch to ${dsh}; pnpm must verify its context`)
     await writeState(dsh, 0)
     // The kernel ships as a family: sync every @deepseek-ai/dsh-* peer that
     // names the old version, so callers (dsh-watch included) cannot produce a
