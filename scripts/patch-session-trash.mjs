@@ -92,7 +92,7 @@ export async function patchBundledSessionTrash(root, upstreamRoot = root) {
   ]) {
     const packageRoot = join(root, 'node_modules', '@deepseek-ai', name)
     const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'))
-    if (manifest.version !== '0.2.1-alpha.5') throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
+    if (manifest.version !== '0.2.1-rc.1') throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
     const file = join(packageRoot, 'lib', bundle)
     const upstreamFile = join(upstreamRoot, 'node_modules', '@deepseek-ai', name, 'lib', bundle)
     const source = await readFile(upstreamFile, 'utf8')
