@@ -85,3 +85,63 @@ Site Data Refresh `39001837976` success，bot `cb8acb1` 合并；线上 JSON 同
 `0.2.1-alpha.5.shell.0` 已发布，官网与镜像已切换到该 tag；已发布 tag 保持不可变。
 未覆盖的真实飞书、物理异机网络、Windows/Linux 人工原生控件及第三方防病毒测试须明确列出，
 不能以模拟环境或 runner 推断这些场景已完成。既有签名/审计例外不暗中改变。
+
+---
+
+# 第二轮：内核升级到 0.2.1-rc.1
+
+目标：把内置 Harness 从 alpha.5 升到上游 `next` 通道的 `0.2.1-rc.1`，完成兼容核对与本地全量门禁。
+已发布 `0.2.1-alpha.5.shell.0` 的 tag（`4e58055`）保持不可变。
+
+## 选择依据与边界
+
+- 官方 npm registry：`@deepseek-ai/dsh` 的 `next` dist-tag 为 `0.2.1-rc.1`（2026-10-17T03:17Z），
+  `latest` 仍为 `0.2.0-rc.2`。**上游尚未发布对应 GitHub Release/tag 或变更说明**，
+  本迭代只按已发布的 npm 制品升级，不引用未公开文案，并在说明中写明该边界。
+- 升级前核对：alpha.5 闭包内的 297 个内核包全部已发布 rc.1，无缺失 companion；
+  此前的部署失败（rc.1 刚出现时 `dsh-session-format-v0-to-v1@0.2.1-rc.1` 缺失）已不再成立。
+- 不做无关重构；只改与内核版本绑定的清单、锁文件、豁免列表、补丁版本保护、构建脚本与文档。
+- 测试仍用临时 profile、假 Secret/Sidecar；不覆盖 `/Applications` 或真实 profile，不读取真实凭据。
+
+## 有序原子任务
+
+| ID | 目标与允许修改 | 门禁 | 状态 |
+|---|---|---|---|
+| RC-01 | 版本与闭包：`package.json`、`manifest/harness` 清单/锁/工作区/豁免、账户补丁版本迁移、`scripts/patch-session-trash.mjs` 版本保护 | 冻结安装（两种 pnpm 读取路径）、bootstrap/peer 审计、补丁在部署闭包中生效 | 完成（见回执） |
+| RC-02 | 构建可复现性：`scripts/deploy-harness.mjs`、`test/ci-bootstrap-order.test.ts` | pnpm 10.33.2 写出的锁文件可被 10/11 两种读取路径冻结安装；hoisted 布局不依赖外层环境注入 | 完成（见回执） |
+| RC-03 | 本地全量门禁与新 dist | verify/audit、双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN、codesign | 完成（见回执） |
+| RC-04 | 文档与发布：release notes、README/ARCHITECTURE 版本示例、本文、HANDOFF；tag 与三平台 CI、GitHub 资产、GitCode 镜像、官网数据 | 八文件与来源证明、六镜像内容与一包全量回读、官网八组、双远端干净 | 待执行 |
+
+## 验收与回执
+
+（随任务完成回填命令、退出码与提交 SHA。）
+
+RC-01：`node scripts/version.mjs bump dsh 0.2.1-rc.1` exit0，自动迁移账户补丁并同步 32 个内核同族 pin；
+迁移后的补丁与 alpha.5 版本逐字节相同（`cmp` exit0）。升级前逐包核对：alpha.5 闭包内 297 个内核包
+全部已发布 rc.1（此前缺失的 `dsh-session-format-v0-to-v1@0.2.1-rc.1` 已补齐）。
+`sync-release-age-excludes.mjs 0.2.1-rc.1` 后豁免 302 条、闭包 297 个包无遗漏；
+锁文件由**仓库锁定的 pnpm 10.33.2** 生成（`patchedDependencies` 为 `hash:` 嵌套形式）。
+`pnpm run bootstrap` exit0：闭包 peer 审计 `closure satisfied`、Node 24.21.0 重新落位；
+`resources/harness` 内 dsh 与账户包均为 rc.1，账户补丁（`dshOnboarding?.hasApiKey`）、
+垃圾桶补丁（`idle-session-trash-v1`）与工作区补丁（`removed-session-selection-v1`）均已生效。
+内核兼容单测 28 项 exit0（`/tmp/dsh-rc1-kernel-tests2.log`）。
+闭包差异：297 个包仅版本字符串一类的小幅缩减，无新增/移除依赖；
+`dsh-api-session-controller`、`dsh-client-ui-workspace` 与 alpha.5 逐字节一致，
+`dsh-client-ui-settings-account` 仅两处版本字符串变化，ACP/headless `cordis.patch.yml` 未变。
+
+RC-02：`pnpm run bootstrap` 首轮在 `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` 处中止。定位为
+manifest 锁文件由 pnpm 11.11 写出（紧凑 `patchedDependencies`），而 `pnpm run bootstrap` 实际
+使用仓库锁定的 10.33.2（`packageManager` + CI `pnpm/action-setup`），10.33.2 不接受该形式；
+未放宽检查或用 `--no-frozen-lockfile` 绕过，改为用 10.33.2 重新生成锁文件（10/11 两种读取路径
+冻结安装均 exit0）。同时把 manifest 安装的 hoisted 布局写成显式参数，不再依赖外层 pnpm 注入的
+`npm_config_node_linker`；新增两项静态回归（显式 hoisted、锁文件 `hash:` 形式与 `packageManager` 主版本）。
+`/tmp/dsh-rc1-bootstrap3.log`、`/tmp/dsh-rc1-frozen.log`。
+
+RC-03：新 dist `dist/mac-arm64/dsh-desktop.app` 版本 `0.2.1-rc.1.shell.0`，包内 dsh 为 rc.1、
+闭包无仓库相对补丁元数据；sidecar commit `a9a936c`，manifest SHA-256
+`60cee01b2fce3087210fe691451a6b9cba376d214e9c80db63434af99cacab77` 与实际二进制一致。
+`pnpm verify` exit0（438 单测 + ACP1、零跳过，覆盖率 89.81/82.76/86.83；`/tmp/dsh-rc1-verify.log`）；
+`pnpm security:audit` exit0（保留既有单一 CVE 例外；`/tmp/dsh-rc1-audit.log`）。
+两项 packaged smoke、packaged 24/24（2.9m）、关键飞书 5 用例 ×5 轮 25（3.2m，retries=0）、
+市场 offline1/real2、打包 LAN 1、`codesign --verify --deep --strict` 全部 exit0
+（`/tmp/dsh-rc1-{smoke1,smoke2,packaged,feishu,market-offline,market-real,lan}.log`）。
