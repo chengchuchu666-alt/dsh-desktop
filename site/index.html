@@ -283,10 +283,10 @@
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">Harness alpha.5：飞书浮窗控制</h3>
-          <p data-i18n="latest.lead">升级内置 Harness 到 alpha.5；桌面工具浮窗分开显示当前应用、桌面进程、飞书通道与 DSH 任务，并提供显式开启、关闭与重连。</p>
+          <h3 id="latest-title" data-i18n="latest.title">Harness rc.1：内核升级与更稳的构建</h3>
+          <p data-i18n="latest.lead">内置 Harness 升到上游 rc.1 预发布：297 个内核包按 registry 元数据核对仅版本字符串变化，插件框架 cordis 转稳定版；闭包安装固定使用仓库锁定的 pnpm，构建结果不再受外层环境影响。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>状态分开：</b>进程就绪不会被当成通道在线，任务验证单独显示。</li><li><b>显式操作：</b>打开浮窗或轮询只读，不会自动连接、发消息或调用模型；无应用、旧凭据或 Safe Mode 会禁用操作并说明原因。</li><li><b>统一管理：</b>继续在管理飞书连接窗口创建/编辑应用，进入页面不会自动开启连接。<a href="/changelog">查看完整更新日志 →</a></li></ul>
+        <ul data-i18n="latest.items"><li><b>内核兼容：</b>账户登录补丁与垃圾桶版本保护随内核迁移；会话控制器与工作区 bundle 与上一版逐字节一致。</li><li><b>飞书浮窗：</b>继续分开显示应用、进程、通道与任务状态，显式开启/关闭/重连，打开浮窗不连接、不发消息、不调用模型。</li><li><b>本地门禁：</b>438 单测＋ACP、两项 smoke、24 项打包回归、飞书五轮、市场与局域网用例全部通过。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>

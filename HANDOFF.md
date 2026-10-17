@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.5.shell.0`，GitHub预览版已发布（`4e58055`）；GitCode六镜像与官网同步见 §84 |
-| 已发布 | ✅ GitHub预览版 `0.2.1-alpha.5.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），GitCode release `58738` 六资产内容核验通过 |
-| 本地门禁 | ✅ verify438 + ACP1、audit、新dist、双smoke、packaged24、飞书五轮25、市场offline1/real2、打包LAN1、codesign deep/strict均exit0（§84） |
-| 核心发布 | ✅ Release `38999365802` / 不可变 tag `4e58055`，verify + 三平台build + publish success，八文件与来源证明通过（§84） |
-| 官网数据 | ✅ 镜像后 Refresh `39001837976` success，bot `cb8acb1` 已合并；线上 JSON 同 tag、6/6 gitcode_ok=true；首页重点改为 alpha.5 浮窗控制，本地八组与部署后线上八组通过（§84） |
-| 国内镜像 | ✅ GitCode release `58738` / tag `4e58055`；六资产匿名Range内容6/6，DEB完整回读228656552字节、cmp与SHA一致（§84） |
-| 实时下载统计 | GitHub 安装快照 6294（mac 772 / Windows 4898 / Linux 624），76 版本，生成于 2026-10-17T04:25:18.401Z；2026-10-17T04:25:50.917Z 实时 API 为 7133（含既有 GitCode 引导计数），两种统计不混用 |
+| 最新代码基线 | `0.2.1-rc.1.shell.0`，GitHub预览版已发布（`7bd642d`）；国内镜像阻塞与官网状态见 §85 |
+| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.0`（Linux deb、macOS dmg、Windows exe；8资产）；`v0.2.1-alpha.5.shell.0`（6/6 镜像）为其上一版 |
+| 本地门禁 | ✅ verify440 + ACP1、audit、bootstrap/peer、内核28项、新dist、双smoke、packaged24、飞书五轮25、市场offline1/real2、打包LAN1、codesign deep/strict均exit0（§85） |
+| 核心发布 | ✅ Release `39005920031` / 不可变 tag `7bd642d`，verify + 三平台build + publish success，八文件与来源证明通过（§85） |
+| 官网数据 | ✅ 自动 Refresh `39008439689` success，bot `8f52335` 已合并；线上 JSON 为 rc.1、六镜像 `gitcode_ok=false`（镜像阻塞）；首页重点已更新，本地八组通过、线上复验见 §85 |
+| 国内镜像 | ⛔ GitCode 目标 release 404；kimi-webbridge 扩展未连接，无法借用登录态上传；不得宣称镜像完成（§85） |
+| 实时下载统计 | GitHub 安装快照 6316（mac 776 / Windows 4913 / Linux 627），77 版本，生成于 2026-10-17T06:33:18.345Z |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2495,3 +2495,51 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 | macOS DMG | 285661419 | `f20965a49765f63271645f029d81e7bdc016b3121f303fd0bf90ef51e2095425` |
 | Windows EXE | 260275866 | `a7c526de3aa4e15003613ff51f07b76ee6803b078e29f401a474cb7487ef99ba` |
 | Linux DEB | 228656552 | `5022949e107cc1dc4c1c5db7a6eacb370216db115e1b9010b8b7f0e95f5b04fe` |
+
+## 85. v0.2.1-rc.1.shell.0 发布（2026-10-17；GitHub 已交付，国内镜像阻塞）
+
+1. **范围**：把内置 Harness 从 alpha.5 升到上游 `next` 通道的 `0.2.1-rc.1`，完成兼容核对与本地全量门禁。
+   已发布 `v0.2.1-alpha.5.shell.0`（tag `4e58055`）保持不可变。上游目前**只发布 npm 包**
+   （dist-tag `next`，2026-10-17T03:17Z；`latest` 仍为 `0.2.0-rc.2`），没有对应的 GitHub Release
+   或变更说明，本轮回执不引用未公开文案。升级前逐包核对：alpha.5 闭包内 297 个内核包全部已发布 rc.1。
+2. **闭包差异**：按 registry 元数据比对 297 个包，全部只有版本字符串一类的小幅缩减
+   （每包 −100～−500 字节），无新增/移除依赖；`dsh-api-session-controller`、
+   `dsh-client-ui-workspace` 与 alpha.5 逐字节一致，`dsh-client-ui-settings-account` 仅两处版本字符串
+   变化，ACP/headless 的 `cordis.patch.yml` 未变。内核声明的 cordis 家族在同一窗口由 `-alpha.2`
+   转为稳定版（4.0.5 / 1.0.10 / 1.0.6 / 1.1.7，发布时间早于 rc.1），属于内核自身范围解析结果。
+3. **构建可复现性修复**：`pnpm run bootstrap` 首轮在 `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` 中止。
+   定位为 manifest 锁文件由 pnpm 11.11 写出（紧凑 `patchedDependencies`），而 bootstrap 实际使用
+   仓库锁定并在 CI 安装的 10.33.2，10.33.2 不接受该形式。未放宽检查：改用 10.33.2 重新生成锁文件
+   （10/11 两种读取路径冻结安装均 exit0），并把 manifest 安装的 hoisted 布局写成显式参数，
+   不再依赖外层 pnpm 注入的 `npm_config_node_linker`；新增两项静态回归防止复发。
+4. **本地全量门禁**：`pnpm run bootstrap` exit0（闭包 peer 审计 `closure satisfied`，账户/垃圾桶/工作区
+   三个补丁均在部署闭包生效）；内核兼容单测 28 项 exit0；`pnpm verify` exit0（440 单测 + ACP1、零跳过，
+   覆盖率 89.81/82.76/86.83）；`pnpm security:audit` exit0（保留既有单一 CVE 例外）。
+   新 dist 版本 `0.2.1-rc.1.shell.0`，包内 dsh 为 rc.1、无仓库相对补丁元数据；sidecar commit `a9a936c`，
+   manifest SHA-256 `60cee01b2fce3087210fe691451a6b9cba376d214e9c80db63434af99cacab77` 与实际二进制一致。
+   两项 packaged smoke、packaged 24/24（2.9m）、关键飞书 5 用例 ×5 轮 25（3.2m，retries=0）、
+   市场 offline1/real2、打包 LAN 1、`codesign --verify --deep --strict` 全部 exit0；日志前缀 `/tmp/dsh-rc1-`。
+5. **GitHub 发布**：tag `v0.2.1-rc.1.shell.0` → `7bd642dc2231d967dadb9aeee2ace8b5e92c86fe`
+   （两远端 peeled 一致）。Release run `39005920031` success（verify + 三平台 build + publish），
+   main CI `39005900843` success。预览版于 2026-10-17T06:02:13Z 公开，draft=false、prerelease=true；
+   八文件严格契约 exit0，三安装包 `gh attestation verify` 均绑定本 tag；资产证据目录 `/tmp/dsh-rc1-assets`。
+6. **官网数据**：Release 后自动 Refresh `39008439689` success，bot `8f52335` 已快进合并；
+   线上 `/data/release.json` 为 rc.1、生成于 2026-10-17T06:33:18.345Z，六镜像标记 `gitcode_ok=false`
+   （镜像未交付），`/api/downloads` 实时计数可用。首页中英「当前版本重点」已改为 rc.1 内核升级与
+   可复现构建，本地八组 `check-site-ui` exit0，推送后线上八组复验。
+7. **国内镜像（阻塞）**：GitCode 目标 release 仍为 HTTP 404；本机 kimi-webbridge 守护进程在运行，
+   但扩展 `extension_connected=false`（浏览器侧未连接），无法借用登录态执行 v2 上传/创建/校验。
+   未使用个人令牌替代浏览器授权，也未把 GitHub 成功写成镜像完成。解除后需：上传六资产 →
+   创建 release（沿用 `--status unset`）→ 六项匿名内容校验 + 至少一个安装包完整回读 →
+   在镜像可用后重新触发站点刷新并复验八组。当前线上按 GitHub 回退展示。
+8. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
+   macOS 公证与 Windows 商业签名仍未覆盖；上游 rc.1 无公开变更说明，本页与发布说明不代替上游文档；
+   Linux worker teardown 既有告警保留，审计例外不变。
+
+公开安装包（GitHub Release）：
+
+| 安装包 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 285649520 | `fd581b12dba38f0b56e73004b75e22e8df7f54080f148c7ed7b7482ebb18bea7` |
+| Windows EXE | 260273571 | `d088d724ca8ba511abc1d579db1ef10c5d41eedc84fb87a1694f425b8d5ad43d` |
+| Linux DEB | 228655036 | `708420d4b8b8de1c8f47385dcf39ac103a67cff9aa23836b68c02412bf000bf2` |
