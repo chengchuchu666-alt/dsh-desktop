@@ -42,6 +42,17 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-alpha.5.shell.0 <small>（kernel 0.2.1-alpha.5）</small></h2>
+  <ul>
+    <li>Upgrades the bundled Harness to the published 0.2.1-alpha.5 preview and resyncs the exact closure lockfile.</li>
+    <li>Extends the release-age exemptions from the real lockfile resolution, with a pure regression test that keeps peer-suffixed keys from becoming bogus package pins.</li>
+    <li>Carries the reviewed account patch to alpha.5, preserving system-browser authorization and the official-desktop-only login capability check.</li>
+    <li>Verifies the session-trash lifecycle anchors against the new upstream bundles before updating the version guard; busy, owned, maintenance and child sessions remain protected.</li>
+    <li>Keeps the ACP saved-credential composition and the separation between Feishu secrets and model API keys.</li>
+    <li>Adds a floating Feishu quick control that shows the selected application, desktop process, Feishu channel and DSH verification separately, with explicit start/stop/reconnect; opening it never connects, sends a message or calls a model, and missing applications, legacy credentials or Safe Mode disable the actions.</li>
+    <li>Verified with 438 unit tests plus ACP, both packaged smokes, 24 packaged E2E cases, 25 repeated Feishu cases, market offline/real and packaged LAN pairing. The gated tag pipeline still owns the three-platform build/upgrade/provenance checks; live phone Feishu round trips and manual Windows/Linux native review are outside local evidence.</li>
+  </ul>
+
   <h2>v0.2.1-alpha.3.shell.0 <small>（kernel 0.2.1-alpha.3）</small></h2>
   <ul>
     <li>Upgrades to Harness 0.2.1-alpha.3, with version-bound Desktop login and session-trash compatibility.</li>
@@ -105,16 +116,6 @@
     <li>Add <code>pnpm run feishu:setup</code> through the official <code>@larksuite/cli</code> installer to provision <code>lark-*</code> skills and user OAuth while keeping CLI and bot identities separate.</li>
     <li>Keep App Secrets out of the window, TOML, status, logs, and repository; clean temporary setup data on success, cancellation, or timeout.</li>
     <li>Update the Chinese and English website home/install pages; automated tests use fake secrets, temporary directories, and a local ACP mock. Real Feishu callback acceptance remains an organization-account QA step.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.4 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Keep the bundled official DeepSeek Harness kernel at 0.2.1-alpha.1 and publish shell revision 4.</li>
-    <li>Ship the existing multi-NIC LAN pairing, runtime/native-module diagnostics, and plugin recovery fixes in the refreshed installer.</li>
-    <li>Remove the automatic legacy GitCode v5 backfill dispatch; verify the domestic v2 mirror independently with anonymous range requests.</li>
-    <li>Upgrade sharp to 0.35.5 for GHSA-wq5f-xc86-pv6w; explicitly track the unfixable sprintf-js CVE-2026-97058 until upstream publishes a fix.</li>
-    <li>Local verification passed typecheck, runtime checks, 305 unit tests, site/API checks, LAN pairing, offline market install, and packaged smoke. The current dshmarket release does not yet declare compatibility with the bundled prerelease kernel, so peer and publish-age safety gates remain unchanged.</li>
-    <li>Add the bundled cc-connect sidecar and the Desktop Feishu settings surface: main-process supervision, start/stop/reconnect, Safe Mode handling, protected local Secret storage, and a documented cleanup path. Automated coverage uses fake sidecars and local ACP/HTTP mocks; real Feishu acceptance still requires user credentials and organization approval.</li>
   </ul>
   <!-- changelog:auto:end -->
 
