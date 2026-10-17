@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-rc.1.shell.1`（壳修复：插件崩溃自愈、profile 可写性预检、渲染进程错误捕获），GitHub预览版已发布（tag `d087ebd`）；国内镜像待浏览器扩展连接，见 §86 |
-| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.1`（Linux deb、macOS dmg、Windows exe；8资产）；GitCode 镜像**未交付**（扩展未连接），`v0.2.1-rc.1.shell.0`（6/6 镜像）为其上一版 |
+| 最新代码基线 | `0.2.1-rc.1.shell.1`（壳修复：插件崩溃自愈、profile 可写性预检、渲染进程错误捕获），GitHub 与 GitCode 均已交付（tag `d087ebd`），见 §86 |
+| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.1`（8资产）＋ GitCode release `58909`（六资产 6/6，完整回读一致）；`v0.2.1-rc.1.shell.0` 为其上一版 |
 | 本地门禁 | ✅ verify466 + ACP1、audit、bootstrap/peer、新 dist:dir、四项 packaged smoke（plain/UI/故障注入/Safe Mode S2.5）、打包 LAN pairing 2、市场 offline1/real2 均 exit0（§86） |
 | 核心发布 | ✅ Release `39038167498` / tag `d087ebd`，verify + 三平台build + publish success，八文件与来源证明通过（§86） |
-| 官网数据 | ⏳ Refresh `39041080613` success，bot `61dfc2b` 已合并；线上 JSON 为 `v0.2.1-rc.1.shell.1`、六资产 `gitcode_ok=false`（镜像待补，补后需再刷一次）（§86） |
-| 国内镜像 | ⏳ **未交付**：webbridge 报 `no extension connected`；GitCode tag 已对齐 `d087ebdd`，`mirror-gitcode-v2 --check-only` 0/6 present；未用个人令牌替代浏览器授权（§86） |
-| 实时下载统计 | GitHub 安装快照 6460（mac 778 / Windows 5049 / Linux 633），78 版本（2026-10-17T15:01Z bot 生成）；两种统计不混用 |
+| 官网数据 | ✅ 镜像后 Refresh `39046968057` success，bot `65f6e5e` 已合并；线上 JSON 为 `v0.2.1-rc.1.shell.1`、六资产 `gitcode_ok=true`（§86） |
+| 国内镜像 | ✅ GitCode release `58909` / tag `d087ebdd`；六资产匿名 206 校验（总字节+首字节+非 HTML）与 DEB 完整回读 SHA 三方一致；创建时预发布配额被拒，按故障表以 `--status unset` 正常发布（§86） |
+| 实时下载统计 | GitHub 安装快照 6486（mac 779 / Windows 5072 / Linux 635），78 版本（2026-10-17T15:53Z bot 生成）；两种统计不混用 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2599,12 +2599,19 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    线上 UI 复验：`SITE_CHECK_URL=https://dsh-desktop.com node scripts/check-site-ui.mjs` exit0
    （中英 × 390/1280 × light/dark 八组，下载按钮指向新版本、无页面错误与横向溢出；
    截图目录见脚本输出的临时目录）。
-6. **国内镜像（未完成，阻塞在浏览器扩展）**：`mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1 --check-only`
-   显示 tag 对齐 `d087ebdd`、6 个公共资产、**0/6 present**；实际镜像需要借用登录态，
-   而 webbridge 返回 `no extension connected`（daemon 已在运行）。未用个人令牌替代浏览器授权，
-   也未把 GitHub 成功写成镜像完成。恢复扩展连接后执行：
-   `node scripts/mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1`，随后重新派发 Site Data Refresh
-   把六资产 `gitcode_ok` 刷为 true，并做一次安装包完整回读比对（沿用 §85 的口径）。
+6. **国内镜像（已完成）**：先经三轮 `no extension connected` 阻塞（未用个人令牌替代浏览器授权、
+   未跑已知静默失败的 v5 管道）；用户恢复扩展连接后，会话标签被关闭导致 `navigate` 报陈旧 tab id，
+   用一次 `close_tab` 清理后重建 GitCode 标签页（origin `https://gitcode.com`、登录态就绪）。
+   `mirror-gitcode-v2.mjs` 六资产上传成功但链接 404（新 tag 尚无 release 对象，该脚本不负责创建），
+   改走伴随技能的 upload → create 流程：六资产重新上传取得 descriptor → `create` 时
+   `--status prerelease` 被 GitCode 以 HTTP 400 拒绝（平台预发布配额），按故障表改用
+   `--status unset`（release_status 0，正常发布）成功创建 release `58909`，tag 对齐
+   `d087ebdda21d4eeb4dd503bd61fac70cf8c50a98`、asset_count=6。
+   验证：`mirror-gitcode-v2 --check-only` **6/6 present**；六资产逐一 `curl -L -r 0-0` 得 206，
+   `Content-Range` 总字节与 GitHub 侧完全一致、首字节一致、非 HTML；DEB 稳定 URL 完整回读
+   228672000 字节，SHA-256 `bb59298515ffa91867d9769734323547660c249fd1dd47792eb7c1f847fdda10`
+   与 GitHub 文件及其 `.sha256` 三方一致。镜像后重新派发 Site Data Refresh `39046968057` success，
+   bot `65f6e5e` 已合并；线上 `/data/release.json` 六资产 `gitcode_ok=true`。
 7. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
    macOS 公证与 Windows 商业签名仍未覆盖；`docs/plans/2026-10-17-boundary-verification.md`
    是这三项的验证计划，本版未执行。
