@@ -156,9 +156,20 @@ function isIncludeRow(row: Record<string, unknown>): boolean {
   return typeof config?.path === 'string' && /\.(ya?ml|json)$/i.test(config.path)
 }
 
-/** The path the loader imports a row's module from. */
-function installedPackagePath(dshHome: string, profile: string, name: string): string | undefined {
-  for (const base of [join(dshHome, 'profiles', profile, 'node_modules'), join(dshHome, 'profiles', 'node_modules')]) {
+/**
+ * The path the loader imports a row's module from. Official bundles are
+ * resolved from the installation closure first (the kernel's own
+ * `resolveBundleDir` order), then from the profile — without the installation
+ * anchor an official row looks user-installed and Safe Mode would disable it
+ * (observed: the shell's own `locale` override broke the web UI).
+ */
+function installedPackagePath(dshHome: string, profile: string, name: string, installRoot?: string): string | undefined {
+  const bases = [
+    ...(installRoot === undefined ? [] : [join(installRoot, 'node_modules')]),
+    join(dshHome, 'profiles', profile, 'node_modules'),
+    join(dshHome, 'profiles', 'node_modules'),
+  ]
+  for (const base of bases) {
     const candidate = join(base, name)
     if (existsSync(candidate)) return candidate
   }
@@ -224,12 +235,13 @@ async function collectBundleRows(
   dshHome: string,
   profile: string,
   bundles: readonly string[],
+  installRoot?: string,
 ): Promise<{ rows: ComposedRow[]; unkeyedRows: number; unresolved: string[] }> {
   const rows: ComposedRow[] = []
   let unkeyedRows = 0
   const unresolved: string[] = []
   for (const name of bundles) {
-    const packageDir = installedPackagePath(dshHome, profile, name)
+    const packageDir = installedPackagePath(dshHome, profile, name, installRoot)
     if (packageDir === undefined) {
       unresolved.push(name)
       continue
@@ -356,7 +368,11 @@ function dedupeRows(rows: readonly ComposedRow[]): ComposedRow[] {
  * user-installed plugins. Official bundles and the shell-owned controls
  * overlay stay mounted; user files are never touched.
  */
-export async function buildSafeModeOverlay(dshHome: string, profile = WEB_PROFILE): Promise<SafeModeOverlay> {
+export async function buildSafeModeOverlay(
+  dshHome: string,
+  profile = WEB_PROFILE,
+  installRoot?: string,
+): Promise<SafeModeOverlay> {
   const manifestPath = join(dshHome, 'profiles', profile, 'package.json')
   let manifest: { dsh?: { profile?: { bundles?: string[] } } }
   try {
@@ -367,9 +383,14 @@ export async function buildSafeModeOverlay(dshHome: string, profile = WEB_PROFIL
   const bundles = manifest.dsh?.profile?.bundles ?? []
   const official = bundles.filter(name => (OFFICIAL_BUNDLES as readonly string[]).includes(name))
   const userBundles = bundles.filter(name => !(OFFICIAL_BUNDLES as readonly string[]).includes(name))
-  const officialRows = await collectBundleRows(dshHome, profile, official)
+  const officialRows = await collectBundleRows(dshHome, profile, official, installRoot)
   const officialIds = new Set(officialRows.rows.map(row => row.id))
-  const userRows = await collectBundleRows(dshHome, profile, userBundles)
+  // Only a fully resolved official composition may judge a patch-layer row:
+  // without it every official row looks user-installed, and disabling the
+  // shell's own `locale` override breaks the web UI (the rc.1.shell.1
+  // candidate failed its packaged Safe Mode smoke exactly this way).
+  const officialKnown = official.length > 0 && officialRows.unresolved.length === 0 && officialRows.rows.length > 0
+  const userRows = await collectBundleRows(dshHome, profile, userBundles, installRoot)
   const layerRows: ComposedRow[] = []
   const layerFiles: string[] = []
   const layerUnresolved: string[] = []
@@ -378,8 +399,10 @@ export async function buildSafeModeOverlay(dshHome: string, profile = WEB_PROFIL
     if (!existsSync(layer)) continue
     const scan = await collectPatchLayerRows(layer)
     // Official-row overrides stay enabled: Safe Mode isolates user plugins,
-    // it does not strip official rows a user re-configured.
-    layerRows.push(...scan.rows.filter(row => !officialIds.has(row.id)))
+    // it does not strip official rows a user re-configured. When the official
+    // composition is unknown, disable nothing from this layer (bundle rows
+    // alone keep the pre-existing recovery behaviour).
+    layerRows.push(...scan.rows.filter(row => officialKnown && !officialIds.has(row.id)))
     layerFiles.push(...scan.files)
     layerUnresolved.push(...scan.unresolved)
     layerUnkeyed += scan.unkeyedRows
@@ -429,8 +452,12 @@ export interface PluginInventory {
 }
 
 /** Inspect the live profile for diagnostics: bundles and composed rows. */
-export async function inspectPluginInventory(dshHome: string, profile = WEB_PROFILE): Promise<PluginInventory> {
-  const overlay = await buildSafeModeOverlay(dshHome, profile)
+export async function inspectPluginInventory(
+  dshHome: string,
+  profile = WEB_PROFILE,
+  installRoot?: string,
+): Promise<PluginInventory> {
+  const overlay = await buildSafeModeOverlay(dshHome, profile, installRoot)
   let bundles: string[] = []
   try {
     const manifest = JSON.parse(await readFile(join(dshHome, 'profiles', profile, 'package.json'), 'utf8')) as {
@@ -499,8 +526,9 @@ export async function writeSafeModeOverlay(
   dir: string,
   profile = WEB_PROFILE,
   fallbackSuspects: readonly ComposedRow[] = [],
+  installRoot?: string,
 ): Promise<string | undefined> {
-  const overlay = await buildSafeModeOverlay(dshHome, profile)
+  const overlay = await buildSafeModeOverlay(dshHome, profile, installRoot)
   const manifestMissing = overlay.unresolved.includes('<missing profile manifest>')
   if (manifestMissing && overlay.ids.length === 0 && fallbackSuspects.length > 0) {
     const fallbackPath = join(dir, 'safe-mode.patch.yml')

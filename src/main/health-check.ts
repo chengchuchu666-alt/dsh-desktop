@@ -355,7 +355,7 @@ export async function runDesktopHealthCheck(options: DesktopHealthCheckOptions):
     : { id: 'harness', status: 'failed', label: copy.harness, detail: copy.harnessFailed, action: copy.harnessAction })
 
   try {
-    const [profile, inventory] = await Promise.all([readProfileStatus(options.dshHome), inspectPluginInventory(options.dshHome)])
+    const [profile, inventory] = await Promise.all([readProfileStatus(options.dshHome), inspectPluginInventory(options.dshHome, WEB_PROFILE, options.harnessRoot)])
     const market = marketText(copy, profile.dshMarket.state, profile.dshMarket.version)
     const version = options.kernelVersion ?? harnessVersion
     const compatNames = await collectKernelCompatAdvisories(options.dshHome, WEB_PROFILE, version)

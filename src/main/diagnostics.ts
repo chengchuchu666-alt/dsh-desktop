@@ -8,7 +8,7 @@ import { atomicWriteFile } from './config-file.ts'
 import { closureRepairUrls, verifyClosureManifest } from './closure-manifest.ts'
 import type { HarnessState } from './supervisor.ts'
 import { shellText, type ShellLocale } from './locale.ts'
-import { classifyNativeModuleFailure, classifyPluginFailureCause, classifyRuntimeSpawnFailure, collectPluginFailures, inspectPluginInventory, type ComposedRow, type PluginFailureCause, type PluginInventory } from './safe-mode.ts'
+import { classifyNativeModuleFailure, classifyPluginFailureCause, classifyRuntimeSpawnFailure, collectPluginFailures, inspectPluginInventory, WEB_PROFILE, type ComposedRow, type PluginFailureCause, type PluginInventory } from './safe-mode.ts'
 import { probeProfileWritable, profileWriteLine, type ProfileWriteProbe } from './profile-writable.ts'
 import { resolveDshHome } from './dsh-home.ts'
 import { harnessRoot, resourcesRoot } from './paths.ts'
@@ -289,7 +289,7 @@ export async function exportDiagnosticReport(
     const dshHome = resolveDshHome(process.env, homedir())
     try {
       profileStatus = await readProfileStatus(dshHome)
-      pluginInventory = await inspectPluginInventory(dshHome)
+      pluginInventory = await inspectPluginInventory(dshHome, WEB_PROFILE, harnessRoot())
     } catch {
       pluginInventory = undefined
     }

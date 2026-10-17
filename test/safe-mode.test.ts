@@ -57,8 +57,10 @@ async function makeHome(): Promise<{ home: string; cleanup: () => Promise<void> 
   }
 }
 
-async function installBundle(home: string, name: string, patch: string): Promise<void> {
-  const pkg = join(home, 'profiles', 'web', 'node_modules', name)
+async function installBundle(home: string, name: string, patch: string, root = 'profile'): Promise<void> {
+  const pkg = root === 'install'
+    ? join(home, 'node_modules', name)
+    : join(home, 'profiles', 'web', 'node_modules', name)
   await mkdir(pkg, { recursive: true })
   await writeFile(
     join(pkg, 'package.json'),
@@ -322,7 +324,9 @@ test('buildSafeModeOverlay covers user patch layers and their includes (#115)', 
   try {
     await writeManifest(home, [...OFFICIAL_BUNDLES, 'user-plugin'])
     await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
-    // The official bundle composes `official-row`; the user layer overrides it.
+    // The official bundles compose `official-row`; the user layer overrides it.
+    // Both official bundles must resolve, otherwise the layer is left alone.
+    await installBundle(home, '@deepseek-ai/dsh-base', '- insert:\n    - id: official-base-row\n')
     await installBundle(home, '@deepseek-ai/dsh-web-app', '- insert:\n    - id: official-row\n')
     await writeFile(
       join(home, 'profiles', 'web', 'cordis.patch.yml'),
@@ -351,16 +355,21 @@ test('buildSafeModeOverlay covers user patch layers and their includes (#115)', 
 })
 
 test('buildSafeModeOverlay reads the home-level patch layer', async () => {
-  const { home, cleanup } = await makeHome()
+  const base = await mkdtemp(join(tmpdir(), 'dsh-safe-mode-home-layer-'))
+  const home = join(base, 'home')
+  const installRoot = join(base, 'harness')
   try {
-    await writeManifest(home, ['user-plugin'])
+    await mkdir(join(home, 'profiles', 'web', 'node_modules'), { recursive: true })
+    await writeManifest(home, [...OFFICIAL_BUNDLES, 'user-plugin'])
+    await installBundle(installRoot, '@deepseek-ai/dsh-base', '- insert:\n    - id: official-base-row\n', 'install')
+    await installBundle(installRoot, '@deepseek-ai/dsh-web-app', '- insert:\n    - id: official-row\n', 'install')
     await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
     await writeFile(join(home, 'cordis.patch.yml'), '- id: home-row\n')
-    const overlay = await buildSafeModeOverlay(home)
+    const overlay = await buildSafeModeOverlay(home, 'web', installRoot)
     assert.deepEqual(overlay.ids.map((row) => row.id).sort(), ['home-row', 'user-a'])
     assert.deepEqual(overlay.patchLayers?.map((file) => file.endsWith('cordis.patch.yml')), [true])
   } finally {
-    await cleanup()
+    await rm(base, { recursive: true, force: true })
   }
 })
 
@@ -387,4 +396,46 @@ test('classifyPluginFailureCause reports a missing kernel package (#115)', () =>
   assert.equal(classifyPluginFailureCause(tail), 'missing-package')
   // A module-not-found outside a loader-entry failure is not a plugin verdict.
   assert.equal(classifyPluginFailureCause("Error: Cannot find package 'sharp'"), 'unknown')
+})
+
+test('buildSafeModeOverlay never disables an official row overridden by the shell locale layer', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'dsh-safe-mode-install-'))
+  const home = join(base, 'home')
+  const profile = join(home, 'profiles', 'web')
+  const installRoot = join(base, 'harness')
+  try {
+    await mkdir(join(profile, 'node_modules'), { recursive: true })
+    await writeManifest(home, [...OFFICIAL_BUNDLES, 'user-plugin'])
+    // Official bundles live in the installation closure, not the profile —
+    // exactly the packaged layout that broke rc.1.shell.1's Safe Mode smoke.
+    await installBundle(installRoot, '@deepseek-ai/dsh-base', '- insert:\n    - id: official-base-row\n', 'install')
+    await installBundle(installRoot, '@deepseek-ai/dsh-web-app', '- insert:\n    - id: locale\n    - id: ui-chat\n', 'install')
+    await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
+    // The shell's locale controller writes this override into the user layer.
+    await writeFile(
+      join(profile, 'cordis.patch.yml'),
+      '- id: locale\n  name: "@deepseek-ai/dsh-client-locale"\n  config:\n    preference: zh\n',
+    )
+    const overlay = await buildSafeModeOverlay(home, 'web', installRoot)
+    assert.deepEqual(overlay.ids.map((row) => row.id), ['user-a'])
+    assert.ok(!overlay.ids.some((row) => row.id === 'locale'))
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+})
+
+test('buildSafeModeOverlay disables nothing from the user layer when the official composition is unknown', async () => {
+  const { home, cleanup } = await makeHome()
+  try {
+    await writeManifest(home, [...OFFICIAL_BUNDLES, 'user-plugin'])
+    await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
+    // The official bundles cannot be resolved from this fixture: the layer row
+    // must survive rather than risk disabling an official row.
+    await writeFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), '- id: mystery-row\n')
+    const overlay = await buildSafeModeOverlay(home)
+    assert.deepEqual(overlay.ids.map((row) => row.id), ['user-a'])
+    assert.deepEqual((overlay.patchRows ?? []).map((row) => row.id), [])
+  } finally {
+    await cleanup()
+  }
 })

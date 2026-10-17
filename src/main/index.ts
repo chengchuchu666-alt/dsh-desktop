@@ -599,7 +599,7 @@ function agentTrashHookScriptPath(): string {
 async function safeModeOverlayPath(): Promise<string | undefined> {
   const dshHome = resolveDshHome(process.env, homedir())
   const userData = app.getPath('userData')
-  return writeSafeModeOverlay(dshHome, userData, WEB_PROFILE, await loadPersistedPluginSuspects(userData))
+  return writeSafeModeOverlay(dshHome, userData, WEB_PROFILE, await loadPersistedPluginSuspects(userData), harnessRoot())
 }
 
 /** The shell state machine, wired to the Electron surfaces it drives. */
