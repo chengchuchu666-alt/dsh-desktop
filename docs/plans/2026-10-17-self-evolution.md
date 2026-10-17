@@ -21,9 +21,9 @@
 
 | ID | 目标与允许修改 | 门禁 | 状态 |
 |---|---|---|---|
-| EV-01 | 自动升级补丁版本迁移：scripts/version.mjs、专用 kernel-patches helper、相应单测、发布技能、本文 | 临时目录中的迁移/幂等/冲突/无关补丁保护；补丁内容不变，应用失败仍阻断；verify | 完成，提交后回填 SHA |
-| EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 待执行 |
-| EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、必要的纯 UI helper/测试、e2e 桌面控件用例、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 待执行 |
+| EV-01 | 自动升级补丁版本迁移：scripts/version.mjs、专用 kernel-patches helper、相应单测、发布技能、本文 | 临时目录中的迁移/幂等/冲突/无关补丁保护；补丁内容不变，应用失败仍阻断；verify | 完成：b8354839b95142c8ff726b692f46759b85f1a4d6，双远端集成分支已推送 |
+| EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 完成，提交后回填 SHA |
+| EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、cc-connect-types/controller 的只读当前应用名及测试、必要的纯 UI helper/测试、e2e 桌面控件用例、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 待执行 |
 | EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 待执行 |
 
 ## 验收与回执
@@ -32,6 +32,22 @@ EV-01：`node --test test/kernel-patches.test.ts` 四项通过 exit0，包含真
 `pnpm verify` exit0（433单测 + ACP1，零跳过），日志为临时目录中的 dsh-evolve-ev01-verify.log。
 保留补丁 bytes、无关 YAML 注释与策略，已有候选文件/自定义或重复映射均拒绝且保持原文件；幂等用例通过。
 本项不改运行时或当前版本，不以四项单测代替后续真实 pnpm 补丁应用与新包门禁。
+EV-02：官方 npm registry 与 GitHub Release `dsh-v0.2.1-alpha.5`（2026-10-16T12:23:28Z，prerelease）
+核对一致；32 个内核同族直接依赖同步，锁文件无 alpha.3 残留。
+`pnpm -C manifest/harness install --frozen-lockfile` 首次被 `MINIMUM_RELEASE_AGE_VIOLATION` 拒绝 75 项；
+未放宽策略或跳过门禁，核对官方发布后按真实闭包补齐豁免，并修复 `resolvedVersionsFromLockfile`
+把 peer 后缀当成包名的问题；新增纯函数回归（`/tmp` 外不保存），修正后冻结安装 exit0，
+豁免脚本二次运行 0 新增且文件哈希不变。
+`pnpm run bootstrap` exit0：闭包 peer 审计 `closure satisfied`、Node 24.21.0 重新落位、
+native 无需重建（`/tmp/dsh-ev02-bootstrap.log`）。账户补丁按精确版本迁移到 alpha.5
+（`git apply --check` exit0，真实冻结闭包中已生效）；alpha.3→alpha.5 的
+`dsh-api-session-controller`、`dsh-client-ui-workspace` 两 bundle 逐字节一致，垃圾桶补丁版本保护更新为 alpha.5。
+登录、垃圾桶、ACP 与补丁迁移共 17 项单测 exit0（`/tmp/dsh-ev02-kernel-tests.log`）。
+`pnpm verify` 首次因当前 PATH 缺 Go 在 cc-connect 配置用例退出 1，补 Go 路径后原测试/断言不变，
+最终 exit0（435 单测 + ACP1，零跳过，覆盖率 89.81/82.75/86.83，`/tmp/dsh-ev02-verify2.log`）；
+`pnpm security:audit` exit0（保留既有单一 CVE 例外，未新增忽略，`/tmp/dsh-ev02-audit.log`）。
+候选发布说明 `docs/release-notes/v0.2.1-alpha.5.shell.0.md` 通过 `write-release-notes check`。
+本项未运行真实飞书、打包安装或发布，留给 EV-03/EV-04。
 下一任务 EV-02；后续同样回填提交 SHA、命令和退出码。
 新版本目标为 `0.2.1-alpha.5.shell.0`，在门禁完成前仅为候选，不提前改官网已发布口径。
 未覆盖的真实飞书、物理异机网络、Windows/Linux 人工原生控件及第三方防病毒测试须明确列出，

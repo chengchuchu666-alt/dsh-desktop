@@ -9,6 +9,7 @@
 // dsh-watch 在 bump 后调用;发布 runbook 亦手动执行同一命令。
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { kernelExcludeAdditions, resolvedVersionsFromLockfile } from './kernel-peers.mjs'
 
 const NEW = process.argv[2]
 if (!NEW) {
@@ -51,10 +52,7 @@ const rewritten = new Set([...availability].filter(([, has]) => has === NEW).map
 // workspace file (a previous blind run may have corrupted the line to a
 // version the registry never served).
 const lockfileSrc = readFileSync('manifest/harness/pnpm-lock.yaml', 'utf8')
-const resolved = new Map()
-for (const match of lockfileSrc.matchAll(/^  '?(@deepseek-ai\/[^'\s:]+)@([^'(:\s]+)/gm)) {
-  if (!resolved.has(match[1])) resolved.set(match[1], match[2])
-}
+const resolved = resolvedVersionsFromLockfile(lockfileSrc)
 
 const replacedLines = src.split('\n').map((line) => {
   const match = dshPin.exec(line)
@@ -70,6 +68,17 @@ const replaced = replacedLines.join('\n')
 const lastIndex = new Map()
 const packagePin = /^  - '(@deepseek-ai\/[^@']+)@[^']+'$/
 const replacedList = replaced.split('\n')
+
+// 新内核会首次引入旧清单里没有的传递依赖；它们同样发布不足 24 小时，
+// 冻结安装会报 MINIMUM_RELEASE_AGE_VIOLATION。以新锁文件实际解析到的
+// 版本为准补齐豁免，而不是等 install 反复列出缺项。
+const additions = kernelExcludeAdditions(src, lockfileSrc, NEW)
+if (additions.length > 0) {
+  const insertAt = replacedList.indexOf('overrides:')
+  if (insertAt < 0) throw new Error('pnpm-workspace.yaml: overrides section not found')
+  replacedList.splice(insertAt, 0, ...additions.map(name => `  - '${name}@${NEW}'`))
+}
+
 replacedList.forEach((line, index) => {
   const match = packagePin.exec(line)
   if (match !== null) lastIndex.set(match[1], index)
@@ -83,6 +92,6 @@ for (const [index, line] of replacedList.entries()) {
 writeFileSync(file, out.join('\n'))
 
 const before = src.split('\n').filter(line => dshPin.test(line)).length
-const after = replaced.split('\n').filter(line => line.endsWith(`@${NEW}'`) && dshPin.test(line)).length
+const after = out.filter(line => line.endsWith(`@${NEW}'`) && dshPin.test(line)).length
 const kept = packages.length - rewritten.size
-console.log(`sync-release-age-excludes: dsh pins -> @${NEW} (${before} -> ${after} pinned entries; ${kept} kept at their resolved version from the lockfile)`)
+console.log(`sync-release-age-excludes: dsh pins -> @${NEW} (${before} -> ${after} pinned entries; ${kept} kept at their resolved version from the lockfile; ${additions.length} new closure entries added)`)

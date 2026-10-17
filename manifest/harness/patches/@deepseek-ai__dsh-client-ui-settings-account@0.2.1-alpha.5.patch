@@ -1,0 +1,20 @@
+diff --git a/lib/client.js b/lib/client.js
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -1031,6 +1031,7 @@
+ 				if (!attempt?.authorizeUrl || this.navigated) return;
+ 				this.navigated = true;
+ 				if (this.popup && !this.popup.closed) this.popup.location.replace(this.destination(attempt.authorizeUrl));
++				else window.open(this.destination(attempt.authorizeUrl), "_blank", "noopener,noreferrer");
+ 			}
+ 			/** Close the owned authorization tab and stop following its attempt. */
+ 			dispose() {
+@@ -4427,7 +4428,7 @@
+ 		];
+ 		/** Register account UI in Desktop and plain Web clients. @param ctx - client plugin context. */
+ 		function apply(ctx) {
+-			const desktop = "dshDesktop" in globalThis;
++			const desktop = "dshDesktop" in globalThis && typeof globalThis.dshOnboarding?.hasApiKey === "function";
+ 			ctx.effect(() => ctx.locale.register("settings.account", {
+ 				en,
+ 				zh

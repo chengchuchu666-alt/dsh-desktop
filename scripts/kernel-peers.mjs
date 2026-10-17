@@ -45,11 +45,32 @@ export async function fetchPublishedVersion(pkg, version) {
 /**
  * Map of `@deepseek-ai/<pkg>` → the version the current lockfile resolved.
  * Pure helper shared by the version tool and the release-age exclude sync.
+ * Lockfile keys may carry peer suffixes (`pkg@version(peer@version)`); the
+ * name class stops before them so a suffix never becomes a package name.
  */
 export function resolvedVersionsFromLockfile(lockfileSource) {
   const resolved = new Map()
-  for (const match of lockfileSource.matchAll(/^  '?(@deepseek-ai\/[^'\s:]+)@([^'(:\s]+)/gm)) {
+  for (const match of lockfileSource.matchAll(/^  '?(@deepseek-ai\/[a-z0-9._-]+)@([^'(:\s]+)/gm)) {
     if (!resolved.has(match[1])) resolved.set(match[1], match[2])
   }
   return resolved
+}
+
+/**
+ * Kernel packages the lockfile resolves at `version` that the workspace's
+ * `minimumReleaseAgeExclude` list does not name yet. A same-day kernel bump
+ * introduces transitive packages the old list never had to exempt, and
+ * `pnpm install --frozen-lockfile` then rejects the whole closure for the
+ * 24h supply-chain window. Pure helper so the exclude sync is testable.
+ */
+export function kernelExcludeAdditions(workspaceSource, lockfileSource, version) {
+  const resolved = resolvedVersionsFromLockfile(lockfileSource)
+  const pinned = new Set()
+  for (const match of workspaceSource.matchAll(/^  - '(@deepseek-ai\/[^@']+)@([^']+)'$/gm)) {
+    if (match[2] === version) pinned.add(match[1])
+  }
+  return [...resolved]
+    .filter(([name, resolvedVersion]) => resolvedVersion === version && name.startsWith('@deepseek-ai/dsh') && !pinned.has(name))
+    .map(([name]) => name)
+    .sort()
 }

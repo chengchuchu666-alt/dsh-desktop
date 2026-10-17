@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 // @ts-expect-error Dependency-free build scripts intentionally stay plain ESM JavaScript.
-import { syncKernelPeerPins } from '../scripts/kernel-peers.mjs'
+import { kernelExcludeAdditions, resolvedVersionsFromLockfile, syncKernelPeerPins } from '../scripts/kernel-peers.mjs'
 
 test('syncKernelPeerPins moves kernel-versioned peers and leaves everything else alone', () => {
   const deps: Record<string, string> = {
@@ -80,4 +80,37 @@ test('syncKernelPeerPins mutates the object it returns (version.mjs persists on 
   assert.equal(returned, dependencies)
   assert.equal(dependencies['@deepseek-ai/dsh-attachment'], '^0.1.6-alpha.1')
   assert.equal(dependencies['@deepseek-ai/dsh'], '0.1.5-rc.2')
+})
+
+test('lockfile resolution strips peer-suffixed keys instead of inventing package names', () => {
+  const lockfile = [
+    "  '@deepseek-ai/dsh@0.2.1-alpha.5':",
+    "    resolution: {integrity: sha512-a==}",
+    "  '@deepseek-ai/dsh-agent-preset@0.2.1-alpha.5(@deepseek-ai/cordis@4.0.5-alpha.2)(@deepseek-ai/dsh-agent@0.2.1-alpha.5(abc))':",
+    "    resolution: {integrity: sha512-b==}",
+    "  '@deepseek-ai/dsh-tool-skill@0.2.1-alpha.5(@deepseek-ai/dsh-tools@0.2.1-alpha.5(f720e65a))':",
+    "    resolution: {integrity: sha512-c==}",
+  ].join('\n')
+  const resolved = resolvedVersionsFromLockfile(lockfile)
+  assert.equal(resolved.get('@deepseek-ai/dsh'), '0.2.1-alpha.5')
+  assert.equal(resolved.get('@deepseek-ai/dsh-agent-preset'), '0.2.1-alpha.5')
+  assert.equal(resolved.get('@deepseek-ai/dsh-tool-skill'), '0.2.1-alpha.5')
+  for (const name of resolved.keys()) assert.equal(name.includes('('), false, name)
+})
+
+test('exclude additions name only kernel packages the new lockfile resolves without a pin', () => {
+  const lockfile = [
+    "  '@deepseek-ai/dsh@0.2.1-alpha.5':",
+    "  '@deepseek-ai/dsh-agent-preset@0.2.1-alpha.5(peer@1.0.0)':",
+    "  '@deepseek-ai/dsh-old@0.2.1-alpha.3':",
+  ].join('\n')
+  const workspace = [
+    'minimumReleaseAgeExclude:',
+    "  - '@deepseek-ai/dsh@0.2.1-alpha.5'",
+    "  - '@deepseek-ai/cordis@4.0.5-alpha.2'",
+    'overrides:',
+    '  yaml: 2.9.1',
+  ].join('\n')
+  assert.deepEqual(kernelExcludeAdditions(workspace, lockfile, '0.2.1-alpha.5'), ['@deepseek-ai/dsh-agent-preset'])
+  assert.deepEqual(kernelExcludeAdditions(workspace, lockfile, '0.2.1-alpha.4'), [])
 })
