@@ -9,7 +9,7 @@
  * @module scripts/deploy-harness
  */
 import { spawnSync } from 'node:child_process'
-import { lstat, readdir, rm } from 'node:fs/promises'
+import { lstat, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { patchBundledSessionTrash } from './patch-session-trash.mjs'
@@ -101,6 +101,21 @@ async function pruneClosure() {
   console.log(`deploy-harness: pruned ${removed.length} paths from the closure`)
 }
 
+/**
+ * The lockfile-faithful deploy copies the workspace patch mapping into the
+ * deployed package.json with a repo-relative path (`../../manifest/...`).
+ * That path does not exist in a packaged app and makes nested pnpm
+ * invocations warn; the closure code is already patched, so drop it.
+ */
+async function pruneWorkspacePatchMetadata() {
+  const file = join(HARNESS_ROOT, 'package.json')
+  const manifest = JSON.parse(await readFile(file, 'utf8'))
+  if (manifest.pnpm === undefined) return
+  delete manifest.pnpm
+  await writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`)
+  console.log('deploy-harness: removed workspace-only patch metadata from the closure')
+}
+
 async function main() {
   await rm(HARNESS_ROOT, { recursive: true, force: true })
 
@@ -131,6 +146,7 @@ async function main() {
   const shims = join(HARNESS_ROOT, 'node_modules', '.bin')
   if (existsSync(shims)) await rm(shims, { recursive: true, force: true })
 
+  await pruneWorkspacePatchMetadata()
   await assertNoSymlinks(HARNESS_ROOT)
   await pruneClosure()
   await patchBundledSessionTrash(HARNESS_ROOT)

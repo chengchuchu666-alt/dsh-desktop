@@ -28,4 +28,8 @@ test('harness deploy stays frozen to the committed lockfile', () => {
   assert.match(source, /--config\.inject-workspace-packages=true/)
   assert.doesNotMatch(source, /--config\.auto-install-peers=/)
   assert.match(source, /Deploy from the shared lockfile/)
+  // The shared-lockfile deploy writes a repo-relative patchedDependencies path
+  // into the closure; packaged trees must not advertise it.
+  assert.match(source, /pruneWorkspacePatchMetadata/)
+  assert.match(source, /delete manifest\.pnpm/)
 })
