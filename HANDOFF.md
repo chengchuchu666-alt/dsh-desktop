@@ -2488,6 +2488,14 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 > SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428`，与 GitHub CI
 > 产物为同源码/同 pin 的不同构建字节。
 
+10. **已发布制品复核**（直接检查从 Release 下载的安装包，而非本机 dist）：
+    macOS DMG 只读挂载后 `CFBundleShortVersionString=0.2.1-rc.1.shell.0`、包内 dsh 为 rc.1、
+    `codesign --verify --deep --strict` 通过，账户/垃圾桶/工作区三个补丁标记与 `trash-host.js`
+    均在包内，闭包无仓库相对补丁元数据；包内 sidecar manifest 与实际二进制 SHA-256 一致
+    （`48f8a6ab…`，CI 自建字节，与本机 `60cee01b…` 不同但自洽）。Linux DEB 解包核对
+    control `Version: 0.2.1~rc.1.shell.0`、依赖列表、18775 个闭包条目，包内 dsh 为 rc.1、
+    两个补丁标记存在、闭包无补丁元数据，linux sidecar manifest SHA-256 `e3c872fd…` 完整给出。
+
 公开安装包（GitHub Release）：
 
 | 安装包 | 字节数 | SHA-256 |
