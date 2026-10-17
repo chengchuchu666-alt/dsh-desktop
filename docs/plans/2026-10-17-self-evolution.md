@@ -22,7 +22,7 @@
 | ID | 目标与允许修改 | 门禁 | 状态 |
 |---|---|---|---|
 | EV-01 | 自动升级补丁版本迁移：scripts/version.mjs、专用 kernel-patches helper、相应单测、发布技能、本文 | 临时目录中的迁移/幂等/冲突/无关补丁保护；补丁内容不变，应用失败仍阻断；verify | 完成：b8354839b95142c8ff726b692f46759b85f1a4d6，双远端集成分支已推送 |
-| EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 完成，提交后回填 SHA |
+| EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 完成：48d07bb3a42460066306842d0e2b1155eef21428，双远端集成分支已推送 |
 | EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、cc-connect-types/controller 的只读当前应用名及测试、必要的纯 UI helper/测试、e2e 桌面控件用例、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 待执行 |
 | EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 待执行 |
 
