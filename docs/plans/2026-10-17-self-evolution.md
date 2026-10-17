@@ -27,7 +27,7 @@
 | EV-02 | Harness alpha.5：package.json、manifest/harness 清单/锁/工作区/账户补丁、必要的内核兼容脚本/测试、版本说明 | 官方发布核对、冻结安装、bootstrap/peer 审计、原登录/垃圾桶/ACP 断言及 verify/audit | 完成：48d07bb3a42460066306842d0e2b1155eef21428，双远端集成分支已推送 |
 | EV-02A | 新上游预发布暴露的部署漂移：scripts/deploy-harness.mjs、CI bootstrap 顺序回归、本文 | 非 legacy deploy 使用共享锁文件；冻结安装后闭包仍为 alpha.5 且无 rc.1；peer 审计与构建通过 | 完成：9e057c748438175a8fedadfb0d7d9f82633fe2f1 |
 | EV-03 | 飞书快捷控制：plugins/dsh-desktop-controls/lib/client.js、cc-connect-types/controller 的只读当前应用名及测试、必要的纯 UI helper/测试、e2e 桌面控件用例（含 trash-harness 假 Sidecar 支持）、cc-connect 指南与中英 README | 当前应用/进程与通道状态分开显示；显式启停/失败恢复；无配置/旧凭据/Safe Mode；中英亮暗、边缘窄窗口与键盘；零隐式启连/零模型调用 | 完成：b442d88227761f454183cbfcfd15790ab18f6c07 |
-| EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 进行中 |
+| EV-04 | 完整回归与发布：构建生成 manifest、release notes、官网介绍/日志、HANDOFF、本文及文档索引 | 新 dist 后双 smoke、packaged 全集、飞书五轮、市场 offline/real、LAN；三平台 CI、严格八文件与来源证明、六镜像内容及一包全量回读、官网八组和双远端干净 | 完成：4e580551aa9c2589199901857c0ea4424afc8670 |
 
 ## 验收与回执
 
@@ -72,8 +72,16 @@ EV-04（本地）：新 dist `dist/mac-arm64/dsh-desktop.app` 版本 `0.2.1-alph
 manifest SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428` 与包内一致。
 两项 smoke、packaged 24/24（3.1m）、飞书 5×5=25（4.2m，retries=0）、市场 offline1/real2、
 打包 LAN 1、`codesign --verify --deep --strict` 均 exit0（`/tmp/dsh-ev04-*.log`）。
-真实手机飞书往返、Windows/Linux 人工原生视觉、三平台 tag CI/镜像/官网仍待完成。
+EV-04（发布）：tag `v0.2.1-alpha.5.shell.0` → `4e580551aa9c2589199901857c0ea4424afc8670`，
+GitHub/GitCode 两远端 peeled commit 一致；Release `38999365802` success（verify + 三平台 build + publish），
+main CI `38999352115` success。GitHub 预览版 2026-10-17T04:14:34Z 公开、8 资产、draft=false/prerelease=true；
+严格八文件校验 exit0，三安装包 `gh attestation verify` 均绑定本 tag。
+GitCode release `58738` tag 对齐、六资产匿名内容 6/6、mirror-v2 --check-only 6/6，
+DEB 完整回读 228656552 字节且 SHA `5022949e107cc1dc4c1c5db7a6eacb370216db115e1b9010b8b7f0e95f5b04fe` 一致。
+Site Data Refresh `39001837976` success，bot `cb8acb1` 合并；线上 JSON 同 tag、6/6 `gitcode_ok=true`，
+`/api/downloads` 实时可用（7133，含既有引导计数）；首页 alpha.5 文案后本地八组 exit0，推送后线上八组复验。
+真实手机飞书往返、Windows/Linux 人工原生视觉、第三方 AV 真机与签名边界保留，不以模拟环境代替。
 后续同样回填提交 SHA、命令和退出码。
-新版本目标为 `0.2.1-alpha.5.shell.0`，在门禁完成前仅为候选，不提前改官网已发布口径。
+`0.2.1-alpha.5.shell.0` 已发布，官网与镜像已切换到该 tag；已发布 tag 保持不可变。
 未覆盖的真实飞书、物理异机网络、Windows/Linux 人工原生控件及第三方防病毒测试须明确列出，
 不能以模拟环境或 runner 推断这些场景已完成。既有签名/审计例外不暗中改变。

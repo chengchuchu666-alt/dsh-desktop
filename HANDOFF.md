@@ -1,6 +1,6 @@
 # HANDOFF — 运维核心
 
-> 更新于 2026-10-16。产品架构见 `docs/ARCHITECTURE.md`；
+> 更新于 2026-10-17。产品架构见 `docs/ARCHITECTURE.md`；
 > 决策记录见 `docs/decisions/`。本文是运维事实的唯一来源。
 
 ## 一、当前状态
@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-alpha.3.shell.0`，GitHub、GitCode镜像与官网交付全部完成（§83） |
-| 已发布 | ✅ GitHub预览版 `0.2.1-alpha.3.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），GitCode六资产镜像、官网双源下载、双语更新日志及新入口介绍均已上线 |
-| 本地门禁 | ✅ verify429 + ACP1、audit、新dist、packaged24、飞书五轮25、市场offline1/real2、打包LAN三轮6/开发2、双smoke/codesign与网站八组视觉均exit0（§83）；候选历史见§82 |
-| 核心发布 | ✅ Release `38832434323` / 不可变 tag `63e5236`，三平台各24项packaged首过，安装/升级/残留/八文件/来源证明与publish通过；保留既有worker收尾告警，见 §83 |
-| 官网数据 | ✅ 镜像后Refresh `38891395135` success，bot `aecfab9`已合并并部署；线上JSON同版、6/6 gitcode_ok=true，中英/窄宽/亮暗八组双源下载检查及抽图复核通过（§83） |
-| 国内镜像 | ✅ GitCode release `58587` / tag `63e5236`；六资产匿名Range内容核验6/6，DEB完整回读232047772字节、cmp与SHA一致；登录阻塞解除，无钥匙串操作（§83） |
-| 实时下载统计 | GitHub原始安装下载快照6232（mac769 / Windows4844 / Linux619），75版本，生成于2026-10-16T11:05:03.613Z；2026-10-16T11:06:09.146Z实时API为7069（含既有GitCode引导计数），两种统计不混用 |
+| 最新代码基线 | `0.2.1-alpha.5.shell.0`，GitHub预览版已发布（`4e58055`）；GitCode六镜像与官网同步见 §84 |
+| 已发布 | ✅ GitHub预览版 `0.2.1-alpha.5.shell.0`（Linux deb、macOS dmg、Windows exe；8资产），GitCode release `58738` 六资产内容核验通过 |
+| 本地门禁 | ✅ verify438 + ACP1、audit、新dist、双smoke、packaged24、飞书五轮25、市场offline1/real2、打包LAN1、codesign deep/strict均exit0（§84） |
+| 核心发布 | ✅ Release `38999365802` / 不可变 tag `4e58055`，verify + 三平台build + publish success，八文件与来源证明通过（§84） |
+| 官网数据 | ✅ 镜像后 Refresh `39001837976` success，bot `cb8acb1` 已合并；线上 JSON 同 tag、6/6 gitcode_ok=true；首页重点改为 alpha.5 浮窗控制，本地八组与部署后线上八组通过（§84） |
+| 国内镜像 | ✅ GitCode release `58738` / tag `4e58055`；六资产匿名Range内容6/6，DEB完整回读228656552字节、cmp与SHA一致（§84） |
+| 实时下载统计 | GitHub 安装快照 6294（mac 772 / Windows 4898 / Linux 624），76 版本，生成于 2026-10-17T04:25:18.401Z；2026-10-17T04:25:50.917Z 实时 API 为 7133（含既有 GitCode 引导计数），两种统计不混用 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2463,5 +2463,34 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    manifest SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428` 与包内一致。
    首轮完整 verify 曾因当前 PATH 缺 Go 与 process-lifecycle 150ms 启动竞态各失败一次；补 Go 路径、
    改为子进程 ready 信号后原断言不变，重跑通过，日志保留。
-6. **发布与外部交付**：待 tag/三平台 CI、GitHub Release 八文件、GitCode 六镜像内容与官网刷新完成后
-   在本节回填；未完成前不把候选写成已发布下载。
+6. **GitHub 发布**：tag `v0.2.1-alpha.5.shell.0` → `4e580551aa9c2589199901857c0ea4424afc8670`，
+   GitHub/GitCode 两远端 tag 均指向同一 commit（peeled 一致）。Release run `38999365802` success：
+   verify + macOS/Windows/Linux build + publish 全绿；main CI `38999352115` success。
+   GitHub 预览版于 2026-10-17T04:14:34Z 公开，draft=false、prerelease=true；八文件严格契约 exit0，
+   三安装包 `gh attestation verify` 均绑定 `refs/tags/v0.2.1-alpha.5.shell.0`。下载资产从公开 Release
+   重新读取，大小与 SHA-256 和公开校验文件一致；本机证据目录 `/tmp/dsh-ev04-assets`。
+7. **GitCode 镜像**：release `58738`，tag 对齐 `4e58055`、asset_count=6；沿用 `--status unset`
+   （GitHub 仍为 alpha 预览版，不改 tag/commit）。六资产匿名 Range 206，Content-Range 总尺寸/首字节
+   与本地一致（`check-gitcode-assets` 6/6 contentVerified、`mirror-gitcode-v2 --check-only` 6/6 present）；
+   DEB 稳定 URL 完整回读 228656552 字节、`cmp` exit0、SHA-256 `5022949e107cc1dc4c1c5db7a6eacb370216db115e1b9010b8b7f0e95f5b04fe`
+   与 GitHub 一致。未删除或移动其他 release/tag。
+8. **官网数据**：镜像完成后 Site Data Refresh `39001837976` success，bot `cb8acb1` 已正常合并；
+   线上 `/data/release.json` 为 `v0.2.1-alpha.5.shell.0`、六资产 `gitcode_ok=true`，生成于
+   2026-10-17T04:25:18.401Z；`/api/downloads` 实时计数可用（7133，含既有 GitCode 引导计数）。
+   首页中英「当前版本重点」已从 alpha.3 更新为 alpha.5 浮窗飞书控制，本地 `check-site-ui` 八组
+   （zh/en × 390/1280 × light/dark）exit0；推送后以线上八组复验为准。
+9. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
+   macOS 公证与 Windows 商业签名仍未覆盖；Linux worker teardown 既有告警保留；审计既有单一
+   CVE 例外不变。未覆盖场景不以模拟环境或 runner 结果代替。
+
+> 注：`resources/cc-connect/manifest.json` 由 `dist:dir` 重建，commit `a9a936c5102ffa24f8165d74d5199206ba6d724a`，
+> SHA-256 `6773f639058af4f077b0b0ffc441b2af5f259ae600022f6709af2eda7caf0428`，与 GitHub CI
+> 产物为同源码/同 pin 的不同构建字节。
+
+公开安装包（GitHub Release）：
+
+| 安装包 | 字节数 | SHA-256 |
+|---|---:|---|
+| macOS DMG | 285661419 | `f20965a49765f63271645f029d81e7bdc016b3121f303fd0bf90ef51e2095425` |
+| Windows EXE | 260275866 | `a7c526de3aa4e15003613ff51f07b76ee6803b078e29f401a474cb7487ef99ba` |
+| Linux DEB | 228656552 | `5022949e107cc1dc4c1c5db7a6eacb370216db115e1b9010b8b7f0e95f5b04fe` |
