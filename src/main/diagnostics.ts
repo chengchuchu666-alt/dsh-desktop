@@ -8,7 +8,8 @@ import { atomicWriteFile } from './config-file.ts'
 import { closureRepairUrls, verifyClosureManifest } from './closure-manifest.ts'
 import type { HarnessState } from './supervisor.ts'
 import { shellText, type ShellLocale } from './locale.ts'
-import { classifyNativeModuleFailure, classifyPluginFailureCause, classifyRuntimeSpawnFailure, collectPluginFailures, inspectPluginInventory, type ComposedRow, type PluginInventory } from './safe-mode.ts'
+import { classifyNativeModuleFailure, classifyPluginFailureCause, classifyRuntimeSpawnFailure, collectPluginFailures, inspectPluginInventory, type ComposedRow, type PluginFailureCause, type PluginInventory } from './safe-mode.ts'
+import { probeProfileWritable, profileWriteLine, type ProfileWriteProbe } from './profile-writable.ts'
 import { resolveDshHome } from './dsh-home.ts'
 import { harnessRoot, resourcesRoot } from './paths.ts'
 import { readProfileStatus, type ProfileStatus } from './profile.ts'
@@ -114,8 +115,14 @@ export interface DiagnosticFacts {
   profileStatus?: ProfileStatus
   pluginInventory: PluginInventory | undefined
   pluginFailures: ComposedRow[]
-  /** Classified cause for the failing plugins (kernel-api upgrade cliff vs unknown). */
-  pluginFailureCause: 'kernel-api' | 'unknown'
+  /** Classified cause for the failing plugins (kernel cliff vs unknown). */
+  pluginFailureCause: PluginFailureCause
+  /** Profile file-level write probe (#116); undefined when not run. */
+  profileWrite?: ProfileWriteProbe
+  /** Harness-home used to render `profileWrite` paths relatively. */
+  dshHome?: string
+  /** Recent renderer console errors/unresponsive events (newest last). */
+  rendererErrors?: readonly string[]
   /** Last manual market operation in this app session, already sanitized. */
   marketInstall?: MarketInstallResult
   /** Non-secret LAN bridge state captured when the user exports the report. */
@@ -138,7 +145,20 @@ function inventoryLines(inventory: PluginInventory | undefined): string[] {
     `user_bundles=${inventory.userBundles.join(',')}`,
     `composed_rows=${inventory.composedRows.map(row => row.id).join(',')}`,
     `damaged_bundles=${inventory.damagedBundles.join(',')}`,
+    `unkeyed_rows=${inventory.unkeyedRows}`,
+    `patch_layers=${inventory.patchLayers.map(layer => basename(layer)).join(',')}`,
   ]
+}
+
+/** The classified-cause hint that tells the reader what to do next. */
+function failureHint(cause: PluginFailureCause): string[] {
+  if (cause === 'kernel-api') {
+    return ['hint=plugins import symbols the bundled kernel no longer exports; update plugins to the latest published version (error page offers one-click update/disable)']
+  }
+  if (cause === 'missing-package') {
+    return ['hint=a loader row imports a package the bundled kernel does not carry; update the app to a newer release (the error page also offers one-click update/disable), or remove that row from the user patch layer']
+  }
+  return []
 }
 
 export function formatDiagnosticReport(facts: DiagnosticFacts): string {
@@ -157,6 +177,9 @@ export function formatDiagnosticReport(facts: DiagnosticFacts): string {
     `safe_mode=${facts.safeMode ? 'true' : 'false'}`,
     `safe_mode_reason=${facts.safeMode ? 'plugin-quarantine' : 'none'}`,
     `profile_manifest=${facts.profileStatus?.manifest ?? 'unknown'}`,
+    ...(facts.profileWrite === undefined
+      ? ['profile_write=not-run']
+      : [profileWriteLine(facts.profileWrite, facts.dshHome ?? homedir())]),
     `market_state=${facts.profileStatus?.dshMarket.state ?? 'unknown'}`,
     `market_version=${facts.profileStatus?.dshMarket.version ?? 'unknown'}`,
     `market_install_status=${facts.marketInstall?.status ?? 'not-run'}`,
@@ -181,9 +204,13 @@ export function formatDiagnosticReport(facts: DiagnosticFacts): string {
     ...(facts.pluginFailures.length === 0
       ? ['none']
       : facts.pluginFailures.map(row => `${row.id} (${row.name})`)),
-    ...(facts.pluginFailureCause === 'kernel-api'
-      ? ['hint=plugins import symbols the bundled kernel no longer exports; update plugins to the latest published version (error page offers one-click update/disable)']
-      : []),
+    ...failureHint(facts.pluginFailureCause),
+    '',
+    '# Renderer errors (recent, newest last)',
+    `renderer_errors=${facts.rendererErrors?.length ?? 0}`,
+    ...(facts.rendererErrors === undefined || facts.rendererErrors.length === 0
+      ? ['none']
+      : facts.rendererErrors.map(entry => `- ${redactDiagnosticsLog(entry)}`)),
     '',
     '# Runtime spawn',
     `runtime_spawn_failure=${classifyRuntimeSpawnFailure(facts.logTail)}`,
@@ -225,6 +252,7 @@ export async function exportDiagnosticReport(
   safeMode = false,
   marketInstall?: MarketInstallResult,
   lan?: LanRuntimeState,
+  rendererErrors?: readonly string[],
 ): Promise<boolean> {
   const api = electron as unknown as typeof import('electron')
   const warning = await api.dialog.showMessageBox({
@@ -257,12 +285,18 @@ export async function exportDiagnosticReport(
     }
     let pluginInventory: PluginInventory | undefined
     let profileStatus: ProfileStatus | undefined
+    let profileWrite: ProfileWriteProbe | undefined
+    const dshHome = resolveDshHome(process.env, homedir())
     try {
-      const dshHome = resolveDshHome(process.env, homedir())
       profileStatus = await readProfileStatus(dshHome)
       pluginInventory = await inspectPluginInventory(dshHome)
     } catch {
       pluginInventory = undefined
+    }
+    try {
+      profileWrite = await probeProfileWritable(dshHome)
+    } catch {
+      profileWrite = undefined
     }
     const logTail = readLogTail(logPath)
     const closureIntegrity = await verifyClosureManifest(resourcesRoot())
@@ -284,6 +318,9 @@ export async function exportDiagnosticReport(
       pluginInventory,
       pluginFailures: collectPluginFailures(logTail),
       pluginFailureCause: classifyPluginFailureCause(logTail),
+      profileWrite,
+      dshHome,
+      rendererErrors,
       marketInstall,
       lan,
       closureIntegrity,

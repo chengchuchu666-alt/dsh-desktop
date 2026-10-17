@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MAX_RENDERER_RECOVERIES, RECOVERY_WINDOW_MS, recordRendererRecovery } from '../src/main/renderer-recovery.ts'
+import { MAX_RENDERER_ERRORS, MAX_RENDERER_ERROR_LENGTH, MAX_RENDERER_RECOVERIES, RECOVERY_WINDOW_MS, recordRendererError, recordRendererRecovery } from '../src/main/renderer-recovery.ts'
 
 test('first failure starts the budget and is allowed', () => {
   const record = recordRendererRecovery(undefined, 1_000)
@@ -27,4 +27,24 @@ test('stale recoveries age out of the rolling window', () => {
   record = recordRendererRecovery(record.times, later)
   assert.equal(record.allowed, true, 'the window rolled over')
   assert.deepEqual(record.times, [later], 'only the fresh timestamp remains')
+})
+
+test('recordRendererError formats, truncates, and bounds console entries', () => {
+  let errors = recordRendererError(undefined, {
+    level: 'error',
+    message: '  boom\n  boom ',
+    sourceId: 'http://127.0.0.1:5000/app.js',
+    lineNumber: 12,
+  })
+  assert.deepEqual(errors, ['error: boom boom (http://127.0.0.1:5000/app.js:12)'])
+  assert.deepEqual(recordRendererError(errors, { level: 'error', message: '   ' }), errors)
+
+  for (let index = 0; index < MAX_RENDERER_ERRORS + 5; index += 1) {
+    errors = recordRendererError(errors, { level: 'warning', message: `w${index}` })
+  }
+  assert.equal(errors.length, MAX_RENDERER_ERRORS)
+  assert.equal(errors.at(-1), `warning: w${MAX_RENDERER_ERRORS + 4}`)
+
+  const long = recordRendererError(undefined, { level: 'error', message: 'x'.repeat(MAX_RENDERER_ERROR_LENGTH * 2) })
+  assert.equal(long[0]?.length, MAX_RENDERER_ERROR_LENGTH)
 })

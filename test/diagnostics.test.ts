@@ -83,6 +83,8 @@ test('formatDiagnosticReport records versions and crash state without upload', (
       userBundles: ['user-plugin'],
       composedRows: [{ id: 'user-a', name: 'user-plugin' }],
       damagedBundles: [],
+      unkeyedRows: 0,
+      patchLayers: ['/home/test/.dsh-desktop/profiles/web/cordis.patch.yml'],
     },
     pluginFailures: [{ id: 'user-a', name: 'user-plugin' }],
     pluginFailureCause: 'kernel-api',
@@ -210,4 +212,44 @@ test('formatDiagnosticReport flags native module dlopen failures with the VC++ h
     pluginInventory: undefined, pluginFailures: [], pluginFailureCause: 'unknown',
   })
   assert.match(healthy, /native_module_failure=false/)
+})
+
+test('formatDiagnosticReport records the profile write probe and renderer errors (#116/#100)', () => {
+  const report = formatDiagnosticReport({
+    createdAt: '2026-10-17T00:00:00.000Z',
+    appVersion: '0.2.1-rc.1.shell.0', electronVersion: '44.7.0', chromiumVersion: '150', nodeVersion: '24',
+    platform: 'win32', platformRelease: '10.0.26200', arch: 'x64',
+    harnessState: { phase: 'crashed', attempts: 0, logTail: 'blocked' }, logTail: 'dsh-desktop: profile-not-writable: ~\\.dsh-desktop\\profiles\\web\\cordis.yml',
+    harnessVersion: '0.2.1-rc.1', pluginInventory: undefined, safeMode: false,
+    pluginFailureCause: 'missing-package',
+    pluginFailures: [{ id: 'preset-pentest', name: '@deepseek-ai/dsh-agent-preset' }],
+    profileWrite: {
+      ok: false,
+      directory: '/home/test/.dsh-desktop/profiles/web',
+      blocked: [{ path: '/home/test/.dsh-desktop/profiles/web/cordis.yml', reason: 'read-only' }],
+      writable: [],
+      directoryWritable: true,
+    },
+    dshHome: '/home/test/.dsh-desktop',
+    rendererErrors: ['error: Uncaught TypeError: x is not a function (http://127.0.0.1:1/app.js:9)'],
+  })
+  assert.match(report, /profile_write=blocked: profiles\/web\/cordis\.yml\(read-only\)/)
+  assert.match(report, /failure_cause=missing-package/)
+  assert.match(report, /hint=a loader row imports a package the bundled kernel does not carry/)
+  assert.match(report, /renderer_errors=1/)
+  assert.match(report, /- error: Uncaught TypeError: x is not a function/)
+})
+
+test('formatDiagnosticReport reports an unrun profile probe and no renderer errors', () => {
+  const report = formatDiagnosticReport({
+    createdAt: '2026-10-17T00:00:00.000Z',
+    appVersion: '0.2.1-rc.1.shell.0', electronVersion: '44.7.0', chromiumVersion: '150', nodeVersion: '24',
+    platform: 'darwin', platformRelease: '25.0.0', arch: 'arm64',
+    harnessState: { phase: 'ready', url: 'http://127.0.0.1:1' }, logTail: 'ready',
+    harnessVersion: '0.2.1-rc.1', pluginInventory: undefined, safeMode: false,
+    pluginFailureCause: 'unknown',
+    pluginFailures: [],
+  })
+  assert.match(report, /profile_write=not-run/)
+  assert.match(report, /renderer_errors=0/)
 })

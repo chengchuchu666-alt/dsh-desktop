@@ -131,3 +131,37 @@ test('a spawn error after readiness enters the restart path', { skip: process.pl
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('supervisor never spawns a doomed boot when the profile is not writable (#116)', async () => {
+  const logDir = await mkdtemp(join(tmpdir(), 'dsh-supervisor-preflight-'))
+  const states: HarnessState[] = []
+  const blockedPath = join(tmpdir(), 'profiles', 'web', 'cordis.yml')
+  const supervisor = new HarnessSupervisor(
+    { onState: state => states.push(state) },
+    {
+      command: process.execPath,
+      // A custom command still runs the preflight: the check guards the spawn,
+      // not the argument composition.
+      args: ['-e', "console.log('dsh web: http://127.0.0.1:1')"],
+      logDir,
+      env: {},
+      readyTimeoutMs: 2_000,
+      profilePreflight: async () => ({
+        ok: false,
+        directory: join(tmpdir(), 'profiles', 'web'),
+        blocked: [{ path: blockedPath, reason: 'read-only' as const }],
+        writable: [],
+        directoryWritable: true,
+      }),
+    },
+  )
+  try {
+    await assert.rejects(supervisor.start(), /profile is not writable/)
+  } finally {
+    await supervisor.stop()
+  }
+  const log = await readFile(join(logDir, 'harness.log'), 'utf8')
+  assert.match(log, /profile-not-writable:/)
+  assert.ok(log.includes(blockedPath))
+  assert.equal(states.some(state => state.phase === 'ready'), false)
+})

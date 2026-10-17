@@ -120,7 +120,7 @@ test('buildSafeModeOverlay reports missing or broken bundles without throwing', 
   const { home, cleanup } = await makeHome()
   try {
     await writeManifest(home, ['ghost-plugin'])
-    assert.deepEqual(await buildSafeModeOverlay(home), { ids: [], unkeyedRows: 0, unresolved: ['ghost-plugin'] })
+    assert.deepEqual(await buildSafeModeOverlay(home), { ids: [], unkeyedRows: 0, unresolved: ['ghost-plugin'], patchRows: [], patchLayers: [] })
     await installBundle(home, 'ghost-plugin', '- insert: [\n')
     const overlay = await buildSafeModeOverlay(home)
     assert.deepEqual(overlay.unresolved, ['ghost-plugin'])
@@ -315,4 +315,76 @@ test('classifyNativeModuleFailure flags dlopen failures for the actionable hint'
   assert.equal(classifyNativeModuleFailure('spawn EFTYPE'), false, 'spawn failures are the runtime classifier')
   assert.equal(classifyNativeModuleFailure('SMOKE_BROKEN_PLUGIN'), false)
   assert.equal(classifyRuntimeSpawnFailure(dlopenTail), false, 'dlopen is not a spawn failure')
+})
+
+test('buildSafeModeOverlay covers user patch layers and their includes (#115)', async () => {
+  const { home, cleanup } = await makeHome()
+  try {
+    await writeManifest(home, [...OFFICIAL_BUNDLES, 'user-plugin'])
+    await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
+    // The official bundle composes `official-row`; the user layer overrides it.
+    await installBundle(home, '@deepseek-ai/dsh-web-app', '- insert:\n    - id: official-row\n')
+    await writeFile(
+      join(home, 'profiles', 'web', 'cordis.patch.yml'),
+      [
+        '- id: user-patch-row',
+        "  name: 'some-plugin'",
+        '- id: official-row',
+        "  name: '@deepseek-ai/dsh-client-ui-chat'",
+        '- id: patch-include',
+        "  name: 'cordis:include'",
+        '  config:',
+        '    path: ./extra.yml',
+      ].join('\n'),
+    )
+    await writeFile(join(home, 'profiles', 'web', 'extra.yml'), '- id: included-row\n')
+    const overlay = await buildSafeModeOverlay(home)
+    assert.deepEqual(overlay.ids.map((row) => row.id).sort(), ['included-row', 'patch-include', 'user-a', 'user-patch-row'])
+    // An override of an official row must stay enabled: Safe Mode isolates
+    // user plugins, it does not strip official rows a user re-configured.
+    assert.ok(!overlay.ids.some((row) => row.id === 'official-row'))
+    assert.deepEqual((overlay.patchRows ?? []).map((row) => row.id).sort(), ['included-row', 'patch-include', 'user-patch-row'])
+    assert.equal(overlay.patchLayers?.length, 2)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('buildSafeModeOverlay reads the home-level patch layer', async () => {
+  const { home, cleanup } = await makeHome()
+  try {
+    await writeManifest(home, ['user-plugin'])
+    await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n')
+    await writeFile(join(home, 'cordis.patch.yml'), '- id: home-row\n')
+    const overlay = await buildSafeModeOverlay(home)
+    assert.deepEqual(overlay.ids.map((row) => row.id).sort(), ['home-row', 'user-a'])
+    assert.deepEqual(overlay.patchLayers?.map((file) => file.endsWith('cordis.patch.yml')), [true])
+  } finally {
+    await cleanup()
+  }
+})
+
+test('inspectPluginInventory reports patch layers and unkeyed rows', async () => {
+  const { home, cleanup } = await makeHome()
+  try {
+    await writeManifest(home, ['user-plugin'])
+    await installBundle(home, 'user-plugin', '- insert:\n    - id: user-a\n    - name: unkeyed\n')
+    await writeFile(join(home, 'profiles', 'web', 'cordis.patch.yml'), '- name: unkeyed-layer-row\n')
+    const inventory = await inspectPluginInventory(home)
+    assert.deepEqual(inventory.composedRows.map((row) => row.id), ['user-a'])
+    assert.equal(inventory.unkeyedRows, 2)
+    assert.equal(inventory.patchLayers.length, 1)
+  } finally {
+    await cleanup()
+  }
+})
+
+test('classifyPluginFailureCause reports a missing kernel package (#115)', () => {
+  const tail = [
+    "Error: dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include): failed to import loader entry preset-pentest (@deepseek-ai/dsh-agent-preset): Cannot find package '@deepseek-ai/dsh-agent-preset' imported from ~\\.dsh-desktop\\profiles\\web\\",
+    "Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@deepseek-ai/dsh-agent-preset' imported from ~\\.dsh-desktop\\profiles\\web\\",
+  ].join('\n')
+  assert.equal(classifyPluginFailureCause(tail), 'missing-package')
+  // A module-not-found outside a loader-entry failure is not a plugin verdict.
+  assert.equal(classifyPluginFailureCause("Error: Cannot find package 'sharp'"), 'unknown')
 })

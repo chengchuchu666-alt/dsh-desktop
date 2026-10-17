@@ -3,17 +3,17 @@ import { app, BrowserWindow, clipboard, Menu, nativeTheme, screen, shell } from 
 import { join } from 'node:path'
 import { errorPageHtml, loadingPageHtml } from './pages.ts'
 import type { HarnessStartupStage } from './supervisor.ts'
-import type { ComposedRow } from './safe-mode.ts'
+import type { ComposedRow, PluginFailureCause } from './safe-mode.ts'
 import { fitWindowState, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, type WindowState } from './window-state.ts'
 import { shellText, type ShellLocale } from './locale.ts'
 import { hiddenTitleBarOptions } from './window-chrome.ts'
 import { ConfigFile } from './config-file.ts'
-import { MAX_RENDERER_RECOVERIES, recordRendererRecovery } from './renderer-recovery.ts'
+import { MAX_RENDERER_RECOVERIES, recordRendererError, recordRendererRecovery } from './renderer-recovery.ts'
 import { buildLanMenuItems, buildSafeModeMenuItems, type LanMenuActions, type LanMenuState } from './menu-template.ts'
 
 type BuiltInPage =
   | { kind: 'loading'; stage: HarnessStartupStage; retryDelayMs: number }
-  | { kind: 'error'; attempts: number; logTail: string; safeMode: boolean; suspects: ComposedRow[]; cause?: 'kernel-api' | 'unknown' }
+  | { kind: 'error'; attempts: number; logTail: string; safeMode: boolean; suspects: ComposedRow[]; cause?: PluginFailureCause }
 
 export interface WindowLanApi {
   getState(): LanMenuState
@@ -41,6 +41,8 @@ export interface WindowContext {
   getLocale(): ShellLocale
   onVisibilityChanged?(): void
   rendererRecoveryTimes?: number[]
+  /** Recent renderer console warnings/errors and unresponsive events, newest last (#100). */
+  rendererErrors?: string[]
   /** LAN-link entries for the window context menu; discoverable without the native menu bar. */
   lan?: WindowLanApi
   /** Safe Mode entry for the window context menu (decision 0023 trio). */
@@ -216,6 +218,25 @@ export function createMainWindow(context: WindowContext): BrowserWindow {
   window.webContents.on('render-process-gone', (_event, details) => {
     if (!context.quitInProgress) void recoverRenderer(context, `renderer ${details.reason} (exit ${details.exitCode})`)
   })
+  // A blank page whose renderer is still alive leaves no crash record, so the
+  // first console exception is captured here and lands in the next diagnostic
+  // export (#100's grill-me report could not supply one).
+  window.webContents.on('console-message', (details) => {
+    const level = details.level
+    if (level !== 'error' && level !== 'warning') return
+    context.rendererErrors = recordRendererError(context.rendererErrors, {
+      level,
+      message: details.message,
+      sourceId: details.sourceId,
+      lineNumber: details.lineNumber,
+    })
+  })
+  window.webContents.on('unresponsive', () => {
+    context.rendererErrors = recordRendererError(context.rendererErrors, {
+      level: 'unresponsive',
+      message: 'renderer stopped responding',
+    })
+  })
   window.webContents.on('did-fail-load', (_event, errorCode, description, validatedURL, isMainFrame) => {
     if (!isMainFrame || errorCode === -3 || validatedURL.startsWith('data:') || context.quitInProgress) return
     void recoverRenderer(context, `load failed (${errorCode}): ${description}`)
@@ -256,7 +277,9 @@ async function recoverRenderer(context: WindowContext, reason: string): Promise<
     await navigateWindow(context, context.harnessUrl)
     return
   }
-  await loadErrorPage(context, 0, `${shellText(context.getLocale(), 'window.rendererFailed')}\n${reason}`)
+  const recentErrors = context.rendererErrors ?? []
+  const tail = [`${shellText(context.getLocale(), 'window.rendererFailed')}\n${reason}`, ...recentErrors].join('\n')
+  await loadErrorPage(context, 0, tail)
 }
 
 export function showWindow(context: WindowContext): void {
@@ -293,7 +316,7 @@ export async function loadLoadingPage(
   await navigateWindow(context, loadingPageHtml(context.getLocale(), stage, retryDelayMs))
 }
 
-export async function loadErrorPage(context: WindowContext, attempts: number, logTail: string, safeMode = false, suspects: ComposedRow[] = [], cause: 'kernel-api' | 'unknown' = 'unknown'): Promise<void> {
+export async function loadErrorPage(context: WindowContext, attempts: number, logTail: string, safeMode = false, suspects: ComposedRow[] = [], cause: PluginFailureCause = 'unknown'): Promise<void> {
   context.builtInPage = { kind: 'error', attempts, logTail, safeMode, suspects, cause }
   await navigateWindow(context, errorPageHtml(attempts, logTail, safeMode, suspects, context.getLocale(), cause))
 }

@@ -7,6 +7,7 @@ import { verifyDarwinSeal, verifyClosureManifest, closureRepairUrls, type Closur
 import { missingVcRuntimeDlls, VC_REDIST_URL } from './win-runtime.ts'
 import { dshBin, nodeBin } from './paths.ts'
 import { readProfileStatus } from './profile.ts'
+import { probeProfileWritable } from './profile-writable.ts'
 import { collectKernelCompatAdvisories, inspectPluginInventory, WEB_PROFILE } from './safe-mode.ts'
 import type { HarnessState } from './supervisor.ts'
 import type { ShellLocale } from './locale.ts'
@@ -81,6 +82,8 @@ const COPY = {
     storageWarn: (free: string) => `数据目录可写，但可用空间仅 ${free}。`,
     storageFailed: '数据目录不可写、不是目录，或磁盘空间严重不足。',
     storageAction: '检查目录权限并清理磁盘空间，然后重新体检。',
+    profileWriteFailed: (paths: string) => `Harness 无法写入 profile 配置文件：${paths}。内置内核每次启动都会重写 cordis.yml，因此在修复前启动会一直失败（安全模式也无效）。`,
+    profileWriteAction: '在「恢复」页点「修复文件权限并重启」清除只读属性；若仍失败，请确认该文件与 profiles 目录的写入权限，并检查 Windows 安全中心「受控文件夹访问」的保护历史记录。',
     harnessOk: 'Harness 已启动，loopback 页面可连接。',
     harnessFailed: 'Harness 未就绪，或当前 loopback 地址不可连接。',
     harnessAction: '从恢复区重启 Harness；仍失败时再启用安全模式。',
@@ -117,6 +120,8 @@ const COPY = {
     storageWarn: (free: string) => `Data folders are writable, but only ${free} is available.`,
     storageFailed: 'A data path is not a writable directory, or disk space is critically low.',
     storageAction: 'Check folder permissions and free disk space, then run the check again.',
+    profileWriteFailed: (paths: string) => `The Harness cannot write its profile configuration: ${paths}. The bundled kernel rewrites cordis.yml on every start, so startup keeps failing until this is fixed (Safe Mode cannot bypass it).`,
+    profileWriteAction: 'Use “Repair file permissions and restart” on the recovery page to clear the read-only attribute; if that fails, check write access to the file and the profiles folder, and Windows Security → Protection history for a Controlled Folder Access block.',
     harnessOk: 'Harness is ready and its loopback page is reachable.',
     harnessFailed: 'Harness is not ready or its current loopback address is unreachable.',
     harnessAction: 'Restart Harness from Recovery; use Safe Mode only if it still fails.',
@@ -313,10 +318,23 @@ export async function runDesktopHealthCheck(options: DesktopHealthCheckOptions):
   }
   const [dshFree, userDataFree] = await Promise.all([freeSpace(options.dshHome), freeSpace(options.userData)])
   const freeBytes = dshFree === undefined || userDataFree === undefined ? undefined : Math.min(dshFree, userDataFree)
-  const storageFailed = !dshWritable || !userDataWritable || (freeBytes !== undefined && freeBytes < FAIL_DISK_BYTES)
+  // Directory writability is not enough (#116): the kernel rewrites the
+  // profile's cordis.yml on every start, so a single read-only file breaks
+  // startup while the folder itself stays writable.
+  const profileWrite = await probeProfileWritable(options.dshHome).catch(() => undefined)
+  const blockedProfileFiles = profileWrite?.blocked.map(block => block.path) ?? []
+  const storageFailed = !dshWritable || !userDataWritable || blockedProfileFiles.length > 0 || (freeBytes !== undefined && freeBytes < FAIL_DISK_BYTES)
   const storageWarning = !storageFailed && (freeBytes === undefined || freeBytes < WARN_DISK_BYTES)
   results.push(storageFailed
-    ? { id: 'storage', status: 'failed', label: copy.storage, detail: copy.storageFailed, action: copy.storageAction }
+    ? {
+        id: 'storage',
+        status: 'failed',
+        label: copy.storage,
+        detail: blockedProfileFiles.length > 0
+          ? copy.profileWriteFailed(blockedProfileFiles.join(', '))
+          : copy.storageFailed,
+        action: blockedProfileFiles.length > 0 ? copy.profileWriteAction : copy.storageAction,
+      }
     : storageWarning
       ? { id: 'storage', status: 'warning', label: copy.storage, detail: copy.storageWarn(formatFree(freeBytes)), action: copy.storageAction }
       : { id: 'storage', status: 'ok', label: copy.storage, detail: copy.storageOk(formatFree(freeBytes)) })

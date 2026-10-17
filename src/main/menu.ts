@@ -90,6 +90,7 @@ export function installAppMenu(
   lanRunning = false,
   lanBusy = false,
   shortcutAccelerator?: string,
+  quarantined = false,
 ): void {
   const template = buildAppMenuTemplate({
     locale,
@@ -101,6 +102,7 @@ export function installAppMenu(
     lanRunning,
     lanBusy,
     shortcutAccelerator,
+    quarantined,
   }, actions)
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }

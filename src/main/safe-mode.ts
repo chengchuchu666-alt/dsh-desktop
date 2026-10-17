@@ -15,7 +15,7 @@
 import { rm, readFile, mkdir } from 'node:fs/promises'
 import { atomicWriteFile } from './config-file.ts'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { parse, stringify } from 'yaml'
 import { kernelCompatAdvisory } from './plugin-compat.ts'
 
@@ -66,9 +66,11 @@ export async function collectKernelCompatAdvisories(dshHome: string, profile: st
  * Why a plugin failed to load. `kernel-api` is the recurring upgrade cliff:
  * the plugin imports a symbol the bundled kernel no longer exports, so the
  * fix is to update (or disable) the plugin — exactly what the error page's
- * recovery rows offer.
+ * recovery rows offer. `missing-package` is the sibling cliff: the plugin (or
+ * a user patch row) imports a package the bundled kernel does not carry, which
+ * only a kernel upgrade — or disabling that row — can resolve (#115).
  */
-export type PluginFailureCause = 'kernel-api' | 'unknown'
+export type PluginFailureCause = 'kernel-api' | 'missing-package' | 'unknown'
 
 /** Log evidence that a loader entry failed on a kernel module import. */
 const KERNEL_API_EVIDENCE = [
@@ -76,15 +78,20 @@ const KERNEL_API_EVIDENCE = [
   /SyntaxError: The requested module '@deepseek-ai\/dsh-/,
 ]
 
+/** Log evidence that a loader entry could not resolve a package at all. */
+const MISSING_PACKAGE_EVIDENCE = [
+  /ERR_MODULE_NOT_FOUND/,
+  /Cannot find package '/,
+]
+
 /**
- * Classify why the failing plugins in `logTail` failed. The kernel-API cliff
- * always shows up as an ESM import error against a `@deepseek-ai/dsh-*`
- * module, or as a runtime TypeError on a kernel object inside a loader-entry
- * failure chain (e.g. `ctx.subagents.registerContinuableSetup is not a
- * function` — an API that only newer kernels ship); anything else stays
- * `unknown` rather than guessing.
+ * Classify why the failing plugins in `logTail` failed. A loader entry that
+ * cannot resolve a package is checked first: it is the more specific verdict
+ * and names the actionable fix (upgrade the kernel, or disable the row).
  */
 export function classifyPluginFailureCause(logTail: string): PluginFailureCause {
+  if (/failed to (?:apply|import) loader entry/.test(logTail)
+    && MISSING_PACKAGE_EVIDENCE.some(pattern => pattern.test(logTail))) return 'missing-package'
   if (KERNEL_API_EVIDENCE.some(pattern => pattern.test(logTail))) return 'kernel-api'
   if (/failed to (?:apply|import) loader entry/.test(logTail) &&
     KERNEL_API_TYPE_ERRORS.some(pattern => pattern.test(logTail))) return 'kernel-api'
@@ -122,6 +129,8 @@ export function classifyRuntimeSpawnFailure(logTail: string): boolean {
 export interface ComposedRow {
   id: string
   name?: string
+  /** True when the shell's persistent quarantine currently disables this row. */
+  quarantined?: boolean
 }
 
 export interface SafeModeOverlay {
@@ -129,8 +138,22 @@ export interface SafeModeOverlay {
   ids: ComposedRow[]
   /** Rows without an id — not addressable, Safe Mode cannot disable them. */
   unkeyedRows: number
-  /** Bundles whose manifest or patch could not be read. */
+  /** Bundles or patch layers whose manifest or patch could not be read. */
   unresolved: string[]
+  /** Rows contributed by the user patch layers (`cordis.patch.yml` + includes). */
+  patchRows?: ComposedRow[]
+  /** Absolute paths of the user patch-layer files that were read. */
+  patchLayers?: string[]
+}
+
+/** The loader's native include row names (the kernel accepts both spellings). */
+const INCLUDE_ROW_NAMES = new Set(['cordis:include', '@deepseek-ai/cordis-plugin-include'])
+
+/** True for a row whose `config.path` pulls in another entry list. */
+function isIncludeRow(row: Record<string, unknown>): boolean {
+  if (typeof row.name !== 'string' || !INCLUDE_ROW_NAMES.has(row.name)) return false
+  const config = row.config as { path?: unknown } | undefined
+  return typeof config?.path === 'string' && /\.(ya?ml|json)$/i.test(config.path)
 }
 
 /** The path the loader imports a row's module from. */
@@ -193,9 +216,145 @@ function parsePatch(text: string): unknown[] {
 }
 
 /**
+ * Collect the inserted rows of one bundle (or several patch files) without
+ * touching the tree. A bundle may declare one patch file or an ordered list;
+ * anything unreadable is reported instead of throwing.
+ */
+async function collectBundleRows(
+  dshHome: string,
+  profile: string,
+  bundles: readonly string[],
+): Promise<{ rows: ComposedRow[]; unkeyedRows: number; unresolved: string[] }> {
+  const rows: ComposedRow[] = []
+  let unkeyedRows = 0
+  const unresolved: string[] = []
+  for (const name of bundles) {
+    const packageDir = installedPackagePath(dshHome, profile, name)
+    if (packageDir === undefined) {
+      unresolved.push(name)
+      continue
+    }
+    let declared: unknown
+    try {
+      const packageJson = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')) as {
+        dsh?: { bundle?: { patch?: unknown } }
+      }
+      declared = packageJson.dsh?.bundle?.patch
+    } catch {
+      declared = undefined
+    }
+    const files = typeof declared === 'string'
+      ? [declared]
+      : Array.isArray(declared) && declared.every(file => typeof file === 'string')
+        ? declared as string[]
+        : undefined
+    if (files === undefined) {
+      unresolved.push(name)
+      continue
+    }
+    let broken = false
+    for (const file of files) {
+      try {
+        const collected = collectInsertIds(parsePatch(await readFile(resolve(packageDir, file), 'utf8')))
+        rows.push(...collected.rows)
+        unkeyedRows += collected.unkeyedRows
+      } catch {
+        broken = true
+      }
+    }
+    if (broken) unresolved.push(name)
+  }
+  return { rows, unkeyedRows, unresolved }
+}
+
+export interface PatchLayerScan {
+  rows: ComposedRow[]
+  unkeyedRows: number
+  /** Absolute paths of the layer files that were read (the layer plus includes). */
+  files: string[]
+  /** Layer files that exist but could not be parsed. */
+  unresolved: string[]
+}
+
+/**
+ * Walk one user patch layer (`cordis.patch.yml`) and every entry list it
+ * includes, collecting the row ids a disable overlay can target. Safe Mode
+ * previously only knew about bundle-inserted rows, so a failing row that came
+ * from the user layer survived every Safe Mode boot (#115).
+ */
+export async function collectPatchLayerRows(file: string, seen = new Set<string>()): Promise<PatchLayerScan> {
+  const scan: PatchLayerScan = { rows: [], unkeyedRows: 0, files: [], unresolved: [] }
+  const profileDir = dirname(resolve(file))
+  const walkFile = async (path: string): Promise<void> => {
+    const absolute = resolve(path)
+    if (seen.has(absolute)) return
+    seen.add(absolute)
+    let data: unknown[]
+    try {
+      data = parsePatch(await readFile(absolute, 'utf8'))
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') scan.unresolved.push(absolute)
+      return
+    }
+    scan.files.push(absolute)
+    await walkItems(data, dirname(absolute))
+  }
+  const walkItems = async (items: readonly unknown[], baseDir: string): Promise<void> => {
+    for (const item of items) {
+      if (item === null || typeof item !== 'object') continue
+      const row = item as Record<string, unknown>
+      if (Array.isArray(row.insert)) {
+        await walkItems(row.insert, baseDir)
+        continue
+      }
+      if (typeof row.id === 'string' && row.id !== '') {
+        scan.rows.push(typeof row.name === 'string' ? { id: row.id, name: row.name } : { id: row.id })
+      } else {
+        scan.unkeyedRows += 1
+      }
+      const nested = Array.isArray(row.config)
+        ? row.config
+        : Array.isArray((row.group as { config?: unknown } | undefined)?.config)
+          ? (row.group as { config: unknown[] }).config
+          : undefined
+      if (nested !== undefined) await walkItems(nested, baseDir)
+      if (!isIncludeRow(row)) continue
+      const spec = (row.config as { path: string }).path
+      const candidates = isAbsolute(spec)
+        ? [spec]
+        : [resolve(baseDir, spec), resolve(profileDir, spec)]
+      const target = candidates.find(candidate => existsSync(candidate))
+      if (target !== undefined) await walkFile(target)
+    }
+  }
+  await walkFile(file)
+  return scan
+}
+
+/** The two user patch layers the kernel applies after every bundle layer. */
+export function userPatchLayerPaths(dshHome: string, profile = WEB_PROFILE): string[] {
+  return [join(dshHome, 'profiles', profile, 'cordis.patch.yml'), join(dshHome, 'cordis.patch.yml')]
+}
+
+/** Drop duplicate row ids while preserving insertion order. */
+function dedupeRows(rows: readonly ComposedRow[]): ComposedRow[] {
+  const seen = new Set<string>()
+  const unique: ComposedRow[] = []
+  for (const row of rows) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    unique.push(row)
+  }
+  return unique
+}
+
+/**
  * Compute the Safe Mode disable overlay for a profile: one `disabled: true`
- * patch row per user-bundle row id. Official bundles and the shell-owned
- * controls overlay stay mounted; user files are never touched.
+ * patch row per user-bundle row id plus every row the user patch layers add
+ * (directly or through an include). Rows the official bundles already compose
+ * are never disabled — those are user *overrides* of official rows, not
+ * user-installed plugins. Official bundles and the shell-owned controls
+ * overlay stay mounted; user files are never touched.
  */
 export async function buildSafeModeOverlay(dshHome: string, profile = WEB_PROFILE): Promise<SafeModeOverlay> {
   const manifestPath = join(dshHome, 'profiles', profile, 'package.json')
@@ -206,39 +365,32 @@ export async function buildSafeModeOverlay(dshHome: string, profile = WEB_PROFIL
     return { ids: [], unkeyedRows: 0, unresolved: ['<missing profile manifest>'] }
   }
   const bundles = manifest.dsh?.profile?.bundles ?? []
-  const userBundles = bundles.filter((name) => !(OFFICIAL_BUNDLES as readonly string[]).includes(name))
-  const ids: ComposedRow[] = []
-  let unkeyedRows = 0
-  const unresolved: string[] = []
-  for (const name of userBundles) {
-    const packageDir = installedPackagePath(dshHome, profile, name)
-    if (packageDir === undefined) {
-      unresolved.push(name)
-      continue
-    }
-    let patchFile: string | undefined
-    try {
-      const packageJson = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')) as {
-        dsh?: { bundle?: { patch?: string } }
-      }
-      patchFile = packageJson.dsh?.bundle?.patch
-    } catch {
-      patchFile = undefined
-    }
-    if (typeof patchFile !== 'string') {
-      unresolved.push(name)
-      continue
-    }
-    try {
-      const data = parsePatch(await readFile(resolve(packageDir, patchFile), 'utf8'))
-      const collected = collectInsertIds(data)
-      ids.push(...collected.rows)
-      unkeyedRows += collected.unkeyedRows
-    } catch {
-      unresolved.push(name)
-    }
+  const official = bundles.filter(name => (OFFICIAL_BUNDLES as readonly string[]).includes(name))
+  const userBundles = bundles.filter(name => !(OFFICIAL_BUNDLES as readonly string[]).includes(name))
+  const officialRows = await collectBundleRows(dshHome, profile, official)
+  const officialIds = new Set(officialRows.rows.map(row => row.id))
+  const userRows = await collectBundleRows(dshHome, profile, userBundles)
+  const layerRows: ComposedRow[] = []
+  const layerFiles: string[] = []
+  const layerUnresolved: string[] = []
+  let layerUnkeyed = 0
+  for (const layer of userPatchLayerPaths(dshHome, profile)) {
+    if (!existsSync(layer)) continue
+    const scan = await collectPatchLayerRows(layer)
+    // Official-row overrides stay enabled: Safe Mode isolates user plugins,
+    // it does not strip official rows a user re-configured.
+    layerRows.push(...scan.rows.filter(row => !officialIds.has(row.id)))
+    layerFiles.push(...scan.files)
+    layerUnresolved.push(...scan.unresolved)
+    layerUnkeyed += scan.unkeyedRows
   }
-  return { ids, unkeyedRows, unresolved }
+  return {
+    ids: dedupeRows([...userRows.rows, ...layerRows]),
+    unkeyedRows: userRows.unkeyedRows + layerUnkeyed,
+    unresolved: [...userRows.unresolved, ...layerUnresolved],
+    patchRows: dedupeRows(layerRows),
+    patchLayers: layerFiles,
+  }
 }
 
 /**
@@ -270,6 +422,10 @@ export interface PluginInventory {
   userBundles: string[]
   composedRows: ComposedRow[]
   damagedBundles: string[]
+  /** Rows Safe Mode cannot address (no id) — reported so they are not invisible. */
+  unkeyedRows: number
+  /** Absolute paths of the user patch layers that were read. */
+  patchLayers: string[]
 }
 
 /** Inspect the live profile for diagnostics: bundles and composed rows. */
@@ -285,7 +441,14 @@ export async function inspectPluginInventory(dshHome: string, profile = WEB_PROF
     bundles = []
   }
   const userBundles = bundles.filter(name => !(OFFICIAL_BUNDLES as readonly string[]).includes(name))
-  return { bundles, userBundles, composedRows: overlay.ids, damagedBundles: overlay.unresolved }
+  return {
+    bundles,
+    userBundles,
+    composedRows: overlay.ids,
+    damagedBundles: overlay.unresolved,
+    unkeyedRows: overlay.unkeyedRows,
+    patchLayers: overlay.patchLayers ?? [],
+  }
 }
 
 /** Unique suspected-bad-plugin rows found in harness output (deepest leaf per line). */

@@ -29,3 +29,35 @@ export function recordRendererRecovery(times: readonly number[] | undefined, now
   recent.push(now)
   return { times: recent, allowed: recent.length <= MAX_RENDERER_RECOVERIES }
 }
+
+/** Renderer console entries kept for the diagnostic report. */
+export const MAX_RENDERER_ERRORS = 20
+
+/** One console entry is truncated to keep the report bounded. */
+export const MAX_RENDERER_ERROR_LENGTH = 400
+
+export interface RendererConsoleEntry {
+  level: string
+  message: string
+  sourceId?: string
+  lineNumber?: number
+}
+
+/**
+ * Format and record one renderer console entry (#100): a blank page whose
+ * renderer never crashed leaves no other trace, so the first exception must
+ * survive into the next diagnostic export.
+ */
+export function recordRendererError(
+  previous: readonly string[] | undefined,
+  entry: RendererConsoleEntry,
+): string[] {
+  const text = entry.message.replace(/\s+/g, ' ').trim()
+  if (text === '') return [...(previous ?? [])]
+  const source = entry.sourceId === undefined || entry.sourceId === ''
+    ? ''
+    : ` (${entry.sourceId}${entry.lineNumber === undefined ? '' : `:${entry.lineNumber}`})`
+  const line = `${entry.level}: ${text}${source}`.slice(0, MAX_RENDERER_ERROR_LENGTH)
+  const next = [...(previous ?? []), line]
+  return next.length > MAX_RENDERER_ERRORS ? next.slice(next.length - MAX_RENDERER_ERRORS) : next
+}

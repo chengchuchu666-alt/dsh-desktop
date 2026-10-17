@@ -120,3 +120,28 @@ test('error page renders the native-module hint for dlopen failures', async () =
   // The spawn-failure hint must NOT appear for a dlopen failure.
   assert.doesNotMatch(html, /spawn EFTYPE 的唯一线索|运行文件.*缺失、损坏/)
 })
+
+test('errorPageHtml explains a missing kernel package with the upgrade hint', () => {
+  const html = decodeURIComponent(errorPageHtml(6, 'failed to import loader entry preset-pentest (@deepseek-ai/dsh-agent-preset): Cannot find package', false, [
+    { id: 'preset-pentest', name: '@deepseek-ai/dsh-agent-preset' },
+  ], 'en', 'missing-package'))
+  assert.ok(html.includes('does not carry'), 'the missing-package hint must be used')
+  assert.ok(html.includes('@deepseek-ai/dsh-agent-preset'))
+})
+
+test('errorPageHtml offers the profile write repair when the preflight blocked the boot', () => {
+  const tail = 'dsh-desktop: profile-not-writable: C:\\Users\\me\\.dsh-desktop\\profiles\\web\\cordis.yml — the bundled kernel rewrites profiles/<name>/cordis.yml on every start'
+  const html = decodeURIComponent(errorPageHtml(0, tail))
+  assert.ok(html.includes('cordis.yml'), 'the blocked path must be named')
+  assert.ok(html.includes('repairProfile()'), 'the repair action must be wired')
+  assert.ok(html.includes('Repair file permissions'), 'the repair button must be labelled')
+  assert.ok(html.includes('Controlled Folder Access'), 'the Windows guidance must be present')
+})
+
+test('errorPageHtml offers releasing the automatic quarantine', () => {
+  const html = decodeURIComponent(errorPageHtml(0, 'tail', false, [{ id: 'preset-pentest', quarantined: true }]))
+  assert.ok(html.includes('clearQuarantine()'))
+  assert.ok(html.includes('Release plugin quarantine'))
+  const clean = decodeURIComponent(errorPageHtml(0, 'tail', false, [{ id: 'preset-pentest' }]))
+  assert.ok(!clean.includes('Release plugin quarantine'), 'no quarantine section without quarantined rows')
+})

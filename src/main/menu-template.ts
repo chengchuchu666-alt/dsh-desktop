@@ -16,6 +16,8 @@ export interface MenuActions {
   toggleMaximize(): void
   restartHarness(): void
   toggleSafeMode(): void
+  /** Release the shell's automatic plugin quarantine (#115), when present. */
+  releasePluginQuarantine?(): void
   checkForUpdates(): void
   showAbout(): void
   openExternal(url: string): void
@@ -32,6 +34,8 @@ export interface MenuEnvironment {
   appName: string
   restartEnabled?: boolean
   safeMode?: boolean
+  /** True when the shell currently disables automatically quarantined rows. */
+  quarantined?: boolean
   lanRunning?: boolean
   lanBusy?: boolean
   shortcutAccelerator?: string
@@ -96,7 +100,7 @@ export function buildSafeModeMenuItems(
 }
 
 export function buildAppMenuTemplate(environment: MenuEnvironment, actions: MenuActions): MenuItemConstructorOptions[] {
-  const { locale, platform, packaged, appName, restartEnabled = true, safeMode = false, lanRunning = false, lanBusy = false, shortcutAccelerator = DESKTOP_SUMMON_ACCELERATOR } = environment
+  const { locale, platform, packaged, appName, restartEnabled = true, safeMode = false, quarantined = false, lanRunning = false, lanBusy = false, shortcutAccelerator = DESKTOP_SUMMON_ACCELERATOR } = environment
   const t = (key: Parameters<typeof shellText>[1]): string => shellText(locale, key)
   const isMac = platform === 'darwin'
   const template: MenuItemConstructorOptions[] = []
@@ -183,6 +187,11 @@ export function buildAppMenuTemplate(environment: MenuEnvironment, actions: Menu
       { type: 'separator' },
       ...buildLanMenuItems(locale, { lanRunning, lanBusy }, actions),
       ...buildSafeModeMenuItems(locale, safeMode, actions),
+      // Reversible half of the automatic plugin quarantine (#115): visible only
+      // while the shell actually disables recorded rows.
+      ...(quarantined && actions.releasePluginQuarantine !== undefined
+        ? [{ label: t('menu.releaseQuarantine'), click: actions.releasePluginQuarantine }]
+        : []),
       // Restart (decision 0028): the extension surfaces' plugin-refresh
       // action; sits with the trio so a misbehaving plugin is fixable from
       // every surface.

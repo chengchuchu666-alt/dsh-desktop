@@ -50,6 +50,8 @@ import { armSmokeTimeout, quitGracefully, SMOKE_TEST, SMOKE_UI_TEST, smokeUiRend
 import { DEV_WEB_URL_ENV, isSmokeVersionMismatch, SMOKE_CLOSURE_FLAG, SMOKE_EXPECTED_VERSION_ENV, SMOKE_EXIT_FAIL, TEST_FAIL_HARNESS_ENV, TEST_RETRY_FAIL_ENV } from './smoke-protocol.ts'
 import { exportDiagnosticReport, redactDiagnosticsLog } from './diagnostics.ts'
 import { clearPersistedPluginSuspects, loadPersistedPluginSuspects, persistPluginSuspects, updatePluginFailureMemory, writeSafeModeOverlay, WEB_PROFILE, OFFICIAL_BUNDLES, classifyPluginFailureCause, type ComposedRow } from './safe-mode.ts'
+import { probeProfileWritable, repairProfileWritable } from './profile-writable.ts'
+import { addQuarantinedRows, clearQuarantinedRows, ensureQuarantinePatch, loadQuarantinedRows, removeQuarantinedRows } from './plugin-quarantine.ts'
 import { listTrash, moveToTrash, purgeExpiredTrash, purgeFromTrash, restoreFromTrash } from './trash.ts'
 import { writeTrashHookFiles } from './trash-hook.ts'
 import { SessionTrashClient } from './trash-client.ts'
@@ -93,6 +95,9 @@ let feishuSetupWindow: FeishuSetupWindowController | undefined
 let kernelLaunchGuard: KernelLaunchGuard | undefined
 /** Suspected failing plugins extracted from the last crash; shown on the recovery pages. */
 let lastPluginFailures: ComposedRow[] = []
+
+/** Persisted plugin-quarantine rows (#115), cached for the synchronous menu/error-page paths. */
+let persistedQuarantine: ComposedRow[] = []
 
 const lanService = new LanService({
   mobileShellRoot,
@@ -603,6 +608,15 @@ const shellApp = new ShellApp({
     { onState, onTrashEndpoint: port => sessionTrashClient.bind(port) },
     {
       safeMode: { enabled: safeModeActive, overlayFactory: safeModeOverlayPath },
+      // Persistent row quarantine (#115): rebuilt per spawn from the record the
+      // auto-quarantine wrote, so a non-bundle failing row self-heals.
+      quarantine: { patchFactory: () => ensureQuarantinePatch(app.getPath('userData')) },
+      // Profile write preflight (#116): a read-only cordis.yml guarantees an
+      // EPERM exit, so report it instead of spawning a doomed harness.
+      profilePreflight: async () => {
+        const probe = await probeProfileWritable(resolveDshHome(process.env, homedir()))
+        return probe.ok ? undefined : probe
+      },
       trashHook: {
         enabled: () => desktopPreferencesController?.snapshot.agentDeletionInterception === true,
         patchFactory: async () => writeTrashHookFiles({
@@ -647,13 +661,13 @@ const shellApp = new ShellApp({
       // this the CI log shows only "exited before ready" and a phase-2 safe
       // boot failure is undiagnosable (issue #41's shell.3 run).
       if (SMOKE_TEST) console.error(`dsh-desktop: harness log tail:\n${state.logTail}`)
-      void loadErrorPage(windowContext, state.attempts, state.logTail, safeModeActive(), lastPluginFailures, classifyPluginFailureCause(state.logTail))
+      void loadErrorPage(windowContext, state.attempts, state.logTail, safeModeActive(), visibleSuspects(), classifyPluginFailureCause(state.logTail))
       void persistPluginSuspects(app.getPath('userData'), lastPluginFailures)
       void autoQuarantineSuspects(lastPluginFailures)
     } else {
       void loadLoadingPage(windowContext, state.stage ?? 'launching', state.retryDelayMs ?? 0)
     }
-    installAppMenu(currentLocale, menuActions, shellApp.restartEnabled(), safeModeActive(), lanService.isRunning, lanService.isBusy, desktopPreferencesController?.snapshot.shortcut)
+    installAppMenu(currentLocale, menuActions, shellApp.restartEnabled(), safeModeActive(), lanService.isRunning, lanService.isBusy, desktopPreferencesController?.snapshot.shortcut, persistedQuarantine.length > 0)
     refreshTray()
   },
   onRestartBusyChanged: refreshNativeSurfaces,
@@ -678,7 +692,7 @@ const shellApp = new ShellApp({
 
 function refreshNativeSurfaces(): void {
   if (windowContext.quitInProgress) return
-  installAppMenu(currentLocale, menuActions, shellApp.restartEnabled(), safeModeActive(), lanService.isRunning, lanService.isBusy, desktopPreferencesController?.snapshot.shortcut)
+  installAppMenu(currentLocale, menuActions, shellApp.restartEnabled(), safeModeActive(), lanService.isRunning, lanService.isBusy, desktopPreferencesController?.snapshot.shortcut, persistedQuarantine.length > 0)
   refreshTray()
   void refreshBalance()
 }
@@ -835,7 +849,7 @@ function toggleMaximize(): void {
 function aboutMaintenance(): AboutMaintenanceActions {
   return {
     openLogs: () => { void openLogsFolder() },
-    exportDiagnostics: () => { void exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState) },
+    exportDiagnostics: () => { void exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState, windowContext.rendererErrors) },
   }
 }
 
@@ -850,6 +864,7 @@ const menuActions: MenuActions = {
   toggleMaximize,
   restartHarness: () => { void shellApp.requestRestart() },
   toggleSafeMode,
+  releasePluginQuarantine: () => { void releasePluginQuarantine() },
   checkForUpdates: () => { void checkForUpdatesInteractively(currentLocale) },
   showAbout: () => { void showAboutDialog(currentLocale, aboutMaintenance()) },
   openExternal: url => { void shell.openExternal(url) },
@@ -910,7 +925,7 @@ ipcMain.handle('shell:open-logs', (event) => {
 
 ipcMain.handle('shell:export-diagnostics', async (event) => {
   if (!isMainWindowSender(windowContext.mainWindow, event.sender, event.senderFrame?.url)) return false
-  return exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState)
+  return exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState, windowContext.rendererErrors)
 })
 
 ipcMain.handle('shell:close-lan-pairing', (event) => {
@@ -958,7 +973,7 @@ ipcMain.handle('desktop:action', async (event, action: unknown) => {
     return true
   }
   if (action === 'exportDiagnostics') {
-    void exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState)
+    void exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState, windowContext.rendererErrors)
     return true
   }
   if (action === 'showAbout') {
@@ -1377,20 +1392,37 @@ let autoQuarantineInFlight = false
 async function autoQuarantineSuspects(suspects: readonly ComposedRow[]): Promise<void> {
   if (autoQuarantineInFlight || suspects.length === 0) return
   const dshHome = resolveDshHome(process.env, homedir())
+  const userData = app.getPath('userData')
   const manifest = await readProfileManifest(dshHome)
   const removable = pickQuarantinable(
     suspects.flatMap(row => typeof row.name === 'string' ? [row.name] : []),
     manifest.dsh?.profile?.bundles ?? [],
     OFFICIAL_BUNDLES,
   )
-  if (removable.length === 0) return
+  // A failing loader row that is not a bundle (#115: a user patch row or an
+  // include child) cannot be removed from the bundle list; record its id and
+  // disable it through the shell-owned overlay instead. Ids already recorded
+  // are skipped — that is the loop guard.
+  const rowSuspects = suspects.filter(row =>
+    typeof row.name !== 'string' || !removable.includes(row.name))
+  const alreadyQuarantined = new Set((await loadQuarantinedRows(userData)).map(row => row.id))
+  const newRows = rowSuspects.filter(row => row.id !== '' && !alreadyQuarantined.has(row.id))
+  if (removable.length === 0 && newRows.length === 0) return
   autoQuarantineInFlight = true
   try {
-    await writeProfileManifest(dshHome, withoutBundles(manifest, removable))
-    for (const row of suspects.filter(suspect => typeof suspect.name === 'string' && removable.includes(suspect.name))) {
+    if (removable.length > 0) await writeProfileManifest(dshHome, withoutBundles(manifest, removable))
+    if (newRows.length > 0) {
+      await addQuarantinedRows(userData, newRows)
+      await refreshPersistedQuarantine()
+    }
+    for (const row of suspects.filter(suspect => removable.length > 0 && typeof suspect.name === 'string' && removable.includes(suspect.name))) {
       if (!autoQuarantined.some(existing => existing.id === row.id)) autoQuarantined.push(row)
     }
-    console.warn(`dsh-desktop: boot failed on ${removable.join(', ')}; quarantined them from the boot list — update or re-enable in Settings → Plugins`)
+    const summary = [
+      ...(removable.length > 0 ? [`removed from the boot list: ${removable.join(', ')}`] : []),
+      ...(newRows.length > 0 ? [`disabled loader rows: ${newRows.map(row => row.id).join(', ')}`] : []),
+    ].join('; ')
+    console.warn(`dsh-desktop: boot failed; ${summary} — update or re-enable in Settings → Plugins`)
     await restartForPluginRecovery()
   } catch (error) {
     console.warn(`dsh-desktop: auto-quarantine failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -1399,9 +1431,20 @@ async function autoQuarantineSuspects(suspects: readonly ComposedRow[]): Promise
   }
 }
 
-/** Suspects worth showing: live failures plus still-quarantined plugins. */
+async function refreshPersistedQuarantine(): Promise<void> {
+  const rows = await loadQuarantinedRows(app.getPath('userData')).catch(() => [])
+  persistedQuarantine = rows.map(row => ({
+    id: row.id,
+    ...(row.name === undefined ? {} : { name: row.name }),
+    quarantined: true,
+  }))
+}
+
+/** Suspects worth showing: live failures, in-memory quarantine, persisted rows. */
 function visibleSuspects(): ComposedRow[] {
-  return [...lastPluginFailures, ...autoQuarantined.filter(row => !lastPluginFailures.some(fail => fail.id === row.id))]
+  const rows = [...lastPluginFailures, ...autoQuarantined.filter(row => !lastPluginFailures.some(fail => fail.id === row.id))]
+  const known = new Set(rows.map(row => row.id))
+  return [...rows, ...persistedQuarantine.filter(row => !known.has(row.id))]
 }
 
 ipcMain.handle('desktop:suspects:get', (event) => {
@@ -1461,6 +1504,15 @@ ipcMain.handle('desktop:plugin:update', async (event, rawName: unknown): Promise
     const quarantinedIndex = autoQuarantined.findIndex(row => row.name === name)
     if (quarantinedIndex !== -1) autoQuarantined.splice(quarantinedIndex, 1)
   }
+  // The updated package is the one the quarantined rows failed on: release
+  // them so the fixed version is loaded on the next start.
+  const releasedIds = (await loadQuarantinedRows(app.getPath('userData')).catch(() => []))
+    .filter(row => row.name !== undefined && targets.includes(row.name))
+    .map(row => row.id)
+  if (releasedIds.length > 0) {
+    await removeQuarantinedRows(app.getPath('userData'), releasedIds).catch(() => 0)
+    await refreshPersistedQuarantine()
+  }
   // Registry metadata can trail a just-published dist-tag, so a no-op install
   // is not a failure: report 'current' so the error page can say so.
   const after = await Promise.all(targets.map(name => installedPluginVersion(dshHome, name)))
@@ -1483,7 +1535,46 @@ ipcMain.handle('desktop:plugin:disable', async (event, rawName: unknown) => {
   }
   const quarantinedIndex = autoQuarantined.findIndex(row => row.name === rawName || row.id === rawName)
   if (quarantinedIndex !== -1) autoQuarantined.splice(quarantinedIndex, 1)
+  const releasedIds = (await loadQuarantinedRows(app.getPath('userData')).catch(() => []))
+    .filter(row => row.name === rawName || row.id === rawName)
+    .map(row => row.id)
+  if (releasedIds.length > 0) {
+    await removeQuarantinedRows(app.getPath('userData'), releasedIds).catch(() => 0)
+    await refreshPersistedQuarantine()
+  }
   return restartForPluginRecovery()
+})
+
+// Profile write repair (#116): clear the read-only attribute on the blocked
+// profile files, then restart so the page reports the real outcome. ACLs and
+// security-software settings stay user-driven by design.
+ipcMain.handle('desktop:profile:repair-write', async (event) => {
+  if (!isMainWindowSender(windowContext.mainWindow, event.sender, event.senderFrame?.url)
+    && !isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  const dshHome = resolveDshHome(process.env, homedir())
+  const probe = await repairProfileWritable(dshHome).catch(() => undefined)
+  if (probe === undefined || !probe.ok) {
+    console.warn(`dsh-desktop: profile write repair did not unblock ${probe?.blocked.map(block => block.path).join(', ') ?? 'the profile'}`)
+    return false
+  }
+  return restartForPluginRecovery()
+})
+
+// Release the automatic row quarantine (#115): the reversible half of the
+// recovery contract, offered on the error page and in the extensions menu once
+// the plugin was updated.
+async function releasePluginQuarantine(): Promise<boolean> {
+  const cleared = await clearQuarantinedRows(app.getPath('userData')).catch(() => false)
+  await refreshPersistedQuarantine()
+  refreshNativeSurfaces()
+  if (!cleared) return false
+  return restartForPluginRecovery()
+}
+
+ipcMain.handle('desktop:quarantine:clear', async (event) => {
+  if (!isMainWindowSender(windowContext.mainWindow, event.sender, event.senderFrame?.url)
+    && !isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return false
+  return releasePluginQuarantine()
 })
 
 ipcMain.handle('desktop:presets:export', (event, id: unknown) => {
@@ -1699,6 +1790,8 @@ if (!gotLock) {
     // The harness (and the market installs it spawns) needs the bundled-pnpm
     // PATH and the translated system proxy before its first boot.
     harnessChildEnv = await installChildEnv()
+    // Surface rows quarantined by a previous session on the first error page.
+    await refreshPersistedQuarantine()
 
     // Closure smoke: verify the packaged tree against its integrity manifest
     // (decision 0032) without booting the harness; the tamper injection turns

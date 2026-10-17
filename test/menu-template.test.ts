@@ -130,3 +130,12 @@ test('lan menu items keep a stable shape for context-menu reuse', () => {
   assert.equal(running[1]?.type, 'separator')
   assert.equal(running[2]?.label, '停止局域网共享')
 })
+
+test('the extensions menu offers releasing the plugin quarantine only when rows are disabled', () => {
+  const actions = { toggleSafeMode: () => undefined, releasePluginQuarantine: () => undefined }
+  const environment = { locale: 'en' as const, platform: 'darwin' as const, packaged: true, appName: 'dsh-desktop' }
+  const withQuarantine = JSON.stringify(buildAppMenuTemplate({ ...environment, quarantined: true }, actions as never))
+  assert.match(withQuarantine, /Release Plugin Quarantine/)
+  const without = JSON.stringify(buildAppMenuTemplate({ ...environment, quarantined: false }, actions as never))
+  assert.doesNotMatch(without, /Release Plugin Quarantine/)
+})

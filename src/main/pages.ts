@@ -6,7 +6,8 @@
 
 import { shellText, type ShellLocale } from './locale.ts'
 import { asDataUrl, escapeHtml } from './shell-html.ts'
-import { classifyNativeModuleFailure, classifyRuntimeSpawnFailure, type ComposedRow } from './safe-mode.ts'
+import { classifyNativeModuleFailure, classifyRuntimeSpawnFailure, type ComposedRow, type PluginFailureCause } from './safe-mode.ts'
+import { classifyProfileWriteFailure } from './profile-writable.ts'
 import type { HarnessStartupStage } from './supervisor.ts'
 
 const STYLE = `
@@ -108,7 +109,7 @@ export function errorPageHtml(
   safeMode = false,
   suspects: readonly ComposedRow[] = [],
   locale: ShellLocale = 'en',
-  cause: 'kernel-api' | 'unknown' = 'unknown',
+  cause: PluginFailureCause = 'unknown',
 ): string {
   const lang = locale === 'zh' ? 'zh-CN' : 'en'
   const retry = shellText(locale, 'page.retry')
@@ -118,12 +119,16 @@ export function errorPageHtml(
   // runtime files, not a plugin problem — say so instead of leaving the raw
   // `spawn EFTYPE` line as the only clue. A native-module dlopen failure
   // (#56) gets its own hint: VC++ redistributable missing or antivirus
-  // quarantine, with the concrete fix.
+  // quarantine, with the concrete fix. A blocked profile file (#116) gets the
+  // write-permission steps plus a one-click repair of the read-only attribute.
+  const profileWrite = classifyProfileWriteFailure(logTail)
   const runtimeHint = classifyRuntimeSpawnFailure(logTail)
     ? `<p class="suspects">${escapeHtml(shellText(locale, 'page.runtimeHint'))}</p>`
     : classifyNativeModuleFailure(logTail)
       ? `<p class="suspects">${escapeHtml(shellText(locale, 'page.nativeModuleHint'))}</p>`
-      : ''
+      : profileWrite !== undefined
+        ? `<p class="suspects">${escapeHtml(shellText(locale, 'page.profileWriteHint', { paths: profileWrite.paths.join(', ') }))}</p>`
+        : ''
   const safeModeLabel = safeMode ? shellText(locale, 'page.safeModeExit') : shellText(locale, 'page.safeModeStart')
   const suspect = suspects[0]
   const suspectLine = suspect === undefined
@@ -134,10 +139,15 @@ export function errorPageHtml(
   // One recovery row per unique failing package; patch rows of the same
   // bundle collapse onto the package the user can actually update or disable.
   const pluginNames = [...new Set(suspects.map(row => row.name).filter((name): name is string => typeof name === 'string' && name !== ''))]
+  const pluginHint = cause === 'kernel-api'
+    ? 'page.pluginsHintKernel'
+    : cause === 'missing-package'
+      ? 'page.pluginsHintMissing'
+      : 'page.pluginsHint'
   const pluginSection = pluginNames.length === 0
     ? ''
     : `<p class="log-label">${escapeHtml(shellText(locale, 'page.pluginsHeading'))}</p>
-    <p>${escapeHtml(shellText(locale, cause === 'kernel-api' ? 'page.pluginsHintKernel' : 'page.pluginsHint'))}</p>
+    <p>${escapeHtml(shellText(locale, pluginHint))}</p>
     <div class="plugin-list">${pluginNames.map(name => `
       <div class="plugin-row"><code>${escapeHtml(name)}</code>
       <button type="button" data-plugin-action="update" data-plugin="${escapeHtml(name)}">${escapeHtml(shellText(locale, 'page.pluginUpdate'))}</button>
@@ -145,6 +155,18 @@ export function errorPageHtml(
       <span class="plugin-state" data-plugin-state="${escapeHtml(name)}"></span></div>`).join('')}
     </div>
     <div class="actions"><button type="button" data-plugin-action="update-all">${escapeHtml(shellText(locale, 'page.pluginUpdateAll'))}</button></div>`
+  // A quarantined row is already disabled by the shell; the only useful action
+  // is releasing it (after the plugin was updated or the user decided to).
+  const quarantined = suspects.some(row => row.quarantined === true)
+  const quarantineSection = quarantined
+    ? `<p class="suspects">${escapeHtml(shellText(locale, 'page.quarantineHint'))}</p>
+    <div class="actions"><button type="button" class="secondary" onclick="clearQuarantine()">${escapeHtml(shellText(locale, 'page.quarantineClear'))}</button></div>`
+    : ''
+  // The blocked profile file is the one failure a user can fix in place, so
+  // the page offers the repair instead of only describing it.
+  const repairButton = profileWrite === undefined
+    ? ''
+    : `<button type="button" onclick="repairProfile()">${escapeHtml(shellText(locale, 'page.repairProfileWrite'))}</button>`
   return asDataUrl(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>dsh-desktop — ${escapeHtml(shellText(locale, 'page.errorTitle'))}</title>
     <meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
     <style>${STYLE}</style></head><body><main class="card">
@@ -153,11 +175,13 @@ export function errorPageHtml(
     <p>${escapeHtml(shellText(locale, 'page.errorBody', { count: attempts }))}</p>
     ${runtimeHint}
     ${suspectLine}
+    ${quarantineSection}
     ${pluginSection}
     <p class="log-label">${escapeHtml(shellText(locale, 'page.logLabel'))}</p>
     <pre>${escapeHtml(logTail)}</pre>
     <div class="actions"><button type="button" onclick="retry()">${escapeHtml(retry)}</button>
     <button type="button" onclick="bootSafe()">${escapeHtml(safeModeLabel)}</button>
+    ${repairButton}
     <button type="button" class="secondary" onclick="exportReport()">${escapeHtml(shellText(locale, 'page.export'))}</button>
     <button type="button" class="secondary" onclick="openLogs()">${escapeHtml(shellText(locale, 'page.openLogs'))}</button>
     <button type="button" class="secondary" onclick="getHelp()">${escapeHtml(shellText(locale, 'page.getHelp'))}</button></div>
@@ -249,6 +273,34 @@ export function errorPageHtml(
       function getHelp() {
         var bridge = pluginBridge().openSupportIssue;
         if (bridge) bridge();
+      }
+      // Release every quarantined row and restart: the reversible half of the
+      // shell's automatic plugin quarantine.
+      function clearQuarantine() {
+        var bridge = pluginBridge().clearPluginQuarantine;
+        var hint = document.getElementById('hint');
+        if (!bridge) return;
+        hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginWorking'))};
+        bridge().then(function (ok) {
+          if (ok === true) { hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginUpdated'))}; retry(); }
+          else { hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginActionFailed'))}; }
+        }).catch(function () {
+          hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginActionFailed'))};
+        });
+      }
+      // Repair the blocked profile file (read-only attribute), then restart so
+      // the page reports a real outcome instead of leaving the user guessing.
+      function repairProfile() {
+        var bridge = pluginBridge().repairProfileWrite;
+        var hint = document.getElementById('hint');
+        if (!bridge) return;
+        hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginWorking'))};
+        bridge().then(function (ok) {
+          if (ok === true) { hint.textContent = ${JSON.stringify(shellText(locale, 'page.pluginUpdated'))}; retry(); }
+          else { hint.textContent = ${JSON.stringify(shellText(locale, 'page.repairProfileFailed'))}; }
+        }).catch(function () {
+          hint.textContent = ${JSON.stringify(shellText(locale, 'page.repairProfileFailed'))};
+        });
       }
       document.addEventListener('click', function (event) {
         var button = event.target instanceof Element && event.target.closest('[data-plugin-action]');

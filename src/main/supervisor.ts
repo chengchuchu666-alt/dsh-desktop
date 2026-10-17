@@ -16,6 +16,7 @@ import { decideRestart, exitsInWindow, parseReadyUrl, RESTART_BASE_DELAY_MS } fr
 import { RollingLogWriter } from './diagnostics.ts'
 import { InFlight, ManagedChild } from './process-lifecycle.ts'
 import { prepareDesktopControlsMount } from './desktop-controls.ts'
+import { profileWriteFailureLine, type ProfileWriteProbe } from './profile-writable.ts'
 
 /** Give a broken first boot room before declaring failure. */
 const READY_TIMEOUT_MS = 90_000
@@ -94,6 +95,15 @@ export interface SupervisorOptions {
     enabled(): boolean
     patchFactory(): Promise<string | undefined>
   }
+  /** Persistent plugin-row quarantine (#115): the disable overlay is re-read
+   * per spawn, so a crash the shell just quarantined lands on the next start. */
+  quarantine?: {
+    patchFactory(): Promise<string | undefined>
+  }
+  /** Profile write-permission preflight (#116): returns the blocked probe —
+   * never spawning a doomed harness — or undefined when the profile is
+   * writable. Omitted in tests and fixtures that spawn their own command. */
+  profilePreflight?: () => Promise<ProfileWriteProbe | undefined>
 }
 
 function defaultLogDir(): string {
@@ -138,6 +148,8 @@ export class HarnessSupervisor {
   private readonly cwd: string | undefined
   private readonly safeMode: NonNullable<SupervisorOptions['safeMode']> | undefined
   private readonly trashHook: NonNullable<SupervisorOptions['trashHook']> | undefined
+  private readonly quarantine: NonNullable<SupervisorOptions['quarantine']> | undefined
+  private readonly profilePreflight: SupervisorOptions['profilePreflight']
   private readonly dshBinOverride: (() => string | undefined) | undefined
 
   constructor(
@@ -157,6 +169,8 @@ export class HarnessSupervisor {
     this.cwd = options.cwd ?? defaultCwd()
     this.safeMode = options.safeMode
     this.trashHook = options.trashHook
+    this.quarantine = options.quarantine
+    this.profilePreflight = options.profilePreflight
     mkdirSync(logDir, { recursive: true })
     const logPath = join(logDir, 'harness.log')
     this.logWriter = new RollingLogWriter(logPath)
@@ -194,6 +208,16 @@ export class HarnessSupervisor {
     } catch (error) {
       console.warn(`dsh-desktop: desktop controls mount failed, booting without the in-app surface: ${error instanceof Error ? error.message : String(error)}`)
     }
+    if (this.quarantine !== undefined) {
+      try {
+        const quarantine = await this.quarantine.patchFactory()
+        // Applied after the user layers, so a quarantined row stays disabled
+        // even if a plugin re-enables it in cordis.patch.yml.
+        if (quarantine !== undefined) patches.push(quarantine)
+      } catch (error) {
+        console.warn(`dsh-desktop: plugin quarantine overlay failed, booting without it: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
     if (this.safeMode?.enabled()) {
       try {
         const overlay = await this.safeMode.overlayFactory()
@@ -221,6 +245,23 @@ export class HarnessSupervisor {
   private async trySpawn(): Promise<void> {
     const args = await this.composedArgs()
     if (this.stopping) return
+    // Profile write preflight (#116): the kernel rewrites cordis.yml on every
+    // start, so a blocked file means a guaranteed exit. Report it as a
+    // classified failure instead of burning the restart budget on EPERM loops.
+    if (this.profilePreflight !== undefined) {
+      const blocked = await this.profilePreflight().catch(() => undefined)
+      if (blocked !== undefined && !blocked.ok) {
+        this.recordLine(profileWriteFailureLine(blocked))
+        const message = `profile is not writable: ${blocked.blocked.map(entry => entry.path).join(', ')}`
+        if (this.rejectReady !== undefined) {
+          this.failStart(new Error(message))
+          return
+        }
+        // Restart path: a deterministic preflight failure never retries itself.
+        this.events.onState({ phase: 'crashed', attempts: 0, logTail: this.logLines.join('\n') })
+        return
+      }
+    }
     this.spawnOnce(args)
   }
 

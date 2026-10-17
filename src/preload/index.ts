@@ -196,6 +196,10 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   updatePlugin: (name?: string): Promise<boolean | 'current'> => ipcRenderer.invoke('desktop:plugin:update', name),
   /** Remove one failing plugin from the boot bundle list and restart. */
   disablePlugin: (name: string): Promise<boolean> => ipcRenderer.invoke('desktop:plugin:disable', name),
+  /** Clear the read-only attribute on blocked profile files and restart (#116). */
+  repairProfileWrite: (): Promise<boolean> => ipcRenderer.invoke('desktop:profile:repair-write'),
+  /** Release every automatically quarantined plugin row and restart (#115). */
+  clearPluginQuarantine: (): Promise<boolean> => ipcRenderer.invoke('desktop:quarantine:clear'),
   /** Open a prefilled, sanitized GitHub issue from the built-in error page. */
   openSupportIssue: (): Promise<boolean> => ipcRenderer.invoke('shell:open-support-issue'),
   /** List the desktop trash, newest first. */

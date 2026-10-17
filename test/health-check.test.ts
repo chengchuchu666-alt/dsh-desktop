@@ -237,3 +237,28 @@ test('health check surfaces a compat advisory for plugins that exclude the curre
     await rm(fixture.root, { recursive: true, force: true })
   }
 })
+
+test('health check fails storage when the profile root config is read-only (#116)', async () => {
+  const fixture = await runtimeFixture()
+  const cordis = join(fixture.dshHome, 'profiles', 'web', 'cordis.yml')
+  try {
+    await writeFile(cordis, '[]\n')
+    await chmod(cordis, 0o444)
+    const report = await runDesktopHealthCheck({
+      ...fixture,
+      harnessState: undefined,
+      safeMode: false,
+      locale: 'en',
+      includeNetwork: false,
+      fetch: async () => new Response('ok'),
+      resolveProxy: async () => 'DIRECT',
+    })
+    const storage = report.results.find(result => result.id === 'storage')
+    assert.equal(storage?.status, 'failed')
+    assert.match(storage?.detail ?? '', /cordis\.yml/)
+    assert.match(storage?.action ?? '', /Repair file permissions/)
+  } finally {
+    await chmod(cordis, 0o644).catch(() => undefined)
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
