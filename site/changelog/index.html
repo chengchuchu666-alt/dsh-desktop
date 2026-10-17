@@ -42,6 +42,17 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.1.shell.0 <small>（内核 0.2.1-rc.1）</small></h2>
+  <ul>
+    <li><strong>内核升级</strong>：把内置 Harness 从 alpha.5 升到上游 <code>next</code> 通道的 <code>0.2.1-rc.1</code>，同步 32 个 内核同族直接依赖、锁文件与 <code>minimumReleaseAgeExclude</code>。上游目前只发布了 npm 包 （dist-tag <code>next</code>），尚未发布对应的 GitHub Release 或变更说明，因此本节不引用未公开的发布文案。</li>
+    <li><strong>闭包差异</strong>：按 registry 元数据逐包比对，297 个内核包全部只有版本字符串一类的小幅缩减 （每个包 −100～−500 字节，来自 <code>0.2.1-alpha.5</code> → <code>0.2.1-rc.1</code> 的替换），没有新增或移除依赖； 壳直接打补丁或依赖契约的三个包中，<code>dsh-api-session-controller</code> 与 <code>dsh-client-ui-workspace</code> 逐字节一致，<code>dsh-client-ui-settings-account</code> 仅两处版本字符串变化，ACP/headless 的 <code>cordis.patch.yml</code> 组合未变。</li>
+    <li><strong>插件框架转正</strong>：内核声明的 cordis 家族在同一批次由 <code>-alpha.2</code> 预发布转为稳定版 （<code>@deepseek-ai/cordis</code> 4.0.5、<code>cordis-plugin-include</code> 1.0.10、<code>cordis-plugin-loader</code> 1.0.6、 <code>cordis-plugin-timer</code> 1.1.7，以及 <code>cosmokit</code>/<code>schemastery</code> 同线更新），稳定版发布时间早于 rc.1，属于内核自身声明的范围解析结果，不是本壳额外引入的依赖。</li>
+    <li><strong>账户登录兼容</strong>：账户补丁随精确版本迁移到 rc.1，补丁内容不变，继续只在官方桌面桥具备 <code>dshOnboarding.hasApiKey</code> 能力时走内嵌登录；Electron 拒绝预开空白窗口时仍把实际授权 URL 一次性交给系统浏览器，不放开导航、Node 权限或外链协议。</li>
+    <li><strong>垃圾桶兼容</strong>：会话控制器与工作区客户端与 alpha.5 逐字节一致，补丁锚点重新核对后版本保护 更新为 rc.1；运行中、排队中、跨客户端所有权、维护中及子会话仍拒绝删除。</li>
+    <li><strong>构建可复现性</strong>：<code>pnpm run bootstrap</code> 现在固定使用仓库锁定的 pnpm 10.33.2 生成/校验锁文件， 并显式请求 hoisted 布局，不再依赖外层 pnpm 注入的环境；此前用 pnpm 11 写出的紧凑 <code>patchedDependencies</code> 形式会被 10.33.2 判为配置不匹配，导致 bootstrap 在 <code>ERR_PNPM_LOCKFILE_CONFIG_MISMATCH</code> 处中止。</li>
+    <li><strong>飞书快捷控制</strong>：浮窗「连接」分组继续分开显示当前应用、桌面进程、飞书通道与 DSH 任务， 并提供显式开启、关闭、重连；打开或轮询只读，不隐式连接、不发消息、不调用模型。</li>
+  </ul>
+
   <h2>v0.2.1-alpha.5.shell.0 <small>（内核 0.2.1-alpha.5）</small></h2>
   <ul>
     <li><strong>内核升级</strong>：升级到官方已发布的 alpha.5 预览版，同步内核同族直接依赖与完整锁文件闭包。 上游包含已打开会话的 <code>/</code> 技能列表随插件启停刷新、批量新建/恢复终端时减少重复查询、 Windows/Linux 右侧栏收起时输入框 Page Up 不再左移界面、PTC 指引与模型身份说明统一， 并新增 <code>conversation.input.model.label</code> Slot。</li>
@@ -102,13 +113,6 @@
     <li><strong>一键 CLI 与 skills</strong>：新增 <code>pnpm run feishu:setup</code>，调用官方 Lark CLI 完成用户 OAuth，并可安装官方 <code>lark-*</code> skills；用户 CLI 身份与 cc-connect 机器人身份明确分离。</li>
     <li><strong>运行时与可靠性</strong>：升级内置 DSH 到 <code>0.2.1-alpha.2</code>，同步 32 个 peer pin，并按新内核重建登录自动打开补丁；新增多运行时管理面板及更严格的运行时路径校验。</li>
     <li><strong>安全边界</strong>：二维码配置使用临时目录，Secret 只进入受保护凭证存储或权限为 <code>0600</code> 的文件，不写入日志、仓库或普通设置文件。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.5 <small>（内核 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li><strong>飞书一键连接</strong>：原生扩展菜单提供独立的“配置飞书机器人”二维码流程，选择工作区、扫码确认后自动保存受保护凭证并尝试启动 cc-connect。</li>
-    <li><strong>官方 Feishu skills</strong>：新增 <code>pnpm run feishu:setup</code>，通过官方 <code>@larksuite/cli</code> 安装 <code>lark-*</code> skills 并完成用户 OAuth；用户 CLI 身份与 cc-connect 机器人身份保持分离。</li>
-    <li><strong>安全边界</strong>：二维码流程只使用临时配置目录，App Secret 不进入窗口、配置 TOML、状态、日志或仓库；退出、取消和超时都会清理临时数据。</li>
   </ul>
   <!-- changelog:auto:end -->
 

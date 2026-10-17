@@ -42,6 +42,15 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.1.shell.0 <small>（kernel 0.2.1-rc.1）</small></h2>
+  <ul>
+    <li>Upgrades the bundled Harness from alpha.5 to the published <code>next</code> prerelease <code>0.2.1-rc.1</code>, resyncing the 32 kernel-family peers, the lockfile and the release-age exemptions. Upstream has published npm artifacts only (dist-tag <code>next</code>), with no GitHub Release or changelog yet, so nothing unpublished is quoted here.</li>
+    <li>Registry metadata shows all 297 kernel packages differ only by small version-string reductions (−100 to −500 bytes each); two of the three packages the shell patches or depends on are byte-identical, the account bundle changes only in two version literals, and the ACP/headless compositions are unchanged.</li>
+    <li>The cordis framework the kernel declares moved from <code>-alpha.2</code> builds to stable releases in the same window (before rc.1), which is the kernel's own range resolution rather than shell-added churn.</li>
+    <li>Carries the reviewed account patch and the session-trash version guard to rc.1 unchanged in behaviour, and makes the closure install reproducible: the pinned pnpm 10.33.2 writes/validates the lockfile and the hoisted layout is requested explicitly instead of inherited from the caller's environment.</li>
+    <li>Verified by 28 kernel assertions, both packaged smokes, the packaged E2E set, repeated Feishu cases, market offline/real, packaged LAN pairing, <code>codesign --deep --strict</code>, 438 unit tests plus ACP and audit.</li>
+  </ul>
+
   <h2>v0.2.1-alpha.5.shell.0 <small>（kernel 0.2.1-alpha.5）</small></h2>
   <ul>
     <li>Upgrades the bundled Harness to the published 0.2.1-alpha.5 preview and resyncs the exact closure lockfile.</li>
@@ -108,14 +117,6 @@
     <li>Adds the multi-runtime dashboard and tightens runtime version/path validation.</li>
     <li>Temporary setup files and credentials stay isolated and permission-protected; secrets are never written to logs or ordinary settings.</li>
     <li>Verification passed: 341 tests, typecheck, coverage, site checks, build, LAN pairing 2/2, market offline 1/1, market real 2/2, packaged smoke, and a live Feishu message round trip.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.1.shell.5 <small>（kernel 0.2.1-alpha.1）</small></h2>
-  <ul>
-    <li>Add a native Extensions / Desktop tools QR flow for setting up a Feishu bot, saving protected credentials, and starting cc-connect for the selected workspace.</li>
-    <li>Add <code>pnpm run feishu:setup</code> through the official <code>@larksuite/cli</code> installer to provision <code>lark-*</code> skills and user OAuth while keeping CLI and bot identities separate.</li>
-    <li>Keep App Secrets out of the window, TOML, status, logs, and repository; clean temporary setup data on success, cancellation, or timeout.</li>
-    <li>Update the Chinese and English website home/install pages; automated tests use fake secrets, temporary directories, and a local ACP mock. Real Feishu callback acceptance remains an organization-account QA step.</li>
   </ul>
   <!-- changelog:auto:end -->
 
