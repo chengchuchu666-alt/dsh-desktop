@@ -2498,10 +2498,17 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 
 ## 85. v0.2.1-rc.1.shell.0 发布（2026-10-17；GitHub 已交付，国内镜像阻塞）
 
-1. **范围**：把内置 Harness 从 alpha.5 升到上游 `next` 通道的 `0.2.1-rc.1`，完成兼容核对与本地全量门禁。
-   已发布 `v0.2.1-alpha.5.shell.0`（tag `4e58055`）保持不可变。上游目前**只发布 npm 包**
-   （dist-tag `next`，2026-10-17T03:17Z；`latest` 仍为 `0.2.0-rc.2`），没有对应的 GitHub Release
-   或变更说明，本轮回执不引用未公开文案。升级前逐包核对：alpha.5 闭包内 297 个内核包全部已发布 rc.1。
+1. **范围**：把内置 Harness 从 alpha.5 升到 `0.2.1-rc.1`（npm `next` 通道，2026-10-17T03:17Z；
+   `latest` 仍为 `0.2.0-rc.2`），完成兼容核对与本地全量门禁，并发布本壳版本。
+   已发布 `v0.2.1-alpha.5.shell.0`（tag `4e58055`）保持不可变。升级前逐包核对：alpha.5 闭包内
+   297 个内核包全部已发布 rc.1。发布后上游补发了
+   [官方预览版说明](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1)
+   （2026-10-17T05:22Z）：该说明汇总 `v0.2.0-rc.2` 以来的整条 0.2.1 变更线（多数已随
+   alpha.1–alpha.5 进入此前版本），就 alpha.5 → rc.1 这一段，逐包 registry 核对仍为版本字符串级差异。
+   同日复核 rc.1 移除/变更的接口（runtime invariant 与 `./invariant` 导出、`both` 工具展示、
+   输入区 `stats` 行、`--from-default-profile` 改为替换式重建、Agent Team 改直投 Inbox）：
+   全仓检索确认本壳未使用其中任何一项；凭据优先级变更（Web/桌面优先已保存凭据、headless 用环境变量）
+   与现有断言一致。发布说明与 GitHub Release 正文已按官方说明补齐并保留 pin/tag 不变。
 2. **闭包差异**：按 registry 元数据比对 297 个包，全部只有版本字符串一类的小幅缩减
    （每包 −100～−500 字节），无新增/移除依赖；`dsh-api-session-controller`、
    `dsh-client-ui-workspace` 与 alpha.5 逐字节一致，`dsh-client-ui-settings-account` 仅两处版本字符串
@@ -2533,8 +2540,10 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    创建 release（沿用 `--status unset`）→ 六项匿名内容校验 + 至少一个安装包完整回读 →
    在镜像可用后重新触发站点刷新并复验八组。当前线上按 GitHub 回退展示。
 8. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
-   macOS 公证与 Windows 商业签名仍未覆盖；上游 rc.1 无公开变更说明，本页与发布说明不代替上游文档；
-   Linux worker teardown 既有告警保留，审计例外不变。
+   macOS 公证与 Windows 商业签名仍未覆盖；上游 rc.1 说明汇总整条 0.2.1 变更线，本页与发布说明
+   只记录可核验事实、不逐条代替上游文档；Linux worker teardown 既有告警保留，审计例外不变。
+   子路径插件不再读取独立 `package.json`、第三方插件兼容优先按 `engines.dsh`：本壳自带插件继续
+   走 shell 挂载路径（`dsh.client` + `bundle.patch`），与本版已验收行为一致，未声明 `engines.dsh`。
 
 公开安装包（GitHub Release）：
 

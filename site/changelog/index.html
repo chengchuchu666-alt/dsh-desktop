@@ -44,8 +44,10 @@
   <!-- changelog:auto:start -->
   <h2>v0.2.1-rc.1.shell.0 <small>（内核 0.2.1-rc.1）</small></h2>
   <ul>
-    <li><strong>内核升级</strong>：把内置 Harness 从 alpha.5 升到上游 <code>next</code> 通道的 <code>0.2.1-rc.1</code>，同步 32 个 内核同族直接依赖、锁文件与 <code>minimumReleaseAgeExclude</code>。上游目前只发布了 npm 包 （dist-tag <code>next</code>），尚未发布对应的 GitHub Release 或变更说明，因此本节不引用未公开的发布文案。</li>
+    <li><strong>内核升级</strong>：把内置 Harness 从 alpha.5 升到 <code>0.2.1-rc.1</code>（上游 <code>next</code> 通道），同步 32 个 内核同族直接依赖、锁文件与 <code>minimumReleaseAgeExclude</code>。上游随后发布了 <a href="https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1" target="_blank" rel="noopener">官方预览版说明</a> （2026-10-17T05:22Z）。</li>
+    <li><strong>说明口径</strong>：上游 rc.1 说明汇总的是 <code>v0.2.0-rc.2</code> 以来的整条 0.2.1 变更线，其中多数已随 alpha.1–alpha.5 进入本壳此前的版本；就 alpha.5 → rc.1 这一段，逐包 registry 元数据核对显示 297 个内核包仅有版本字符串一类的小幅缩减。本壳的实际使用面（会话控制器、工作区客户端、 账户登录补丁、ACP 组合）在 rc.1 未发生变化。</li>
     <li><strong>闭包差异</strong>：按 registry 元数据逐包比对，297 个内核包全部只有版本字符串一类的小幅缩减 （每个包 −100～−500 字节，来自 <code>0.2.1-alpha.5</code> → <code>0.2.1-rc.1</code> 的替换），没有新增或移除依赖； 壳直接打补丁或依赖契约的三个包中，<code>dsh-api-session-controller</code> 与 <code>dsh-client-ui-workspace</code> 逐字节一致，<code>dsh-client-ui-settings-account</code> 仅两处版本字符串变化，ACP/headless 的 <code>cordis.patch.yml</code> 组合未变。</li>
+    <li><strong>上游移除/变更接口核对</strong>：rc.1 移除了运行时 invariant 插件与各包 <code>./invariant</code> 导出、工具展示的 <code>both</code> 混合模式、输入区 <code>stats</code> 统计行，并把 <code>--from-default-profile</code> 调整为替换式重建， Agent Team 消息改为直接投递 Inbox。全仓检索确认本壳未使用其中任何接口：没有 <code>from-default-profile</code> 调用，没有 invariant 引用，没有注册 <code>stats</code> 行，也没有使用 <code>both</code> 模式； 本壳的 ACP 与凭据边界（Web/桌面优先已保存凭据、headless 改用环境变量）与既有断言一致。</li>
     <li><strong>插件框架转正</strong>：内核声明的 cordis 家族在同一批次由 <code>-alpha.2</code> 预发布转为稳定版 （<code>@deepseek-ai/cordis</code> 4.0.5、<code>cordis-plugin-include</code> 1.0.10、<code>cordis-plugin-loader</code> 1.0.6、 <code>cordis-plugin-timer</code> 1.1.7，以及 <code>cosmokit</code>/<code>schemastery</code> 同线更新），稳定版发布时间早于 rc.1，属于内核自身声明的范围解析结果，不是本壳额外引入的依赖。</li>
     <li><strong>账户登录兼容</strong>：账户补丁随精确版本迁移到 rc.1，补丁内容不变，继续只在官方桌面桥具备 <code>dshOnboarding.hasApiKey</code> 能力时走内嵌登录；Electron 拒绝预开空白窗口时仍把实际授权 URL 一次性交给系统浏览器，不放开导航、Node 权限或外链协议。</li>
     <li><strong>垃圾桶兼容</strong>：会话控制器与工作区客户端与 alpha.5 逐字节一致，补丁锚点重新核对后版本保护 更新为 rc.1；运行中、排队中、跨客户端所有权、维护中及子会话仍拒绝删除。</li>

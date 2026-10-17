@@ -155,3 +155,7 @@ Release `39005920031` success（verify + macOS/Windows/Linux build + publish）�
 GitCode 镜像未完成：目标 release 404，kimi-webbridge 守护进程在运行但扩展 `extension_connected=false`，
 无法借用登录态；未用个人令牌替代、未把 GitHub 成功写成镜像完成。解除后按 v2 管道上传→创建→
 六项匿名内容校验→至少一包完整回读，并重新触发站点刷新复验线上八组。
+上游随后补发 rc.1 官方说明（dsh-v0.2.1-rc.1，2026-10-17T05:22Z）：已按该说明更新发布说明与
+GitHub Release 正文（不改 tag、不换资产），并复核其移除/变更接口——全仓检索确认本壳未使用
+`./invariant` 导出、`both` 工具展示、`stats` 统计行或 `--from-default-profile`，
+凭据优先级变更与既有 ACP/登录断言一致；同时本地重生成中英 changelog 页面并复验站点检查。
