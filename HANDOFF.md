@@ -2596,6 +2596,9 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 5. **官网数据**：Release 后自动 Refresh `39041080613` success，bot `61dfc2b` 已合并；线上
    `/data/release.json` 为 `v0.2.1-rc.1.shell.1`（生成于 2026-10-17T15:01:38Z），六资产
    `gitcode_ok=false`（镜像未交付），`/api/downloads` 实时计数可用（6460 / 78 版本）。
+   线上 UI 复验：`SITE_CHECK_URL=https://dsh-desktop.com node scripts/check-site-ui.mjs` exit0
+   （中英 × 390/1280 × light/dark 八组，下载按钮指向新版本、无页面错误与横向溢出；
+   截图目录见脚本输出的临时目录）。
 6. **国内镜像（未完成，阻塞在浏览器扩展）**：`mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1 --check-only`
    显示 tag 对齐 `d087ebdd`、6 个公共资产、**0/6 present**；实际镜像需要借用登录态，
    而 webbridge 返回 `no extension connected`（daemon 已在运行）。未用个人令牌替代浏览器授权，
