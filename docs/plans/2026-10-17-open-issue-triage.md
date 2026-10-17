@@ -218,10 +218,14 @@ Playwright e2e 在本机不能作为门禁：`environment edge paths › a read-
 
 ### 6.3 仍未完成
 
-1. 提交并发布（版本号与 release note 走 `release-dsh-desktop` 流程），#115/#116 的修复要等发布后才能让用户验证；
+1. ~~提交并发布~~ **已完成**：`v0.2.1-rc.1.shell.1` 已发布（tag `d087ebd`，release run `39038167498`
+   全绿，八资产）；#115/#116 已回帖告知修复版本并请用户验证。首个候选（`2b570b8`）在 S2.5 Safe Mode
+   冒烟失败，根因是补丁层扫描把壳自身的官方 locale 覆盖当成用户行禁用，修复见 `e66ce72`；
+2. GitCode 国内镜像**未交付**：webbridge 报 `no extension connected`，恢复扩展连接后执行
+   `node scripts/mirror-gitcode-v2.mjs v0.2.1-rc.1.shell.1` 并刷新官网 `gitcode_ok`；
 2. 兜底恢复 profile（§1.3/§3.3 的 P1：连续失败后用 `--profile web-recovery` 启动）未实现——预检+一键修复已覆盖
    最常见的只读属性场景，ACL/安全软件拦截仍会停在错误页（但已有明确指引，不再是无提示的 EPERM 循环）；
-3. 诊断里的内核 overlay 版本（§1.3 P1 的一部分）未加，当前只补了补丁层、`unkeyed_rows`、`profile_write` 与渲染进程错误；
-4. `dsh-watch` 的 registry 退避重试与退出码区分（§2.3）尚未实现，作为独立 CI 维护项；
-5. 更新通道镜像回退（§1.3 P2）未实现——它是"用户停在旧内核"这一根因的最后一块；
-6. 官网 FAQ 的"profile 文件不可写"条目（§3.3 P2）未补。
+4. 诊断里的内核 overlay 版本（§1.3 P1 的一部分）未加，当前只补了补丁层、`unkeyed_rows`、`profile_write` 与渲染进程错误；
+5. `dsh-watch` 的 registry 退避重试与退出码区分（§2.3）尚未实现，作为独立 CI 维护项；
+6. 更新通道镜像回退（§1.3 P2）未实现——它是"用户停在旧内核"这一根因的最后一块；
+7. 官网 FAQ 的"profile 文件不可写"条目（§3.3 P2）未补。
