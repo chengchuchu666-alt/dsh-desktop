@@ -16,3 +16,16 @@ for (const [file, job] of [['ci.yml', 'check'], ['release.yml', 'verify']] as co
     assert.equal(steps.filter(step => step.run === 'pnpm run bootstrap').length, 1)
   })
 }
+
+test('harness deploy stays frozen to the committed lockfile', () => {
+  const source = readFileSync(new URL('../scripts/deploy-harness.mjs', import.meta.url), 'utf8')
+  // `--legacy` makes pnpm re-resolve package.json ranges; when upstream
+  // publishes a new prerelease between the frozen install and deploy (as
+  // 0.2.1-rc.1 did), the staged closure could silently drift or fail. The
+  // non-legacy deploy consumes the shared lockfile and requires injected
+  // workspace packages; autoInstallPeers must come from that lockfile too.
+  assert.doesNotMatch(source, /'--legacy'/)
+  assert.match(source, /--config\.inject-workspace-packages=true/)
+  assert.doesNotMatch(source, /--config\.auto-install-peers=/)
+  assert.match(source, /Deploy from the shared lockfile/)
+})

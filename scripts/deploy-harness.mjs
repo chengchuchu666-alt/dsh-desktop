@@ -1,11 +1,11 @@
 /**
  * Materialize the @deepseek-ai/dsh dependency closure for the bundled harness
  * (docs/decisions/0005): install the pure manifest in manifest/harness against
- * its committed lockfile, then `pnpm deploy` (legacy, hoisted) a symlink-free
- * node_modules into resources/harness/ — the closure technique the upstream
- * deepseek-harness single-exe build uses. Clears resources/harness first, so
- * bootstrap fetches the pinned Node afterwards and then rebuilds ABI-bound
- * addons with that exact runtime.
+ * its committed lockfile, then `pnpm deploy` (hoisted, from that shared
+ * lockfile) a symlink-free node_modules into resources/harness/ — the closure
+ * technique the upstream deepseek-harness single-exe build uses. Clears
+ * resources/harness first, so bootstrap fetches the pinned Node afterwards and
+ * then rebuilds ABI-bound addons with that exact runtime.
  * @module scripts/deploy-harness
  */
 import { spawnSync } from 'node:child_process'
@@ -110,10 +110,19 @@ async function main() {
   // node_modules) and in deploy below, which is exactly what this script
   // does on purpose (it rm'd HARNESS_ROOT above); interactive prompts
   // cannot run in CI.
+  //
+  // Deploy from the shared lockfile, not the legacy mode: `--legacy` ignores
+  // the lockfile and re-resolves every range, so a newly published prerelease
+  // (0.2.1-rc.1 appeared mid-iteration) could silently replace the reviewed
+  // alpha.5 closure or fail on a companion that was never published. The
+  // non-legacy deploy is frozen to this lockfile; pnpm >=10 requires
+  // inject-workspace-packages and the lockfile's auto-install-peers setting
+  // (do not override it here). `link-workspace-packages` keeps the local
+  // dsh-desktop-controls file dependency materialized in the closure.
   runPnpm([
-    'deploy', '--filter', '.', '--prod', '--legacy',
+    'deploy', '--filter', '.', '--prod',
+    '--config.inject-workspace-packages=true',
     '--config.node-linker=hoisted',
-    '--config.auto-install-peers=false',
     '--config.link-workspace-packages=true',
     '--config.safe-delete=false',
     HARNESS_ROOT,
@@ -149,8 +158,8 @@ async function main() {
     console.log(`deploy-harness: closure staged at ${HARNESS_ROOT} (${String(result.stdout).trim().split('\t')[0]})`)
   }
 
-  // The closure must satisfy every non-optional peer dependency (the deploy
-  // runs with auto-install-peers=false, so the manifest owns the complete set).
+  // The closure must satisfy every non-optional peer dependency; the manifest
+  // lists the complete set while the lockfile governs the exact versions.
   run(process.execPath, [join(ROOT, 'scripts', 'audit-harness-peers.mjs')], { cwd: ROOT })
 }
 
