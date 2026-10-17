@@ -33,3 +33,26 @@ test('harness deploy stays frozen to the committed lockfile', () => {
   assert.match(source, /pruneWorkspacePatchMetadata/)
   assert.match(source, /delete manifest\.pnpm/)
 })
+
+test('harness manifest installs with an explicit hoisted layout', () => {
+  const source = readFileSync(new URL('../scripts/deploy-harness.mjs', import.meta.url), 'utf8')
+  // npm_config_node_linker used to decide this layout from the caller's
+  // environment; without it the kernel bundles the contract tests read were
+  // missing from the manifest tree's top level.
+  const install = /runPnpm\(\['install', '--frozen-lockfile'[^\]]*\]\)/.exec(source)?.[0] ?? ''
+  assert.match(install, /--config\.node-linker=hoisted/)
+  assert.match(source, /The hoisted linker is explicit rather than inherited/)
+})
+
+test('kernel lockfile stays readable by the pinned pnpm major', () => {
+  const lock = readFileSync(new URL('../manifest/harness/pnpm-lock.yaml', import.meta.url), 'utf8')
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { packageManager?: string }
+  assert.match(pkg.packageManager ?? '', /^pnpm@10\./)
+  // pnpm 10 stores patchedDependencies as a nested `hash:` mapping; the compact
+  // `pkg@version: <hash>` form pnpm 11 writes makes the pinned 10.33.2 abort
+  // `pnpm run bootstrap` with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH, so whichever
+  // version regenerates this file must keep the pinned form.
+  const block = lock.slice(lock.indexOf('patchedDependencies:')).split(/\n(?=\S)/)[0] ?? ''
+  assert.match(block, /hash: [0-9a-f]{40,}/)
+  assert.doesNotMatch(block, /': ?[0-9a-f]{64}$/m)
+})

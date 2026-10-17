@@ -119,12 +119,15 @@ async function pruneWorkspacePatchMetadata() {
 async function main() {
   await rm(HARNESS_ROOT, { recursive: true, force: true })
 
-  runPnpm(['install', '--frozen-lockfile', '--config.safe-delete=false'])
   // safe-delete=false: pnpm 11 asks for confirmation before emptying a
   // non-empty target — both here (replacing stale closure entries under
   // node_modules) and in deploy below, which is exactly what this script
   // does on purpose (it rm'd HARNESS_ROOT above); interactive prompts
-  // cannot run in CI.
+  // cannot run in CI. The hoisted linker is explicit rather than inherited
+  // from the caller's env: the manifest tree must expose the kernel bundles
+  // at their top-level paths (the account/trash contract tests read them
+  // there) no matter how bootstrap was started.
+  runPnpm(['install', '--frozen-lockfile', '--config.safe-delete=false', '--config.node-linker=hoisted'])
   //
   // Deploy from the shared lockfile, not the legacy mode: `--legacy` ignores
   // the lockfile and re-resolves every range, so a newly published prerelease
