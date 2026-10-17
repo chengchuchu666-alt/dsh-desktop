@@ -33,14 +33,18 @@ test('ManagedChild.stop terminates a running child with SIGTERM', async () => {
 test('ManagedChild.stop escalates to SIGKILL when the child ignores SIGTERM', async () => {
   const managed = new ManagedChild()
   // Ignore SIGTERM so only the SIGKILL fallback can stop it. Wait for the
-  // handler to register before stopping: a SIGTERM delivered during Node's
-  // startup bootstrap is handled by the default handler and exits normally.
+  // handler to actually register before stopping: a fixed startup sleep raced
+  // Node bootstrap on a loaded machine, and a SIGTERM delivered before the
+  // handler exists is handled by Node's default handler (exit before budget).
   const child = managed.spawn({
     command: process.execPath,
-    args: ['-e', 'process.on("SIGTERM", () => {}); setInterval(() => {}, 1000)'],
+    args: ['-e', 'process.on("SIGTERM", () => {}); console.log("sigterm-ready"); setInterval(() => {}, 1000)'],
     windowsHide: false,
   })
-  await new Promise<void>(resolve => child.once('spawn', () => setTimeout(resolve, 150)))
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('child did not install the SIGTERM handler')), 5_000)
+    child.stdout!.once('data', () => { clearTimeout(timer); resolve() })
+  })
   const started = Date.now()
   await managed.stop(120)
   assert.equal(exited(child), true)
