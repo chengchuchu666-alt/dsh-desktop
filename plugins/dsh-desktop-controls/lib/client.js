@@ -57,6 +57,7 @@ window.__ModuleLoader__.load({
       [data-dsh-desktop-controls] [data-dsh-controls-trigger][data-dsh-controls-dragging] { cursor: grabbing; }
       [data-dsh-desktop-controls] [data-dsh-controls-trigger]:focus-visible,
       [data-dsh-desktop-controls] [data-dsh-controls-action]:focus-visible,
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-actions] button:focus-visible,
       [data-dsh-desktop-controls] [data-dsh-guide-close]:focus-visible,
       [data-dsh-desktop-settings] button:focus-visible,
       [data-dsh-desktop-settings] input:focus-visible {
@@ -236,6 +237,92 @@ window.__ModuleLoader__.load({
         line-height: 1;
       }
       [data-dsh-desktop-controls] [data-dsh-controls-action][disabled] { cursor: wait; opacity: .6; }
+      /* 飞书快捷控制：当前应用、桌面进程与通道状态分开显示；操作只在点击后发生。 */
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick] {
+        background: var(--dsh-controls-panel-muted);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 13px;
+        display: grid;
+        gap: 8px;
+        margin: 0 4px 8px;
+        padding: 10px 11px;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick][data-state="crashed"],
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick][data-state="degraded"] {
+        border-color: color-mix(in srgb, #c33 36%, var(--dsh-controls-border));
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-head] { display: grid; gap: 2px; min-width: 0; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-head] strong { font-size: 12px; font-weight: 650; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-app] {
+        color: var(--dsh-controls-text);
+        font-size: 11px;
+        line-height: 1.35;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] {
+        display: grid;
+        gap: 5px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span {
+        background: var(--dsh-controls-panel);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 9px;
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+        padding: 6px 8px;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-dsh-feishu-dsh] { grid-column: 1 / -1; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] small {
+        color: var(--dsh-controls-muted);
+        font-size: 9px;
+        letter-spacing: .03em;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] strong {
+        font-size: 11.5px;
+        font-weight: 650;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="ready"] strong,
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="online"] strong { color: #128b5c; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="starting"] strong,
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="connecting"] strong,
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="degraded"] strong { color: #9a6700; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="crashed"] strong,
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-grid] > span[data-state="offline"] strong { color: #c33; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-hint] {
+        color: var(--dsh-controls-muted);
+        font-size: 10.5px;
+        line-height: 1.4;
+        margin: 0;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-actions] { display: flex; flex-wrap: wrap; gap: 6px; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-actions] button {
+        background: var(--dsh-controls-panel);
+        border: 1px solid var(--dsh-controls-border);
+        border-radius: 999px;
+        color: var(--dsh-controls-text);
+        cursor: pointer;
+        font-size: 11.5px;
+        font-weight: 650;
+        min-height: 30px;
+        padding: 0 12px;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-actions] button[data-primary] {
+        background: var(--dsh-controls-accent);
+        border-color: var(--dsh-controls-accent);
+        color: #fff;
+      }
+      [data-dsh-desktop-controls] [data-dsh-feishu-quick-actions] button[disabled] { cursor: not-allowed; opacity: .55; }
+      [data-dsh-desktop-controls] [data-dsh-feishu-message] {
+        color: var(--dsw-alias-state-error-primary, #c33);
+        font-size: 10.5px;
+        line-height: 1.4;
+      }
       [data-dsh-desktop-controls] [data-dsh-controls-hint] {
         color: var(--dsh-controls-muted);
         font-size: 11px;
@@ -920,6 +1007,16 @@ window.__ModuleLoader__.load({
         trigger: "桌面工具", title: "桌面工具", panelEyebrow: "DSH DESKTOP", panelCopy: "连接移动设备、调整桌面习惯，或在异常时恢复 Harness。", ready: "已就绪",
         panelConnect: "连接", panelRecovery: "恢复", panelMaintenance: "维护", panelInfo: "信息",
         feishuEntry: "飞书连接", feishuEntryDetail: "扫码创建、管理应用与消息样式", feishuBoundary: "在独立管理窗口中保存应用、开启或关闭连接。关闭窗口不会关闭连接；进入此页不会自动连接。",
+        feishuQuickTitle: "飞书连接状态", feishuApplication: "当前应用", feishuProcess: "桌面进程", feishuNoApplication: "未选择应用", feishuLoading: "正在读取连接状态…",
+        feishuConfigureHint: "还没有可连接的应用。打开管理窗口扫码创建或添加已有应用；这里不会自动连接。",
+        feishuSecretReentryHint: "旧版 Secret 需要重新录入；不会在这里自动重连。",
+        feishuSafeModeHint: "安全模式已暂停连接；退出安全模式后可手动开启。",
+        feishuDisabledHint: "连接已显式关闭；再次开启不会改动保存的应用配置。",
+        feishuStoppedHint: "配置已保存，桌面进程尚未启动。",
+        feishuReadyHint: "进程就绪只代表服务已启动；飞书通道与 DSH 任务分别确认。",
+        feishuCrashHint: "上次启动失败；确认配置后可显式重试，不会自动反复重连。",
+        feishuStart: "开启连接", feishuStop: "关闭连接", feishuRestart: "重新连接", feishuWorking: "处理中…", feishuManage: "管理应用",
+        feishuStartFailed: "开启失败：", feishuStopFailed: "关闭失败：",
         about: "关于",
         aboutDetail: "版本、运行时与项目来源",
         checkUpdates: "检查更新", checkUpdatesDetail: "检查 dsh-desktop 新版本",
@@ -982,6 +1079,16 @@ window.__ModuleLoader__.load({
         trigger: "Desktop tools", title: "Desktop tools", panelEyebrow: "DSH DESKTOP", panelCopy: "Connect a device, tune desktop habits, or recover Harness when needed.", ready: "Ready",
         panelConnect: "Connect", panelRecovery: "Recovery", panelMaintenance: "Maintenance", panelInfo: "Information",
         feishuEntry: "Feishu connections", feishuEntryDetail: "QR setup, applications and message styles", feishuBoundary: "Save applications and open or close connections in the manager. Closing its window does not disconnect. Visiting this page does not connect automatically.",
+        feishuQuickTitle: "Feishu connection", feishuApplication: "Application", feishuProcess: "Desktop service", feishuNoApplication: "No application selected", feishuLoading: "Reading connection state…",
+        feishuConfigureHint: "No application is ready. Open the manager to create one with a QR code or add an existing app; this panel never connects automatically.",
+        feishuSecretReentryHint: "Re-enter the old Secret in the manager; nothing reconnects automatically here.",
+        feishuSafeModeHint: "Safe Mode paused the connection; start it manually after leaving Safe Mode.",
+        feishuDisabledHint: "The connection was explicitly closed; starting again keeps the saved application settings.",
+        feishuStoppedHint: "Settings are saved; the desktop service has not started.",
+        feishuReadyHint: "Service readiness only means the process started; the Feishu channel and DSH tasks are confirmed separately.",
+        feishuCrashHint: "The last start failed. Retry explicitly after checking the settings; no automatic reconnect loop runs.",
+        feishuStart: "Start connection", feishuStop: "Stop connection", feishuRestart: "Reconnect", feishuWorking: "Working…", feishuManage: "Manage",
+        feishuStartFailed: "Start failed: ", feishuStopFailed: "Stop failed: ",
         about: "About",
         aboutDetail: "Version, runtime, and project source",
         checkUpdates: "Check for updates", checkUpdatesDetail: "Check for a new dsh-desktop release",
@@ -2133,6 +2240,51 @@ window.__ModuleLoader__.load({
       });
     }
 
+    /**
+     * 飞书快捷控制视图：把主进程的只读状态折成“当前应用 / 桌面进程 /
+     * 飞书通道 / DSH 任务”，进程就绪不会被当成通道在线。纯函数；调用方只
+     * 渲染结果，不会在这里触发任何连接或模型请求。
+     */
+    function connectFeishuQuickView(connect, safeMode, copy) {
+      const phase = connect?.phase ?? "disabled";
+      const channel = connect?.health?.channel ?? "unknown";
+      const dsh = connect?.health?.dsh ?? "unknown";
+      const named = typeof connect?.applicationName === "string" && connect.applicationName !== "" ? connect.applicationName : null;
+      const appId = typeof connect?.appId === "string" && connect.appId !== "" ? connect.appId : null;
+      const applicationName = named ?? appId;
+      const active = phase === "ready" || phase === "starting" || phase === "degraded";
+      // `enabled` is the saved intent, not a precondition for a manual start:
+      // after an explicit close the same button must be able to reopen it.
+      const configured = connect?.secretConfigured === true && connect?.needsSecretReentry !== true;
+      const enabled = connect?.enabled === true;
+      const hint = safeMode === true ? copy.feishuSafeModeHint
+        : connect?.needsSecretReentry === true ? copy.feishuSecretReentryHint
+        : connect?.secretConfigured !== true ? copy.feishuConfigureHint
+        : connect?.enabled !== true ? copy.feishuDisabledHint
+        : phase === "crashed" || phase === "degraded" || (phase === "starting" && typeof connect?.lastError === "string" && connect.lastError !== "")
+          ? copy.feishuCrashHint
+        : phase === "ready" ? copy.feishuReadyHint
+        : copy.feishuStoppedHint;
+      return {
+        application: applicationName ?? copy.feishuNoApplication,
+        applicationName,
+        processLabel: ({ disabled: copy.connectDisabled, stopped: copy.connectStopped, starting: copy.connectStarting,
+          ready: copy.connectServiceReady, degraded: copy.connectDegraded, crashed: copy.connectCrashed })[phase] ?? copy.connectUnknown,
+        processState: phase,
+        channelLabel: ({ online: copy.connectOnline, offline: copy.connectOffline, connecting: copy.connectStarting })[channel] ?? copy.connectUnknown,
+        channelState: channel,
+        dshLabel: ({ available: copy.connectModelAvailable, unavailable: copy.connectModelUnavailable })[dsh] ?? copy.connectModelUnknown,
+        dshState: dsh,
+        active,
+        configured,
+        enabled,
+        canStart: configured && !active && safeMode !== true,
+        canStop: active,
+        canRestart: configured && enabled && phase !== "starting" && safeMode !== true,
+        hint,
+      };
+    }
+
     /* NIC 勾选（#65）：选择局域网入口监听哪些网卡，空 = 自动。 */
     function LanNicSection({ copy, bridge }) {
       const zh = useChinese();
@@ -2177,6 +2329,10 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = react.useState("");
       const [preferences, setPreferences] = react.useState(null);
       const [lanState, setLanState] = react.useState(null);
+      const [connectState, setConnectState] = react.useState(null);
+      const [connectLoaded, setConnectLoaded] = react.useState(false);
+      const [connectBusy, setConnectBusy] = react.useState("");
+      const [connectMessage, setConnectMessage] = react.useState("");
       const [entryPosition, setEntryPosition] = react.useState(loadEntryPosition);
       const [dragging, setDragging] = react.useState(false);
       const dragRef = react.useRef(null);
@@ -2257,6 +2413,26 @@ window.__ModuleLoader__.load({
       }, [open, bridge]);
 
       react.useEffect(() => {
+        // Read-only status poll while the panel is open. Opening, hovering or
+        // reading state must never start the Sidecar or call a model.
+        if (!open || typeof bridge?.getConnectState !== "function") return undefined;
+        let mounted = true;
+        let version = 0;
+        const refresh = async () => {
+          const current = ++version;
+          try {
+            const value = await bridge.getConnectState();
+            if (mounted && current === version) { setConnectState(value); setConnectLoaded(true); }
+          } catch {
+            if (mounted) setConnectMessage(copy.connectUnavailable);
+          }
+        };
+        void refresh();
+        const timer = setInterval(() => void refresh(), 1000);
+        return () => { mounted = false; clearInterval(timer); };
+      }, [open, bridge]);
+
+      react.useEffect(() => {
         if (!open) return undefined;
         const onKeyDown = (event) => {
           if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
@@ -2282,6 +2458,28 @@ window.__ModuleLoader__.load({
         try {
           if (await bridge.openConnectManager() === true) setOpen(false);
         } finally { setBusy(""); }
+      };
+
+      const connectAction = async (kind) => {
+        const action = kind === "start" ? bridge?.startConnect : kind === "stop" ? bridge?.stopConnect : bridge?.restartConnect;
+        if (typeof action !== "function") {
+          setConnectMessage(copy.connectUnavailable);
+          return;
+        }
+        setConnectBusy(kind);
+        setConnectMessage("");
+        try {
+          const ok = await action();
+          // Refresh once after the explicit action so the panel tells the
+          // truth immediately instead of waiting for the next poll.
+          const value = typeof bridge?.getConnectState === "function" ? await bridge.getConnectState() : null;
+          if (value !== null) { setConnectState(value); setConnectLoaded(true); }
+          if (!ok) setConnectMessage((kind === "stop" ? copy.feishuStopFailed : copy.feishuStartFailed) + (value?.lastError ?? copy.connectUnknown));
+        } catch {
+          setConnectMessage((kind === "stop" ? copy.feishuStopFailed : copy.feishuStartFailed) + copy.connectUnknown);
+        } finally {
+          setConnectBusy("");
+        }
       };
 
       const onEntryPointerDown = (event) => {
@@ -2351,6 +2549,7 @@ window.__ModuleLoader__.load({
       const entryStyle = entryPosition === null
         ? undefined
         : { left: String(entryPosition.left) + "px", top: String(entryPosition.top) + "px", right: "auto" };
+      const quick = connectLoaded ? connectFeishuQuickView(connectState, preferences?.safeMode === true, copy) : null;
 
       return react_jsx_runtime.jsxs(react.Fragment, {
         children: [
@@ -2386,6 +2585,39 @@ window.__ModuleLoader__.load({
             typeof bridge?.desktopAction === "function" ? react_jsx_runtime.jsxs(react.Fragment, { children: [
               react_jsx_runtime.jsxs("section", { "data-dsh-controls-group": "connect", children: [
                 react_jsx_runtime.jsx("h3", { "data-dsh-controls-group-label": true, children: copy.panelConnect }),
+                typeof bridge?.getConnectState === "function" ? (quick === null
+                  ? react_jsx_runtime.jsx("p", { "data-dsh-feishu-loading": true, role: "status", children: copy.feishuLoading })
+                  : react_jsx_runtime.jsxs("div", { "data-dsh-feishu-quick": true, "data-state": quick.processState, role: "group", "aria-label": copy.feishuQuickTitle, children: [
+                    react_jsx_runtime.jsxs("div", { "data-dsh-feishu-quick-head": true, children: [
+                      react_jsx_runtime.jsx("strong", { children: copy.feishuQuickTitle }),
+                      react_jsx_runtime.jsx("span", { "data-dsh-feishu-quick-app": true, title: quick.application, children: copy.feishuApplication + ": " + quick.application }),
+                    ] }),
+                    react_jsx_runtime.jsxs("div", { "data-dsh-feishu-quick-grid": true, children: [
+                      react_jsx_runtime.jsxs("span", { "data-dsh-feishu-process": true, "data-state": quick.processState, children: [
+                        react_jsx_runtime.jsx("small", { children: copy.feishuProcess }),
+                        react_jsx_runtime.jsx("strong", { children: quick.processLabel }),
+                      ] }),
+                      react_jsx_runtime.jsxs("span", { "data-dsh-feishu-channel": true, "data-state": quick.channelState, children: [
+                        react_jsx_runtime.jsx("small", { children: copy.connectChannel }),
+                        react_jsx_runtime.jsx("strong", { children: quick.channelLabel }),
+                      ] }),
+                      react_jsx_runtime.jsxs("span", { "data-dsh-feishu-dsh": true, "data-state": quick.dshState, children: [
+                        react_jsx_runtime.jsx("small", { children: copy.connectDsh }),
+                        react_jsx_runtime.jsx("strong", { children: quick.dshLabel }),
+                      ] }),
+                    ] }),
+                    react_jsx_runtime.jsx("p", { "data-dsh-feishu-hint": true, role: "status", "aria-live": "polite", children: quick.hint }),
+                    connectMessage === "" ? null : react_jsx_runtime.jsx("small", { "data-dsh-feishu-message": true, role: "alert", children: connectMessage }),
+                    react_jsx_runtime.jsxs("div", { "data-dsh-feishu-quick-actions": true, children: [
+                      quick.canStop
+                        ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-feishu-stop": true, "data-primary": true, disabled: connectBusy !== "", onClick: () => void connectAction("stop"), children: connectBusy === "stop" ? copy.feishuWorking : copy.feishuStop })
+                        : react_jsx_runtime.jsx("button", { type: "button", "data-dsh-feishu-start": true, "data-primary": true, disabled: !quick.canStart || connectBusy !== "", title: quick.hint, onClick: () => void connectAction("start"), children: connectBusy === "start" ? copy.feishuWorking : copy.feishuStart }),
+                      quick.configured && quick.enabled && !quick.canStop
+                        ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-feishu-restart": true, disabled: !quick.canRestart || connectBusy !== "", onClick: () => void connectAction("restart"), children: connectBusy === "restart" ? copy.feishuWorking : copy.feishuRestart })
+                        : null,
+                      typeof bridge?.openConnectManager === "function" ? react_jsx_runtime.jsx("button", { type: "button", "data-dsh-feishu-manage": true, disabled: connectBusy !== "", onClick: () => void openConnectManager(), children: copy.feishuManage }) : null,
+                    ] }),
+                  ] })) : null,
                 react_jsx_runtime.jsxs("div", { "data-dsh-controls-actions": true, children: [
                   typeof bridge?.openConnectManager === "function" ? react_jsx_runtime.jsx(PanelAction, { mark: "FS", label: copy.feishuEntry, detail: copy.feishuEntryDetail, disabled: busy !== "", onClick: () => void openConnectManager() }) : null,
                   lanState?.running === true ? react_jsx_runtime.jsxs(react.Fragment, { children: [

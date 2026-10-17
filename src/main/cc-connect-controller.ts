@@ -59,6 +59,7 @@ export class ConnectController {
       credentialProtection: selected?.credentialProtection ?? 'none',
       ...(selected?.needsSecretReentry === true ? { needsSecretReentry: true } : {}),
       autoConnect: settings.autoConnect, applicationId: settings.activeApplicationId, health: { ...this.health },
+      applicationName: selected?.name ?? null,
       ...('lastError' in this.runtime && this.runtime.lastError !== undefined ? { lastError: this.runtime.lastError } : {}),
       ...('restartAttempts' in this.runtime ? { restartAttempts: this.runtime.restartAttempts } : {}),
     }

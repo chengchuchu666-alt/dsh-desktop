@@ -1,14 +1,14 @@
 /** Real Harness + local model, isolated from every real credential and data home. */
 import { createServer, type ServerResponse } from 'node:http'
 import { once } from 'node:events'
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { _electron as electron, expect } from '@playwright/test'
 import { locatePackagedExecutable } from '../scripts/packaged-locator.mjs'
 import { dismissOnboardingModals, WELCOME_ACKNOWLEDGED_YAML } from './onboarding.ts'
 
-export async function launchTrashHarness(packaged: boolean, options: { locale?: 'zh' | 'en'; theme?: 'light' | 'dark'; firstRunGuideDismissed?: boolean; safeMode?: boolean } = {}) {
+export async function launchTrashHarness(packaged: boolean, options: { locale?: 'zh' | 'en'; theme?: 'light' | 'dark'; firstRunGuideDismissed?: boolean; safeMode?: boolean; connectSidecar?: boolean } = {}) {
   const locale = options.locale ?? 'zh', theme = options.theme ?? 'dark'
   const root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-trash-real-')))
   const home = join(root, 'home')
@@ -70,8 +70,32 @@ export async function launchTrashHarness(packaged: boolean, options: { locale?: 
     ].join('\n'))
     await writeFile(join(home, 'settings.yaml'), `locale:\n  preference: ${locale}\nui-theme:\n  preference: ${theme}\n` + WELCOME_ACKNOWLEDGED_YAML)
     await writeFile(join(userData, 'shell-preferences.json'), JSON.stringify({ closeToTrayExplained: true, firstRunGuideDismissed: options.firstRunGuideDismissed ?? true, safeMode: options.safeMode ?? false }))
+    let connectModePath: string | undefined
+    let connectBinPath: string | undefined
+    if (options.connectSidecar) {
+      if (packaged) throw new Error('the fake cc-connect sidecar is dev-mode only')
+      connectModePath = join(root, 'fake-cc-connect.mode')
+      connectBinPath = join(root, 'fake-cc-connect.mjs')
+      await writeFile(connectModePath, 'ready\n')
+      await writeFile(connectBinPath, [
+        '#!/usr/bin/env node',
+        "import { readFileSync, appendFileSync } from 'node:fs'",
+        "const mode = readFileSync(process.env.DSH_CC_CONNECT_TEST_MODE, 'utf8').trim()",
+        "appendFileSync(process.env.DSH_CC_CONNECT_TEST_MODE + '.starts', String(process.pid) + '\\n')",
+        "if (mode !== 'waiting') console.error('fake cc-connect ready projects=1')",
+        "if (mode === 'health') setTimeout(() => { for (const event of [{version:1,component:'channel',state:'online'},{version:1,component:'agent',state:'unavailable',errorCode:'model-key-missing'}]) console.error('level=INFO msg=\"cc-connect health\" event=' + JSON.stringify(JSON.stringify(event))) }, 30)",
+        "if (mode === 'crash') setTimeout(() => { console.error('fake sidecar crash'); process.exit(23) }, 40)",
+        'setInterval(() => {}, 1000)',
+        '',
+      ].join('\n'))
+      await chmod(connectBinPath, 0o755)
+    }
     const env: Record<string, string> = Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined))
     Object.assign(env, { DSH_HOME: home, DSH_TRASH_FAKE_KEY: 'fake-trash-key', DEEPSEEK_API_KEY: '' })
+    if (connectModePath !== undefined && connectBinPath !== undefined) {
+      env.DSH_CC_CONNECT_TEST_BIN = connectBinPath
+      env.DSH_CC_CONNECT_TEST_MODE = connectModePath
+    }
     delete env.DSH_DESKTOP_DEV_WEB_URL
     const args = [`--user-data-dir=${userData}`]
     if (!packaged) args.unshift(resolve('.'))
@@ -91,7 +115,7 @@ export async function launchTrashHarness(packaged: boolean, options: { locale?: 
     let page = await launch()
     expect(requests).toBe(0)
     return {
-      get app() { return app! }, get page() { return page }, home, workspace, close,
+      get app() { return app! }, get page() { return page }, home, workspace, close, connectModePath,
       async restart(beforeLaunch?: () => Promise<void>) { await stopApp(); await beforeLaunch?.(); page = await launch(); return page },
       get requests() { return requests },
       pause() { paused = true },

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, readFile, rm, writeFile, lstat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
+import { runInNewContext } from 'node:vm'
 import { desktopControlsPatchPath, prepareDesktopControlsMount } from '../src/main/desktop-controls.ts'
 
 const pluginRoot = resolve('plugins/dsh-desktop-controls')
@@ -75,6 +76,25 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   assert.match(client, /restartConnect/)
   assert.match(client, /connectAppSecret/)
   assert.match(client, /connectProtected/)
+  // Floating Feishu quick control: the selected application, the desktop
+  // process and the Feishu channel are separate read-only rows; starting or
+  // stopping only ever happens from an explicit button.
+  assert.match(client, /connectFeishuQuickView/)
+  assert.match(client, /data-dsh-feishu-quick/)
+  assert.match(client, /data-dsh-feishu-quick-app/)
+  assert.match(client, /data-dsh-feishu-process/)
+  assert.match(client, /data-dsh-feishu-channel/)
+  assert.match(client, /data-dsh-feishu-dsh/)
+  assert.match(client, /data-dsh-feishu-hint/)
+  assert.match(client, /data-dsh-feishu-start/)
+  assert.match(client, /data-dsh-feishu-stop/)
+  assert.match(client, /data-dsh-feishu-restart/)
+  assert.match(client, /data-dsh-feishu-manage/)
+  assert.match(client, /data-dsh-feishu-loading/)
+  assert.match(client, /role: "group", "aria-label": copy\.feishuQuickTitle/)
+  for (const key of ['feishuQuickTitle', 'feishuApplication', 'feishuProcess', 'feishuNoApplication', 'feishuLoading', 'feishuConfigureHint', 'feishuSecretReentryHint', 'feishuSafeModeHint', 'feishuDisabledHint', 'feishuStoppedHint', 'feishuReadyHint', 'feishuCrashHint', 'feishuStart', 'feishuStop', 'feishuRestart', 'feishuWorking', 'feishuManage', 'feishuStartFailed', 'feishuStopFailed']) {
+    assert.equal((client.match(new RegExp(key + ':', 'g')) ?? []).length, 2, `${key} has Chinese and English translations`)
+  }
   for (const key of ['connectDetailTitle', 'connectDetailFull', 'connectDetailCompact', 'connectDetailQuiet', 'connectStreamPreview', 'connectStreamPreviewInterval', 'connectCardModeTitle', 'connectCardModeLegacy', 'connectCardModeRich', 'connectProgressStyleTitle', 'connectProgressStyleLegacy', 'connectProgressStyleCompact', 'connectProgressStyleCard', 'connectQuietHint']) {
     assert.equal((client.match(new RegExp(key + ':', 'g')) ?? []).length, 2, `${key} has Chinese and English translations`)
   }
@@ -225,6 +245,87 @@ test('Feishu management entry and health text share the settings design system',
   assert.match(css, /\[data-dsh-connect-manager\]\[data-primary\] \{[^}]*background: var\(--dsh-controls-accent\);/)
   assert.match(css, /\[data-dsh-connect-manager\] \{[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere;[^}]*white-space: normal;/)
   assert.match(css, /\[data-dsh-connect-health\],[^}]*display: block;/)
+})
+
+test('Feishu quick control separates application, process and channel state without connecting', async () => {
+  const client = await readFile(join(pluginRoot, 'lib/client.js'), 'utf8')
+  const copyStart = client.indexOf('const COPY = {')
+  const copyEnd = client.indexOf('\n    };', copyStart)
+  assert.ok(copyStart >= 0 && copyEnd > copyStart)
+  const COPY = runInNewContext(`(${client.slice(copyStart + 'const COPY = '.length, copyEnd + 6)})`, {}) as { zh: Record<string, string>; en: Record<string, string> }
+  const fnStart = client.indexOf('function connectFeishuQuickView(')
+  const fnEnd = client.indexOf('\n    }\n', fnStart)
+  assert.ok(fnStart >= 0 && fnEnd > fnStart)
+  type QuickView = {
+    application: string; applicationName: string | null; processState: string; processLabel: string
+    channelState: string; channelLabel: string; dshState: string; dshLabel: string
+    configured: boolean; canStart: boolean; canStop: boolean; canRestart: boolean; hint: string
+  }
+  const connectFeishuQuickView = runInNewContext(`${client.slice(fnStart, fnEnd + 6)}\nconnectFeishuQuickView`, {}) as
+    (connect: unknown, safeMode: boolean, copy: Record<string, string>) => QuickView
+
+  const empty = connectFeishuQuickView(null, false, COPY.zh)
+  assert.equal(empty.application, COPY.zh.feishuNoApplication)
+  assert.equal(empty.processState, 'disabled')
+  assert.equal(empty.channelState, 'unknown')
+  assert.equal(empty.canStart, false)
+  assert.equal(empty.canStop, false)
+  assert.equal(empty.canRestart, false)
+  assert.equal(empty.hint, COPY.zh.feishuConfigureHint)
+
+  const saved = { enabled: true, secretConfigured: true, phase: 'stopped', applicationName: 'Robot A', appId: 'cli_a', health: { channel: 'offline', dsh: 'unknown' } }
+  const stopped = connectFeishuQuickView(saved, false, COPY.zh)
+  assert.equal(stopped.application, 'Robot A')
+  assert.equal(stopped.processLabel, COPY.zh.connectStopped)
+  assert.equal(stopped.channelLabel, COPY.zh.connectOffline)
+  assert.equal(stopped.canStart, true)
+  assert.equal(stopped.canStop, false)
+  assert.equal(stopped.canRestart, true)
+  assert.equal(stopped.hint, COPY.zh.feishuStoppedHint)
+
+  const ready = connectFeishuQuickView({ ...saved, phase: 'ready', health: { channel: 'online', dsh: 'available' } }, false, COPY.zh)
+  assert.equal(ready.processLabel, COPY.zh.connectServiceReady)
+  assert.equal(ready.channelLabel, COPY.zh.connectOnline)
+  assert.equal(ready.dshLabel, COPY.zh.connectModelAvailable)
+  assert.equal(ready.canStart, false)
+  assert.equal(ready.canStop, true)
+  assert.equal(ready.hint, COPY.zh.feishuReadyHint)
+
+  // An explicit close persists disabled intent, but the saved Secret still
+  // allows a manual start; only "reconnect" is intent-bound.
+  const closed = connectFeishuQuickView({ ...saved, enabled: false, phase: 'disabled' }, false, COPY.zh)
+  assert.equal(closed.canStart, true)
+  assert.equal(closed.canRestart, false)
+  assert.equal(closed.hint, COPY.zh.feishuDisabledHint)
+
+  const crashed = connectFeishuQuickView({ ...saved, phase: 'crashed', lastError: 'cc-connect could not start' }, false, COPY.zh)
+  assert.equal(crashed.canStart, true)
+  assert.equal(crashed.canRestart, true)
+  assert.equal(crashed.hint, COPY.zh.feishuCrashHint)
+
+  // The supervisor briefly re-enters 'starting' while retrying after a crash;
+  // keep the failure hint and the explicit stop action visible.
+  const retrying = connectFeishuQuickView({ ...saved, phase: 'starting', lastError: 'cc-connect exited' }, false, COPY.en)
+  assert.equal(retrying.hint, COPY.en.feishuCrashHint)
+  assert.equal(retrying.canStop, true)
+  assert.equal(retrying.canStart, false)
+
+  const legacy = connectFeishuQuickView({ ...saved, needsSecretReentry: true, secretConfigured: false }, false, COPY.zh)
+  assert.equal(legacy.configured, false)
+  assert.equal(legacy.canStart, false)
+  assert.equal(legacy.canRestart, false)
+  assert.equal(legacy.hint, COPY.zh.feishuSecretReentryHint)
+
+  const safe = connectFeishuQuickView({ ...saved, phase: 'ready', health: { channel: 'online' } }, true, COPY.en)
+  assert.equal(safe.hint, COPY.en.feishuSafeModeHint)
+  assert.equal(safe.canStart, false)
+  assert.equal(safe.canRestart, false)
+  // A live process can still be stopped explicitly while Safe Mode is on.
+  assert.equal(safe.canStop, true)
+
+  assert.equal(connectFeishuQuickView({ ...saved, applicationName: null }, false, COPY.en).application, 'cli_a')
+  assert.equal(connectFeishuQuickView({ ...saved, applicationName: null, appId: '' }, false, COPY.en).application, COPY.en.feishuNoApplication)
+  assert.doesNotMatch(JSON.stringify(connectFeishuQuickView({ ...saved, appSecret: 'fake-secret-value' }, false, COPY.zh)), /fake-secret-value/)
 })
 
 test('trash section uses the settings design system with guarded destructive actions', async () => {

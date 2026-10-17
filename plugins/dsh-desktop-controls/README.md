@@ -28,3 +28,11 @@ Enter the Feishu App ID and Secret, choose an absolute workspace directory, and
 save before starting the bundled cc-connect sidecar. The Secret input is
 cleared after a successful save; only whether a Secret is configured and the
 sidecar's redacted status are shown back to the page.
+
+The floating Desktop tools panel mirrors a compact Feishu quick control: the
+selected application name, the desktop service phase, the official SDK channel
+state and DSH task verification are separate read-only rows. Start, stop and
+reconnect are explicit buttons; opening the panel, polling state, or changing
+locale/theme never starts the sidecar or calls a model. Missing applications,
+legacy credentials that need re-entry, and Safe Mode disable the actions and
+state the reason.

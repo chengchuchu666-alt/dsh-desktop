@@ -197,6 +197,23 @@ test('saving another application is inert; active preferences restart without dr
   } finally { await f.close() }
 })
 
+test('state exposes the selected application name while keeping credentials out of the public snapshot', async () => {
+  const f = await fixture()
+  try {
+    const app = await f.add('one')
+    let state = await f.controller.state()
+    assert.equal(state.connection.applicationName, 'one')
+    assert.equal(state.connection.applicationId, app.id)
+    assert.doesNotMatch(JSON.stringify(state), /fake-one|appSecret/)
+    await f.controller.saveApplication({ id: app.id, name: 'Renamed app', appId: 'one', workspace: f.home, appSecret: '' })
+    state = await f.controller.state()
+    assert.equal(state.connection.applicationName, 'Renamed app')
+    await f.controller.remove(app.id)
+    state = await f.controller.state()
+    assert.equal(state.connection.applicationName, null)
+  } finally { await f.close() }
+})
+
 test('missing credentials, invalid workspace, Safe Mode and unready Harness do not spawn or infer model readiness', async () => {
   const f = await fixture()
   try {

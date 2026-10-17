@@ -11,6 +11,8 @@ export interface ConnectState extends ConnectSettings {
   lastError?: string
   restartAttempts?: number
   applicationId?: string | null
+  /** Local display name of the selected application; never a credential. */
+  applicationName?: string | null
   autoConnect?: boolean
   health?: ConnectHealth
 }
