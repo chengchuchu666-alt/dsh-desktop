@@ -2478,7 +2478,8 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    线上 `/data/release.json` 为 `v0.2.1-alpha.5.shell.0`、六资产 `gitcode_ok=true`，生成于
    2026-10-17T04:25:18.401Z；`/api/downloads` 实时计数可用（7133，含既有 GitCode 引导计数）。
    首页中英「当前版本重点」已从 alpha.3 更新为 alpha.5 浮窗飞书控制，本地 `check-site-ui` 八组
-   （zh/en × 390/1280 × light/dark）exit0；推送后以线上八组复验为准。
+   （zh/en × 390/1280 × light/dark）exit0；推送后 Vercel 已上线，`SITE_CHECK_URL=https://dsh-desktop.com`
+   线上八组再次 exit0（截图 `/var/folders/wf/6qt496h52ws3z7j49rz19ylw0000gn/T/dsh-site-ui-uk7tOv`）。
 9. **保留边界**：真实手机飞书往返、Windows/Linux 人工原生控件视觉、第三方 AV 受控真机、
    macOS 公证与 Windows 商业签名仍未覆盖；Linux worker teardown 既有告警保留；审计既有单一
    CVE 例外不变。未覆盖场景不以模拟环境或 runner 结果代替。

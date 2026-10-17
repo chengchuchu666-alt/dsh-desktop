@@ -79,7 +79,7 @@ main CI `38999352115` success。GitHub 预览版 2026-10-17T04:14:34Z 公开、8
 GitCode release `58738` tag 对齐、六资产匿名内容 6/6、mirror-v2 --check-only 6/6，
 DEB 完整回读 228656552 字节且 SHA `5022949e107cc1dc4c1c5db7a6eacb370216db115e1b9010b8b7f0e95f5b04fe` 一致。
 Site Data Refresh `39001837976` success，bot `cb8acb1` 合并；线上 JSON 同 tag、6/6 `gitcode_ok=true`，
-`/api/downloads` 实时可用（7133，含既有引导计数）；首页 alpha.5 文案后本地八组 exit0，推送后线上八组复验。
+`/api/downloads` 实时可用（7133，含既有引导计数）；首页 alpha.5 文案后本地八组 exit0，推送后 Vercel 上线且线上八组 exit0。
 真实手机飞书往返、Windows/Linux 人工原生视觉、第三方 AV 真机与签名边界保留，不以模拟环境代替。
 后续同样回填提交 SHA、命令和退出码。
 `0.2.1-alpha.5.shell.0` 已发布，官网与镜像已切换到该 tag；已发布 tag 保持不可变。
