@@ -24,7 +24,7 @@ const userData = join(root, 'Electron preferences 桌面数据')
 /** @returns the single matching installer for this architecture, or null when
  *  the previous release never published one (a brand-new architecture). */
 async function findForArch(dir, suffix) {
-  const files = (await readdir(dir)).filter(name => name.endsWith(suffix) && installerRunsHere(name))
+  const files = (await readdir(dir)).filter(name => name.endsWith(suffix) && installerRunsHere(name, 'linux'))
   if (files.length === 0) return null
   if (files.length > 1) throw new Error(`expected one matching installer under ${dir}, found ${files.length}`)
   return join(dir, files[0])
@@ -95,6 +95,31 @@ async function seedUserState() {
 // Kernel 0.1.7 migrates the legacy flat settings file into the new settings
 // service and archives the original verbatim as settings.yaml.imported — the
 // file leaving dshHome is a migration, not data loss (asserted separately).
+/** Install the previous release's deb for THIS architecture, then upgrade to
+ *  the freshly built one. A brand-new architecture has nothing to upgrade from:
+ *  the first arm64 release finds only the amd64 deb in the previous release, so
+ *  the smoke reports the skip instead of failing on an uninstallable package. */
+async function runDpkgUpgrade() {
+  const previous = await findForArch(previousDir, '.deb')
+  if (previous === null) {
+    console.log(`smoke-upgrade: skipped dpkg — the previous release has no deb for ${process.arch}`)
+    return
+  }
+  const current = await findOne(currentDir, name => isCurrentInstaller(name, currentVersion, 'linux') && installerRunsHere(name, 'linux'))
+  await execFileP('sudo', ['apt-get', 'install', '-y', previous], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
+  const executable = await installedDpkgExecutable()
+  await seedUserState()
+  const before = await snapshot()
+  await smoke(executable)
+  await assertPreserved(before)
+  // Manual branch candidates can share the published version number. Force
+  // installation of the candidate bytes instead of accepting apt's no-op.
+  await execFileP('sudo', ['apt-get', 'install', '--reinstall', '-y', current], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
+  await assertPreserved(before)
+  await smoke(executable)
+  await assertPreserved(before)
+}
+
 const preserved = [
   join(dshHome, 'upgrade-user-marker.txt'),
   join(userData, 'shell-preferences.json'),
@@ -193,26 +218,7 @@ try {
     await assertPreserved(before)
     await execFileP(uninstaller, ['/S'], { timeout: 300_000 }).catch(() => undefined)
   } else if (method === 'dpkg') {
-    const previous = await findForArch(previousDir, '.deb')
-    if (previous === null) {
-      // First release of this architecture: the previous tag only published the
-      // other one, so there is nothing this machine could upgrade from.
-      console.log(`smoke-upgrade: skipped dpkg — the previous release has no deb for ${process.arch}`)
-      return
-    }
-    const current = await findOne(currentDir, name => isCurrentInstaller(name, currentVersion, 'linux') && installerRunsHere(name))
-    await execFileP('sudo', ['apt-get', 'install', '-y', previous], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
-    const executable = await installedDpkgExecutable()
-    await seedUserState()
-    const before = await snapshot()
-    await smoke(executable)
-    await assertPreserved(before)
-    // Manual branch candidates can share the published version number. Force
-    // installation of the candidate bytes instead of accepting apt's no-op.
-    await execFileP('sudo', ['apt-get', 'install', '--reinstall', '-y', current], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
-    await assertPreserved(before)
-    await smoke(executable)
-    await assertPreserved(before)
+    await runDpkgUpgrade()
   } else {
     throw new Error('usage: smoke-upgrade.mjs <macos|nsis|dpkg> <current-dist> <previous-dir>')
   }
