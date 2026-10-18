@@ -10,7 +10,7 @@ import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { spawn } from 'node:child_process'
 import { SMOKE_EXIT_OK, SMOKE_FLAG } from '../src/main/smoke-protocol.ts'
-import { isCurrentInstaller } from './download-previous-release.mjs'
+import { installerRunsHere, isCurrentInstaller } from './download-previous-release.mjs'
 
 const execFileP = promisify(execFile)
 const method = process.argv[2]
@@ -20,6 +20,15 @@ const currentVersion = JSON.parse(await readFile(resolve('package.json'), 'utf8'
 const root = await mkdtemp(join(tmpdir(), 'dsh cross-version upgrade 中文-'))
 const dshHome = join(root, 'DSH profile 用户数据')
 const userData = join(root, 'Electron preferences 桌面数据')
+
+/** @returns the single matching installer for this architecture, or null when
+ *  the previous release never published one (a brand-new architecture). */
+async function findForArch(dir, suffix) {
+  const files = (await readdir(dir)).filter(name => name.endsWith(suffix) && installerRunsHere(name))
+  if (files.length === 0) return null
+  if (files.length > 1) throw new Error(`expected one matching installer under ${dir}, found ${files.length}`)
+  return join(dir, files[0])
+}
 
 async function findOne(dir, predicate) {
   const files = (await readdir(dir)).filter(predicate)
@@ -184,8 +193,14 @@ try {
     await assertPreserved(before)
     await execFileP(uninstaller, ['/S'], { timeout: 300_000 }).catch(() => undefined)
   } else if (method === 'dpkg') {
-    const previous = await findOne(previousDir, name => name.endsWith('.deb'))
-    const current = await findOne(currentDir, name => isCurrentInstaller(name, currentVersion, 'linux'))
+    const previous = await findForArch(previousDir, '.deb')
+    if (previous === null) {
+      // First release of this architecture: the previous tag only published the
+      // other one, so there is nothing this machine could upgrade from.
+      console.log(`smoke-upgrade: skipped dpkg — the previous release has no deb for ${process.arch}`)
+      return
+    }
+    const current = await findOne(currentDir, name => isCurrentInstaller(name, currentVersion, 'linux') && installerRunsHere(name))
     await execFileP('sudo', ['apt-get', 'install', '-y', previous], { timeout: 600_000, maxBuffer: 32 * 1024 * 1024 })
     const executable = await installedDpkgExecutable()
     await seedUserState()

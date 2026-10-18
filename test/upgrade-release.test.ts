@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { assertPreviousTag, installerSuffix, isCurrentInstaller, parseChecksum, previousAssetPatterns } from '../scripts/download-previous-release.mjs'
+import { assertPreviousTag, installerRunsHere, installerSuffix, isCurrentInstaller, parseChecksum, previousAssetPatterns } from '../scripts/download-previous-release.mjs'
 
 test('previous release assets select one installer and its checksum per platform', () => {
   assert.deepEqual(previousAssetPatterns('darwin'), ['*.dmg', '*.dmg.sha256'])
@@ -33,4 +33,17 @@ test('current installer selection ignores stale artifacts in a reused dist direc
 test('release checksum parsing accepts standard sha256 files only', () => {
   assert.equal(parseChecksum(`${'a'.repeat(64)}  installer.dmg\n`), 'a'.repeat(64))
   assert.throws(() => parseChecksum('not-a-checksum installer.dmg'), /malformed/)
+})
+
+test('the upgrade smoke only accepts a deb this architecture can install', () => {
+  const v = '0.1.2-alpha.3.shell.0'
+  const amd = `dsh-desktop-${v}-amd64.deb`
+  const arm = `dsh-desktop-${v}-arm64.deb`
+  assert.equal(installerRunsHere(amd, 'linux', 'x64'), true)
+  assert.equal(installerRunsHere(arm, 'linux', 'x64'), false)
+  assert.equal(installerRunsHere(arm, 'linux', 'arm64'), true)
+  assert.equal(installerRunsHere(amd, 'linux', 'arm64'), false)
+  // Other platforms ship a single OS-wide installer.
+  assert.equal(installerRunsHere(`dsh-desktop-setup-${v}.exe`, 'win32', 'x64'), true)
+  assert.equal(installerRunsHere(`dsh-desktop-${v}-arm64-mac.dmg`, 'darwin', 'arm64'), true)
 })

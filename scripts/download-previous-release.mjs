@@ -25,6 +25,15 @@ export function installerSuffix(platform = process.platform) {
   throw new Error(`unsupported upgrade platform: ${platform}`)
 }
 
+/** Linux installers are per architecture. The upgrade smoke installs the
+ *  previous release on this runner, so it must pick a deb this machine can
+ *  actually install; other platforms ship one installer for the OS. */
+export function installerRunsHere(name, platform = process.platform, arch = process.arch) {
+  if (platform !== 'linux') return true
+  const suffix = arch === 'arm64' ? 'arm64' : 'amd64'
+  return name.endsWith(`-${suffix}.deb`)
+}
+
 export function isCurrentInstaller(name, version, platform = process.platform) {
   if (platform === 'darwin') return name.endsWith(`-${version}-arm64-mac.dmg`)
   if (platform === 'win32') return name === `dsh-desktop-setup-${version}.exe`
