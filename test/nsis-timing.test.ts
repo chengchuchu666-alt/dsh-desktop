@@ -28,7 +28,18 @@ test('installer timing retains runtime occupancy failure and release benchmarks 
   assert.match(workflow, /github\.event_name == 'workflow_dispatch'/)
   assert.match(workflow, /if: \$\{\{ github\.ref_type == 'tag' \}\}/)
   assert.match(workflow, /github\.event_name == 'workflow_dispatch' && '--allow-same-version' \|\| ''/)
-  for (const os of ['macos-14', 'windows-2022', 'ubuntu-24.04']) {
-    assert.match(workflow, new RegExp(`Cross-version upgrade[^\\n]+\\n        if: matrix\\.os == '${os}'`))
+  // Every build runner must be covered by a cross-version upgrade step. Linux
+  // runs on two Ubuntu runners (x64 and arm64) behind one prefix guard.
+  const runners = [...workflow.matchAll(/^ {10}- os: (\S+)$/gm)].map(match => match[1]!)
+  assert.ok(runners.length >= 4, `expected the build matrix to list its runners, saw ${runners.join(', ')}`)
+  const guards = [...workflow.matchAll(/Cross-version upgrade[^\n]+\n {8}if: (.+)$/gm)].map(match => match[1]!.trim())
+  const covers = (guard: string, os: string): boolean => {
+    const equality = /^matrix\.os == '([^']+)'$/.exec(guard)
+    if (equality !== null) return equality[1] === os
+    const prefix = /^startsWith\(matrix\.os, '([^']+)'\)$/.exec(guard)
+    return prefix !== null && prefix[1] !== undefined && os.startsWith(prefix[1])
+  }
+  for (const os of runners) {
+    assert.ok(guards.some(guard => covers(guard, os)), `no cross-version upgrade guard covers ${os}`)
   }
 })

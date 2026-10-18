@@ -186,7 +186,8 @@ export function closureRepairUrls(
     ? `dsh-desktop-setup-${appVersion}.exe`
     : platform === 'darwin'
       ? `dsh-desktop-${appVersion}-arm64-mac.dmg`
-      : `dsh-desktop-${appVersion}-amd64.deb`
+      // Linux ships per-architecture debs; the repair link must match this machine.
+      : `dsh-desktop-${appVersion}-${process.arch === 'arm64' ? 'arm64' : 'amd64'}.deb`
   const tag = `v${appVersion}`
   const github = `https://github.com/citrusli2026/dsh-desktop/releases/download/${tag}/${asset}`
   const gitcode = `https://gitcode.com/citrusli2026/dsh-desktop/releases/download/${tag}/${asset}`

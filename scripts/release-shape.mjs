@@ -69,11 +69,19 @@ export function parseCompositeVersion(version) {
   return { dsh: match[1], rev: Number(match[2]) }
 }
 
-/** Installer file names published for one platform (electron-builder conventions). */
-export function installerNames(version, platform) {
+/** Linux debs are published per architecture (electron-builder suffixes the
+ *  arch in the file name); everything else is a single installer. */
+export const LINUX_ARCHES = ['x64', 'arm64']
+/** Installer file names published for one platform (electron-builder conventions).
+ *  `arch` selects the Linux deb; it defaults to the host so the per-runner
+ *  checksum step names the artifact that runner just built. */
+export function installerNames(version, platform, arch = process.arch) {
   if (platform === 'darwin') return [`dsh-desktop-${version}-arm64-mac.dmg`]
   if (platform === 'win32') return [`dsh-desktop-setup-${version}.exe`]
-  if (platform === 'linux') return [`dsh-desktop-${version}-amd64.deb`]
+  if (platform === 'linux') {
+    const suffix = arch === 'arm64' ? 'arm64' : 'amd64'
+    return [`dsh-desktop-${version}-${suffix}.deb`]
+  }
   throw new Error(`release installers are not published for ${platform}`)
 }
 
@@ -81,7 +89,7 @@ export function installerNames(version, platform) {
 export function expectedAssetNames(version) {
   const mac = installerNames(version, 'darwin')[0]
   const win = installerNames(version, 'win32')[0]
-  const linux = installerNames(version, 'linux')[0]
+  const linux = LINUX_ARCHES.flatMap(arch => installerNames(version, 'linux', arch))
   return [
     mac,
     `${mac}.sha256`,
@@ -89,8 +97,7 @@ export function expectedAssetNames(version) {
     `${win}.sha256`,
     `${win}.blockmap`,
     'latest.yml',
-    linux,
-    `${linux}.sha256`,
+    ...linux.flatMap(name => [name, `${name}.sha256`]),
   ]
 }
 

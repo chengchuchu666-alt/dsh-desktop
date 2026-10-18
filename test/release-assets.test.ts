@@ -12,7 +12,7 @@ import { installerNames, writeReleaseChecksum } from '../scripts/write-release-c
 
 const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version as string
 
-test('release contract has three platforms of installers, hashes, and Windows updater metadata', () => {
+test('release contract has three platforms of installers (Linux x64 + arm64), hashes, and Windows updater metadata', () => {
   assert.deepEqual(expectedAssetNames(VERSION), [
     `dsh-desktop-${VERSION}-arm64-mac.dmg`,
     `dsh-desktop-${VERSION}-arm64-mac.dmg.sha256`,
@@ -22,10 +22,13 @@ test('release contract has three platforms of installers, hashes, and Windows up
     'latest.yml',
     `dsh-desktop-${VERSION}-amd64.deb`,
     `dsh-desktop-${VERSION}-amd64.deb.sha256`,
+    `dsh-desktop-${VERSION}-arm64.deb`,
+    `dsh-desktop-${VERSION}-arm64.deb.sha256`,
   ])
   assert.deepEqual(installerNames(VERSION, 'darwin'), [`dsh-desktop-${VERSION}-arm64-mac.dmg`])
   assert.deepEqual(installerNames(VERSION, 'win32'), [`dsh-desktop-setup-${VERSION}.exe`])
-  assert.deepEqual(installerNames(VERSION, 'linux'), [`dsh-desktop-${VERSION}-amd64.deb`])
+  assert.deepEqual(installerNames(VERSION, 'linux', 'x64'), [`dsh-desktop-${VERSION}-amd64.deb`])
+  assert.deepEqual(installerNames(VERSION, 'linux', 'arm64'), [`dsh-desktop-${VERSION}-arm64.deb`])
 })
 
 test('checksum writer and release validator reject missing, extra, or changed assets', async () => {
@@ -50,7 +53,7 @@ test('checksum writer and release validator reject missing, extra, or changed as
       `sha512: ${windowsSha512}`,
       '',
     ].join('\n'))
-    assert.equal(await validateReleaseAssets(directory, VERSION), 8)
+    assert.equal(await validateReleaseAssets(directory, VERSION), expectedAssetNames(VERSION).length)
 
     await writeFile(join(directory, 'latest.yml'), [
       `version: ${VERSION}`,

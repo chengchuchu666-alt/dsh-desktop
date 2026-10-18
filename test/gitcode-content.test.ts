@@ -15,10 +15,10 @@ async function fixture(t: test.TestContext) {
 }
 const partial = () => new Response('a', { status: 206, headers: { 'Content-Range': 'bytes 0-0/5' } })
 
-test('mirror content validates all six partial assets and complete 200 responses', async t => {
+test('mirror content validates every public partial asset and complete 200 responses', async t => {
   const root = await fixture(t)
   const results = await verifyMirrorBytes(root, tag, async () => partial())
-  assert.equal(results.length, 6)
+  assert.equal(results.length, expectedAssetNames(tag.slice(1)).filter(classifyPublicAsset).length)
   assert.ok(results.every(result => result.contentVerified && result.status === 206))
   const full = await verifyMirrorBytes(root, tag, async () => new Response('asset'))
   assert.ok(full.every(result => result.contentVerified && result.status === 200))
