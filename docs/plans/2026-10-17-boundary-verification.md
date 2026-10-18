@@ -130,3 +130,33 @@ Windows guest 未能进入可安装状态（8.3），因此“真机杀软”暂
 - **多引擎扫描（无需真机）**：对已发布 EXE/DMG/DEB 做 VirusTotal 查询/上传。上传会使样本公开可下载，需用户明确同意；也可提供 VT API key 或仅做哈希查询（限已被他人上传过的样本）。
 - **Defender 实机（VM 内）**：Windows guest 可用后，`Get-MpThreatDetection`、`Get-MpComputerStatus` 记录实时防护下的安装/首启/卸载拦截。
 - **第三方 OEM 杀软**：arm64 Windows 上 360/火绒/腾讯电脑管家 无 ARM64 版本；ESET/Kaspersky 有 ARM64 支持但需授权。因此若要覆盖国内主流杀软，仍需一台 x86_64 Windows 真机或云主机。
+
+### 8.6 A 项回执：隔离 rc.1 实例的真实往返（成功）
+
+2026-10-18 11:24–11:31，按用户授权临时接管其机器人连接（其机器人自 09:41 起空闲），完成后已恢复。
+
+| 步骤 | 证据 |
+|---|---|
+| 凭据 | 用户真实 profile 的 `applications.json` + `credentials/<uuid>.json` 以 0600 权限原样复制进隔离 userData（未读取 Secret 内容） |
+| 关闭用户连接 | 其管理器显示 `桌面服务 已关闭 / 飞书通道 离线`；其 sidecar 进程退出（日志 `supervisor: cc-connect exited`） |
+| 隔离实例上线 | rc.1 隔离实例 sidecar pid 77008（`--config /Users/citrus/dsh-review/rc1/.../config.toml`），日志 `11:24:12 connected to wss://msg-frontier.feishu.cn` + `channel state=online` |
+| 发送 | 在**电脑版飞书**（Lark.app）的 `dsh` 机器人会话中发送带标记消息 `[E2E-T1] dsh-desktop rc.1 real round-trip test - reply with marker E2E-T1` |
+| 回包 | 同一会话收到**富卡片**回复：标题 `回复 citrusli: [E2E-T1]…`、正文 `Done` + `E2E-T1`、页脚 `用时 3.9 秒` / 工作区 `~/dsh-desktop` |
+| 落到隔离内核 | 隔离 DSH_HOME 新建会话 `48149902-9007-44ea-8c52-f59e85ead587`（`11:29`，workspace 映射目录 `--Users-citrus-dsh-desktop--`），其 `session_projcache` 中可检索到标记 `E2E-T1`，会话标题即该消息 |
+| 恢复 | 重新点击用户管理器的「开启连接」，日志 `11:36:58 connected to wss://…`，管理器回到 `服务已启动 / 在线` |
+
+结论：真实通道（WebSocket 长连接）、真实机器人凭据、真实富卡片回复与真实内核任务全部成立，且落在 **rc.1 打包产物 + 隔离 profile** 上。
+
+### 8.7 发现 F-2（产品缺陷，macOS）：非 legacy 应用的 sidecar 控制套接字路径超长
+
+隔离实例的管理器在整个成功往返期间一直显示 `桌面服务 已关闭 / 飞书通道 离线 / DSH 任务 尚未通过任务验证`，而 sidecar 日志明确是 `channel state=online` 且真实完成了任务。根因在 sidecar 日志里：
+
+```
+level=WARN msg="api server unavailable" error="listen unix socket: listen unix
+/Users/citrus/dsh-review/rc1/userData/cc-connect/applications/47113a22-…/data/run/api.sock: bind: invalid argument"
+```
+
+- macOS 的 `sun_path` 上限是 104 字节（可用 103），而该路径长 **116** 字符；真实 profile 走同一分支时更长：`/Users/citrus/Library/Application Support/dsh-desktop/cc-connect/applications/<uuid>/data/run/api.sock` = **132** 字符。
+- 分支来自 `src/main/cc-connect-applications.ts:213`：`legacyDataApplicationId === id ? …/cc-connect/data : …/cc-connect/applications/<id>/data`。用户真实 profile 与隔离副本的 `legacyDataApplicationId` 都是空字符串，所以**默认就落到长路径分支**（旧 alpha.3 的扁平路径 `…/cc-connect/data/run/api.sock` 只有 82 字符，正常）。
+- 影响：sidecar 的 Feishu 通道照常工作，但 App 无法通过 API socket 获取健康/任务验证状态，管理器显示为「已关闭/离线/尚未通过任务验证」，用户会误判连接失败；App 对 sidecar 的控制面（重启/停止/健康）同样不可用。
+- 建议修复（未在本轮改代码）：把控制套接字放到短路径（如沿用 `…/cc-connect/data/run/api.sock`、或 `$TMPDIR/dsh-<hash>.sock`），或对 `<id>` 取短哈希；并加一条“socket 路径长度 ≤ 100”的断言与真实 macOS 回归。
