@@ -36,7 +36,7 @@ test('the visual-evidence gate names every missing extension surface', async () 
   try {
     const result = await f.run()
     assert.equal(result.code, 1)
-    assert.match(result.output, /required surfaces 20\/22/)
+    assert.match(result.output, /required surfaces 19\/21/)
     for (const missing of REQUIRED_SURFACES.slice(-2)) assert.match(result.output, new RegExp(`MISSING ${missing.replace('.', '\\.')}`))
   } finally { await f.close() }
 })
@@ -46,7 +46,7 @@ test('the visual-evidence gate passes when every surface rendered', async () => 
   try {
     const result = await f.run()
     assert.equal(result.code, 0)
-    assert.match(result.output, /all 22 extension surfaces rendered/)
+    assert.match(result.output, /all 21 extension surfaces rendered/)
   } finally { await f.close() }
 })
 

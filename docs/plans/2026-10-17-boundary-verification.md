@@ -301,7 +301,7 @@ AI 侧此前只有市场弹窗进过工件。为此 CI 增加 `scripts/collect-v
 
 ```sh
 node scripts/collect-visual-evidence.mjs test-results visual-evidence/packaged   # Playwright 会清空输出目录，必须先留存
-node scripts/verify-visual-evidence.mjs visual-evidence/packaged --label <runner>  # 22 个扩展面，缺一即失败
+node scripts/verify-visual-evidence.mjs visual-evidence --label <runner>  # 21 个打包扩展面，缺一即失败
 ```
 
 `scripts/verify-visual-evidence.mjs` 覆盖：首启/安全模式横幅、浮动飞书快捷控制及其底部菜单、飞书管理五态
@@ -313,7 +313,7 @@ gh run download <run-id> -n packaged-visuals-windows-2022 -D /tmp/win-vis
 node scripts/verify-visual-evidence.mjs /tmp/win-vis --label windows-2022
 ```
 
-实测：macOS 27 个不同截图名（139 文件）、Windows 137 个、arm64 Linux 65 个，四端全部 22/22 通过后才发布。
+实测：macOS 27 个不同截图名（139 文件）、Windows 137 个、arm64 Linux 65 个，四端全部 21/21 通过后才发布。
 
 ### 12.2 维护者真机层（每次发版留证）
 

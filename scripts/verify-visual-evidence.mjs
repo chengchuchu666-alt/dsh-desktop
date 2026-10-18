@@ -38,8 +38,10 @@ export const REQUIRED_SURFACES = [
   'loading.png',                        // 首屏加载
   'trash-sessions-populated.png',       // 回收站 · 会话
   'trash-resources-populated.png',      // 回收站 · 资源
-  'popover-attempt-0.png',              // 插件市场弹窗
 ]
+// Market-suite screenshots (popover-attempt-*.png, market-*.png) are not part
+// of this contract: they come from the market suites that run after the
+// packaged gate and ride along in test-results/ instead.
 
 async function pngNames(root) {
   const entries = await readdir(root, { recursive: true, withFileTypes: true }).catch(() => [])
