@@ -360,8 +360,13 @@ jobs:
             exit 1
           fi
           echo "tag $TAG -> $PEELED matches this run"
+      # Only the installer artifacts belong in the release. Build jobs also
+      # upload packaged-visuals-<runner> screenshots; without the pattern they
+      # would land in artifacts/ and the release validator rejects them as
+      # unexpected files.
       - uses: actions/download-artifact@v8
         with:
+          pattern: dsh-desktop-*
           path: artifacts
           merge-multiple: true
       - name: Install release validator dependency
