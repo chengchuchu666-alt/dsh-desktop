@@ -17,3 +17,13 @@ test('packaged executable stays absolute when the app starts in a different work
     assert.equal(located, executable)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
+
+test('linux packaged executables are found in the per-architecture unpacked directory', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-package-locator-arm64-'))
+  const executable = join(root, 'linux-arm64-unpacked/dsh-desktop')
+  try {
+    await mkdir(join(executable, '..'), { recursive: true })
+    await writeFile(executable, 'fake executable')
+    if (process.platform === 'linux') assert.equal(await locatePackagedExecutable(root), executable)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})

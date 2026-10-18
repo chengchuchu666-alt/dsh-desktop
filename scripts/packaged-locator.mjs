@@ -16,7 +16,9 @@ function isExecutable(path) {
   const normalized = path.replaceAll('\\', '/')
   if (process.platform === 'darwin') return normalized.endsWith('/dsh-desktop.app/Contents/MacOS/dsh-desktop')
   if (process.platform === 'win32') return basename(path).toLowerCase() === 'dsh-desktop.exe' && normalized.includes('/win-unpacked/')
-  return basename(path) === 'dsh-desktop' && normalized.includes('/linux-unpacked/')
+  // electron-builder names the directory `<platform>-<arch>-unpacked` for
+  // non-x64 targets (e.g. linux-arm64-unpacked), so match the arch optionally.
+  return basename(path) === 'dsh-desktop' && /\/linux(-[a-z0-9_]+)?-unpacked\//.test(normalized)
 }
 
 /** Resources directory for the current platform unpacked app. */
