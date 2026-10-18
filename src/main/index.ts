@@ -69,6 +69,7 @@ import { completeMarketInstall, type MarketInstallCommandResult, type MarketInst
 import { runDesktopHealthCheck } from './health-check.ts'
 import { normalizeConnectSettings, writeConnectToml } from './cc-connect-config.ts'
 import { ConnectApplicationStore } from './cc-connect-applications.ts'
+import { prepareSidecarDataDirectory } from './cc-connect-data-dir.ts'
 import { ConnectController, ConnectOperationError } from './cc-connect-controller.ts'
 import type { ConnectStartReason } from './cc-connect-policy.ts'
 import { ConnectSupervisor, type ConnectSupervisorEvents } from './cc-connect-supervisor.ts'
@@ -419,7 +420,9 @@ async function createConnectSupervisor(application: ConnectApplication, secret: 
   const configPath = await writeConnectToml(userData, {
     settings: { ...application, enabled: true },
     paths: {
-      dataDir: await new ConnectApplicationStore(userData).dataDirectory(application.id),
+      // The sidecar binds its control socket inside this directory; the alias
+      // keeps that path short enough for macOS regardless of the home path.
+      dataDir: await prepareSidecarDataDirectory(await new ConnectApplicationStore(userData).dataDirectory(application.id)),
       nodeCommand: nodeBin(),
       dshEntry: activeKernelBin(harnessRoot(), kernelDir()),
       dshHome,
