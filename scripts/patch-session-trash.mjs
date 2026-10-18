@@ -84,6 +84,15 @@ export function patchWorkspaceTrashNavigation(source) {
 \t\t\t\t\tif (this.clearArchivedCurrent()) return;`)
 }
 
+/** Kernels whose session-trash lifecycle has been reviewed against this patch.
+ *  Every bump must add its kernel here with the review evidence: compare the
+ *  two patched bundles (dsh-api-session-controller/lib/index.js and
+ *  dsh-client-ui-workspace/lib/client.js) upstream between the versions, then
+ *  re-run both transforms against the new source. 0.2.1-rc.1 → 0.2.1-rc.2:
+ *  both files are byte-identical upstream (diff 0 lines) and both transforms
+ *  still apply, so the reviewed diff carries over unchanged. */
+export const REVIEWED_KERNELS = ['0.2.1-rc.1', '0.2.1-rc.2']
+
 /** Only the shell-owned deployed closure is an allowed target. */
 export async function patchBundledSessionTrash(root, upstreamRoot = root) {
   for (const [name, bundle, transform] of [
@@ -92,7 +101,7 @@ export async function patchBundledSessionTrash(root, upstreamRoot = root) {
   ]) {
     const packageRoot = join(root, 'node_modules', '@deepseek-ai', name)
     const manifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'))
-    if (manifest.version !== '0.2.1-rc.1') throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
+    if (!REVIEWED_KERNELS.includes(manifest.version)) throw new Error(`session-trash patch: unsupported kernel ${manifest.version}; lifecycle review required`)
     const file = join(packageRoot, 'lib', bundle)
     const upstreamFile = join(upstreamRoot, 'node_modules', '@deepseek-ai', name, 'lib', bundle)
     const source = await readFile(upstreamFile, 'utf8')
