@@ -2658,3 +2658,29 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    30 天，失败也上传），首个证据构建 run `39092684234`（分支 `ci-visual-evidence`，基于绿色 tag
    `v0.2.1-rc.1.shell.1` + 该提交）已产出 macOS/Linux 工件的真实平台截图；main 因用户会话迭代
    （rich-card 默认值）verify 红，故未从 main 派发。
+
+## 87. 边界验证收尾：macOS 套接字修复 + UTM 上的 Windows 原生视觉与 Defender（2026-10-18）
+
+1. **F-2 修复并验证（已提交 `4bc756f`，含 4 条单测）**：`src/main/cc-connect-data-dir.ts` 为 sidecar 提供短路径别名
+   （`$TMPDIR/dsh-desktop-cc/<hash>` 软链到真实数据目录，零迁移、零数据搬动），使控制套接字路径与家目录长度解耦：
+   实测深路径 116 字符 `bind` 失败（`AF_UNIX path too long`）、别名 93 字符 `bind` 成功；打包后 sidecar 日志
+   `api server started socket=/var/folders/.../dsh-desktop-cc/98b721a0100814b9/run/api.sock` 无告警，
+   管理器由「已关闭/离线」回到「服务已启动 / 在线」。`pnpm verify` 470 测试全绿；顺带修复 main 上因 rich-card
+   默认值导致的 E2E 断言红（`e2e/electron-shell.spec.ts:1200`，提交 `baa59e1`），main 恢复绿。
+2. **Windows 原生视觉：完成（真实 Windows 11 ARM64 + 已发布 NSIS 安装包）**。UTM 5.0.8 无 `create` 且文件面板
+   不可自动驱动，故按 schema 手工构造 `DshWindows.utm`（QEMU/ConfigurationVersion 4、`virt`、8 GB/6 vCPU、
+   **`virtio-ramfb`**、`PS2Controller=false` 以生成 `usb-kbd`）→ 官方 UUP 合成 ISO + 自建 autounattend + 驱动盘
+   → Setup 全自动安装 → OOBE → 桌面。安装器四步向导、应用首启与主界面截图 10 张存于
+   `~/dsh-review/evidence/windows/`（清单与踩坑见 `docs/plans/2026-10-17-boundary-verification.md` §9）。
+   定位到一条可复现的坑：**驱动缺失的 virtio-net 会让首启卡死**（QEMU 持续 512–666% CPU、无画面），移除后 CPU
+   回落 1% 并直接进 OOBE；显示（virtio-ramfb）全程正常。
+3. **发现 F-3**：干净 Windows 11 ARM64 首启弹「Windows runtime library missing」，缺 `msvcp140/vcruntime140/
+   vcruntime140_1.dll`，且提示文案写的是 **x64** 版 VC++ 运行时。建议安装包内置并按架构选择 redist（ARM64 应提示
+   `vc_redist.arm64.exe`），或至少让文案区分架构。
+4. **C 项（第三方 AV）：本轮按用户选择跳过**，未做 VirusTotal 上传与第三方引擎扫描。同一台真实 Windows 11 ARM64
+   上取到内置 Defender 回执：`AMServiceEnabled/RealTimeProtectionEnabled/AntivirusEnabled/BehaviorMonitorEnabled`
+   均为 True、引擎 `1.1.23110.2`、签名 `1.403.7.0`（2023-12 基线，离线未更新），`Get-MpThreatDetection`/
+   `Get-MpThreat` 零输出、`DisableRealtimeMonitoring=False`——即发布 EXE 在实时防护开启下完成挂载→安装→首启，
+   **零检出、零拦截**。国内 OEM 杀软无 ARM64 版本，如需覆盖仍需 x86_64 真机或 VirusTotal API key。
+5. **Linux 侧仍是 F-1 缺口**：发布 DEB 仅 amd64，arm64 Ubuntu 上 `dpkg -i` 拒绝；Linux 发布产物的原生视觉证据
+   由 CI x86_64 runner 截图提供。建议为 arm64 增加打包 job 或在下载页明确「Linux 仅 x86_64」。
