@@ -2703,3 +2703,18 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    `~/dsh-review/evidence/linux/desktop-with-app.png` 为首启界面原生视觉证据。非阻塞观察：日志有
    `gtk_widget_add_accelerator` 断言告警（Electron/Gtk 在 24.04 常见）。
 4. 结论：**F-1 关闭**——arm64 Linux 用户现在有可安装、可运行的发布产物；第三方 AV 仍按用户选择未覆盖（§9.5）。
+
+## 89. 扩展功能面补测与 CI 视觉证据留存（2026-10-18）
+
+1. 用户反馈“Windows 截图窗口没显示全”：根因是虚拟机显示 800×640 而应用窗口更大。已把 UTM 窗口放大到 1480×935
+   （virtio-ramfb 动态分辨率随窗口），并在 guest 内最大化应用窗口，重拍全部截图与一段完整窗口录屏
+   （`~/dsh-review/evidence/windows-ext/`，含 `06-main-window-maximized.png`、`08-native-tour-windows-arm64.mov`）。
+2. 扩展面实机走查（Windows 11 ARM64）：桌面工具面板 CONNECT 段（服务 Disabled / 通道 Not confirmed / 任务 Not verified
+   + Start connection / Manage / Feishu connections / Start pairing）、飞书管理 Create with QR 全表单、消息样式段
+   （Message detail / Streaming preview / Refresh interval / Card style / Progress display）、插件市场（内置 Subagent、
+   Web search、Agent loop、Shell + 实验性 Agent Teams）、应用设置窗口导航与 General 面板、侧栏溢出菜单
+   （Settings Ctrl+Alt+, / Feedback / Sign in）、原生目录选择器。未截到：自动化任务、托盘菜单（UTM 鼠标捕获反复打断）。
+   矩阵见 `docs/plans/2026-10-17-boundary-verification.md` §11。
+3. CI 证据留存修复：Playwright 每次运行清空输出目录，市场用例把 packaged `@smoke` 写的桌面 UI 截图冲掉，导致此前工件
+   只有市场弹窗。新增 `scripts/collect-visual-evidence.mjs`，在 packaged 运行后立刻拷到 `visual-evidence/packaged`
+   （Xvfb 侧 `packaged-headless`）并纳入工件上传；随后 dispatch 的 release run 起三平台扩展面截图随工件发布。

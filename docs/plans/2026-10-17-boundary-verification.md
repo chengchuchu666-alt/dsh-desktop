@@ -263,3 +263,30 @@ DisableRealtimeMonitoring : False        ExclusionPath/Extension : 需管理员�
   Electron/Gtk 在 Ubuntu 24.04 上的常见告警，应用照常可用。
 
 F-1（发布产物只有 amd64）到此关闭：arm64 Linux 现在有可安装、可运行的发布产物，并有真实桌面的原生视觉证据。
+
+## 11. 扩展功能面的覆盖矩阵（2026-10-18 补测）
+
+用户指出两点：Windows 侧截图窗口没显示全、以及“扩展功能是否都覆盖”。前者原因是虚拟机显示只有 800×640 且应用窗口大于屏幕：
+现已把 UTM 窗口放大到 1480×935（virtio-ramfb 动态分辨率跟随窗口）并在 guest 内最大化应用窗口，重拍了全部截图与一段
+完整窗口的录屏（`~/dsh-review/evidence/windows-ext/06-main-window-maximized.png`、`08-native-tour-windows-arm64.mov`）。
+
+覆盖矩阵（✅ 有该面的实机截图；部分=只覆盖到入口或相邻面板；⛔ 未覆盖）：
+
+| 扩展面 | Windows 11 ARM64 实机 | Linux arm64 实机 | 自动化门（CI） |
+|---|---|---|---|
+| 安装向导 | ✅ NSIS 四步（范围/目录/安装中/完成） | ✅ `apt-get install` + `dpkg -l` 记录 | ✅ NSIS 静默安装 + 跨版本升级 smoke |
+| 首启向导 / 安全模式 | ✅ 首启界面（含 F-3 运行时告警） | ✅ 首启界面截图 | ✅ `desktop-ui-review`（zh/en × light/dark 截图） |
+| 桌面工具面板 + 飞书快捷控制 | ✅ CONNECT 段三态（服务/通道/任务）+ Start connection/Manage + Feishu connections + Start pairing | 部分（面板入口） | ✅ `@desktop-ui` 断言（data-state / disabled / hint） |
+| 飞书管理：扫码创建 | ✅ Create with QR 全表单 | — | ✅ empty/error/saved 三态截图 |
+| 飞书管理：消息样式/降噪 | ✅ 详细度/流式预览/刷新间隔/卡片样式/进度展示 | — | ✅ `electron-shell` 显示控制用例 |
+| 应用设置窗口 | ✅ 左侧全导航 + General 面板 | ✅（macOS 侧本会话早前） | ✅ `settings-feishu` 截图 |
+| 插件市场 / 内置插件设置 | ✅ Subagent、Web search、Agent loop、Shell + 实验性 Agent Teams | — | ✅ market offline/real 用例 |
+| 自动化任务 | ⛔ 未截到（UTM 鼠标捕获反复打断） | — | 部分（cron/timer 单测） |
+| 托盘菜单 | ⛔ 未截到 | — | — |
+| 原生对话框 | ✅ Select Workspace Directory | ✅ GTK 目录选择 | ✅ dialog stub 断言 |
+| 健康检查/修复链接 | 部分（设置内提示） | — | ✅ health-check 单测（含架构相关修复链接） |
+
+**结论**：扩展面在 Windows 实机上有 8/11 面有截图证据，2 面（自动化任务、托盘菜单）本轮没截到，1 面（会话界面）依赖工作区+模型未铺开；
+AI 侧此前只有市场弹窗进过工件。为此 CI 增加 `scripts/collect-visual-evidence.mjs`：在 packaged `@smoke` 之后立刻把
+`test-results` 拷到 `visual-evidence/packaged`（Xvfb 侧另存 `packaged-headless`）再上传——Playwright 每次运行都会清空
+输出目录，市场用例正是把桌面 UI 截图冲掉的原因。下一次 release run 起，三平台的扩展面截图会随工件发布。
