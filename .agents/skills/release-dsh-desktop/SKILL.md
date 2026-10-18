@@ -66,8 +66,16 @@ temporary credential copies and cleanup; verify thoughts cannot enter answer tex
 5. `pnpm -C manifest/harness install --frozen-lockfile` → `Done`.
 6. `pnpm run bootstrap` → `audit-harness-peers: closure satisfied`; fix
    missing non-optional peers and re-run when it reports gaps.
-7. Verify the login patch landed in the staged closure:
-   `grep -c openedAttemptId resources/harness/node_modules/@deepseek-ai/dsh-client-ui-settings-account/lib/client.js` → non-zero.
+7. Verify the reviewed closures landed in the staged, deployed kernel:
+   - account patch — both hunks must be present in
+     `resources/harness/node_modules/@deepseek-ai/dsh-client-ui-settings-account/lib/client.js`:
+     the popup fallback `else window.open(this.destination(attempt.authorizeUrl), "_blank", "noopener,noreferrer");`
+     and the onboarding guard `"dshDesktop" in globalThis && typeof globalThis.dshOnboarding?.hasApiKey === "function"`.
+   - session-trash patch — `pnpm run bootstrap` refuses a kernel that is not in
+     `REVIEWED_KERNELS` (`scripts/patch-session-trash.mjs`). To add one, diff both patched bundles
+     (`dsh-api-session-controller/lib/index.js`, `dsh-client-ui-workspace/lib/client.js`) between the old and new
+     kernel (`npm pack` both versions and `diff -u`), re-run both exported transforms against the new source, then
+     add the kernel to the list with that evidence. `test/session-trash-kernel.test.ts` fails until it is added.
 8. `pnpm run verify` → exit 0 (typecheck, unit tests + coverage, site
    checks, build).
 9. `pnpm exec playwright test -g "LAN pairing"` → 2 passed. Then
@@ -91,14 +99,15 @@ temporary credential copies and cleanup; verify thoughts cannot enter answer tex
     tag to origin **and** gitcode (branch + tag). Confirm both remotes'
     peeled tag commit match `git rev-parse v<v>.shell.0^{}`.
 14. `gh run list --workflow=release.yml --limit 1` → note the id;
-    `gh run watch <id> --exit-status` → exit 0, jobs verify + 3×build +
-    publish all `success`. **If verify fails on
+    `gh run watch <id> --exit-status` → exit 0, jobs verify + 4×build
+    (macos-14, windows-2022, ubuntu-24.04, ubuntu-24.04-arm) + publish all `success`. **If verify fails on
     `security:audit`**, apply the audit-floor row below, then cancel the
     run, `git tag -f`, force-push the tag to both remotes, and watch the
     new run.
-15. `gh release view v<v>.shell.0 --json assets` → 8 assets.
+15. `gh release view v<v>.shell.0 --json assets` → 10 assets (dmg, exe, blockmap, latest.yml, amd64 deb, arm64 deb + four `.sha256`).
 16. Mirror: `node scripts/mirror-gitcode-v2.mjs v<v>.shell.0` → exit 0,
-    `6/6 assets verified anonymously`. Add one full-download spot check:
+    `8/8 assets verified anonymously` (installers + checksums; the arm64 deb is mirrored like the amd64 one).
+   Add one full-download spot check:
     `curl -sL -o /tmp/v.deb <gitcode deb URL> && shasum -a 256 /tmp/v.deb`
     vs the `.sha256` file.
 17. Site data: `node scripts/gen-site-data.mjs` (or `GH_CLI=1 …` when
@@ -240,7 +249,7 @@ the new release tag by mistake.
 
 Watch the run: `gh run list --workflow=release.yml --limit 1`, then
 `gh run watch <id> --exit-status`. Jobs: verify → build (macos-14 +
-windows-2022 + ubuntu-24.04) → publish. Success means: 8 assets
+windows-2022 + ubuntu-24.04 + ubuntu-24.04-arm) → publish. Success means: 10 assets
 (dmg/exe/deb + three `.sha256` + blockmap + latest.yml; AppImage is
 not built), attestations verified, release created.
 
@@ -437,6 +446,50 @@ node scripts/mirror-gitcode-v2.mjs v<version> --check-only   # 6× present, no t
 - Commit and push. The release is complete when the site shows the
   new tag with `gitcode_ok=true` for all assets.
 
+## Real-machine verification (in the release flow since v0.2.1-rc.2.shell.0)
+
+Two layers, both mandatory before a release is called complete.
+
+### 1. CI visual verification (automatic, every build)
+
+Every desktop runner (macos-14, windows-2022, ubuntu-24.04, ubuntu-24.04-arm) runs the packaged `@smoke` suite and
+then **must prove the app rendered**, not merely that a job finished:
+
+```sh
+# what CI runs, in order, inside the build job
+node scripts/collect-visual-evidence.mjs test-results visual-evidence/packaged
+node scripts/verify-visual-evidence.mjs visual-evidence/packaged --label <runner>
+```
+
+`verify-visual-evidence.mjs` names the 22 desktop extension surfaces (first-run/safe-mode banner, floating Feishu quick
+control and its bottom menu, five Feishu-manager states, message preferences, six settings panes, LAN pairing, trash,
+recovery, loading, market popover) and fails the job listing exactly which are missing. Screenshots ride along in the
+`packaged-visuals-<runner>` artifact. Playwright wipes its output directory per run, which is why the collector runs
+immediately after the packaged run instead of at the end of the job.
+
+Inspect the evidence of a release run:
+
+```sh
+gh run download <run-id> -n packaged-visuals-windows-2022 -D /tmp/win-vis
+node scripts/verify-visual-evidence.mjs /tmp/win-vis --label windows-2022   # re-check offline
+```
+
+### 2. Maintainer real-machine checks (the two boundaries CI cannot reach)
+
+CI runs on GitHub runners; the two boundaries below need the local VMs, and each release records what was covered:
+
+| Boundary | Environment | Checklist |
+|---|---|---|
+| Windows native install + desktop | UTM 5.x, Windows 11 ARM64 (hand-built bundle: `virt` + `virtio-ramfb`, 8 GB/6 vCPU, `PS2Controller=false` so UTM generates `usb-kbd`) | mount the release ISO/EXE from `installer.iso`, run the NSIS wizard (scope → directory → install → finish), confirm the first-run window, desktop-tools panel (Feishu quick control states), Feishu manager (create-with-QR + message styles), plugins, settings panes, then `Get-MpComputerStatus` + `Get-MpThreatDetection` for the Defender receipt |
+| Linux arm64 native install | QEMU + HVF, Ubuntu 24.04.x arm64, GNOME on Xorg, VNC/SSH | `sha256sum -c` the arm64 deb, `dpkg-deb -I` shows `Architecture: arm64`, `sudo apt-get install -y ./…-arm64.deb`, launch from the app menu, screenshot the first-run window (`~/dsh-review/evidence/linux/`) |
+
+Evidence layout: `~/dsh-review/evidence/{windows,windows-ext,linux}/` (screenshots + `.mov` recordings). Record in
+HANDOFF what was covered and — explicitly — what was not (for example: tray menu and automation-tasks view were not
+captured visually; third-party AV scanning is out of scope unless the user asks).
+
+When a release touches Feishu display settings, the tray, or the automation view, extend the CI surface list in
+`scripts/verify-visual-evidence.mjs` first so the coverage is enforced rather than remembered.
+
 ## Failure modes seen in the field
 
 | Symptom | Cause / fix |
@@ -457,7 +510,7 @@ node scripts/mirror-gitcode-v2.mjs v<version> --check-only   # 6× present, no t
 | GitCode upload reports `no extension connected` | start the daemon once; if the browser extension remains disconnected, report this mirror prerequisite to the user while completing other release gates. Do not report the mirror or full release complete |
 | publish fails: `release-notes: missing docs/release-notes/v<tag>.md` | every release must write notes; scaffold with `node scripts/write-release-notes.mjs v<tag>`, fill it, commit, re-run (or re-push the tag) |
 | publish fails/ warns: `still contains placeholder <>` | fill every `<...>` in the notes file before tagging |
-| `pnpm -C manifest/harness install --lockfile-only` reports `ERR_PNPM_UNUSED_PATCH` after a kernel bump | the `patchedDependencies` key and patch filename still target the previous `dsh-client-ui-settings-account` version; use the exact `pnpm patch` → edit → `patch-commit` flow above, remove the obsolete patch, regenerate the lockfile, and verify `openedAttemptId` in the staged closure |
+| `pnpm -C manifest/harness install --lockfile-only` reports `ERR_PNPM_UNUSED_PATCH` after a kernel bump | the `patchedDependencies` key and patch filename still target the previous `dsh-client-ui-settings-account` version; use the exact `pnpm patch` → edit → `patch-commit` flow above, remove the obsolete patch, regenerate the lockfile, and re-check both account-patch hunks (popup fallback + onboarding guard) in the staged closure |
 | `audit-harness-peers` fails after bump | new kernel peer gap; add the package to the manifest and re-install |
 | `main` push rejected | bot sync landed; fetch and merge origin/main, preserve task SHAs, push normally. A published tag remains immutable; a docs/site follow-up is not a reason to retag |
 | backfill run cancels at ~120 min with installers missing | normal; re-dispatch (idempotent), expect 2–3 runs |
@@ -486,7 +539,7 @@ node scripts/mirror-gitcode-v2.mjs v<version> --check-only   # 6× present, no t
 
 ## Exit criteria
 
-- GitHub release has the 8 assets; attestations verified in CI.
+- GitHub release has the 10 assets; attestations verified in CI.
 - GitCode serves all six user-facing assets (dmg, exe, deb, 3× sha256;
   AppImage is not mirrored).
 - `site/data/release.json` committed with `gitcode_ok=true` and live

@@ -290,3 +290,46 @@ F-1（发布产物只有 amd64）到此关闭：arm64 Linux 现在有可安装�
 AI 侧此前只有市场弹窗进过工件。为此 CI 增加 `scripts/collect-visual-evidence.mjs`：在 packaged `@smoke` 之后立刻把
 `test-results` 拷到 `visual-evidence/packaged`（Xvfb 侧另存 `packaged-headless`）再上传——Playwright 每次运行都会清空
 输出目录，市场用例正是把桌面 UI 截图冲掉的原因。下一次 release run 起，三平台的扩展面截图会随工件发布。
+
+## 12. 流程固化：三端真机验证进入发版流程（2026-10-18）
+
+从 `v0.2.1-rc.2.shell.0` 起，三端“真机”验证分成两层，前者自动、后者留证：
+
+### 12.1 CI 自动层（每个 build 必须通过）
+
+四个 runner（`macos-14`、`windows-2022`、`ubuntu-24.04`、`ubuntu-24.04-arm`）在打包 `@smoke` 之后：
+
+```sh
+node scripts/collect-visual-evidence.mjs test-results visual-evidence/packaged   # Playwright 会清空输出目录，必须先留存
+node scripts/verify-visual-evidence.mjs visual-evidence/packaged --label <runner>  # 22 个扩展面，缺一即失败
+```
+
+`scripts/verify-visual-evidence.mjs` 覆盖：首启/安全模式横幅、浮动飞书快捷控制及其底部菜单、飞书管理五态
+（空/错误/已保存/受限文件凭据/中英）、消息偏好、六个设置面板（宽/最小/飞书/高级运行时/恢复/回收站）、LAN 配对、
+回收站两类资源、恢复、加载、插件市场弹窗。证据随 `packaged-visuals-<runner>` 工件发布，任何人可离线复核：
+
+```sh
+gh run download <run-id> -n packaged-visuals-windows-2022 -D /tmp/win-vis
+node scripts/verify-visual-evidence.mjs /tmp/win-vis --label windows-2022
+```
+
+实测：macOS 27 个不同截图名（139 文件）、Windows 137 个、arm64 Linux 65 个，四端全部 22/22 通过后才发布。
+
+### 12.2 维护者真机层（每次发版留证）
+
+| 边界 | 环境 | 检查内容与产出 |
+|---|---|---|
+| Windows 原生安装与桌面 | UTM 5.x + Windows 11 ARM64（手工 `.utm`：`virt` + `virtio-ramfb`、8 GB/6 vCPU、`PS2Controller=false` 才会生成 `usb-kbd`） | 用发布产物跑 NSIS 向导四步、首启窗口、桌面工具面板三态、飞书管理（扫码创建 + 消息样式）、插件市场、设置各面板；`Get-MpComputerStatus` / `Get-MpThreatDetection` 取 Defender 回执 |
+| Linux arm64 原生安装 | QEMU+HVF + Ubuntu 24.04.x arm64 + GNOME(Xorg) | `sha256sum -c` → `dpkg-deb -I` 显示 `Architecture: arm64` → `apt-get install` → 应用菜单启动 → 首启界面截图 |
+
+证据落在 `~/dsh-review/evidence/{windows,windows-ext,linux}/`；HANDOFF 记录“覆盖了什么、没覆盖什么”（例如托盘菜单与
+自动化任务视图本轮未截到、第三方 AV 未做）。若某次发版改动了托盘、自动化视图或飞书显示设置，应先把对应面加进
+`scripts/verify-visual-evidence.mjs` 的必需清单，让覆盖由门禁保证而不是靠记忆。
+
+### 12.3 同批固化的其他流程改动
+
+- 内核升级必须复核会话回收站补丁：`REVIEWED_KERNELS`（`scripts/patch-session-trash.mjs`）+ `test/session-trash-kernel.test.ts`
+  会在新内核未复核时直接失败；复核证据是“两个被补丁上游 bundle 逐字节相同 + 两个变换仍命中”。
+- 账号补丁的验证命令从过时的 `openedAttemptId` 改为当前两个补丁标记（弹窗回退 + onboarding 守卫）。
+- 资产契约 8 → 10（amd64/arm64 两个 deb 各带 `.sha256`），发布 job 断言、镜像脚本与站点守卫同步；
+  运行手册（`.agents/skills/release-dsh-desktop/SKILL.md`）新增「Real-machine verification」章节与 4 runner/10 资产口径。
