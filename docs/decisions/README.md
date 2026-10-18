@@ -40,8 +40,9 @@ This directory records the architecture decisions made while building dsh-deskto
 | 0033 | cc-connect as an opt-in Desktop messaging sidecar / cc-connect 作为用户主动启用的桌面消息 Sidecar | [EN](0033-cc-connect-sidecar.md) · [中文](0033-cc-connect-sidecar.zh.md) | Accepted / 已接受 |
 | 0034 | Multi-runtime Dashboard with explicit Edition adapters / 采用明确 Edition Adapter 的多 Runtime Dashboard | [EN](0034-multi-runtime-dashboard.md) · [中文](0034-multi-runtime-dashboard.zh.md) | Accepted / 已接受 |
 | 0035 | Host-owned session trash transactions / Host 权威协调的会话垃圾桶事务 | [EN](0035-host-owned-session-trash.md) · [中文](0035-host-owned-session-trash.zh.md) | Accepted / 已接受 |
-| 0036 | Bounded message preferences with quieter legacy defaults / 受控消息偏好与更安静的旧配置默认值 | [EN](0036-bounded-message-preferences.md) · [中文](0036-bounded-message-preferences.zh.md) | Accepted / 已接受 |
+| 0036 | Bounded message preferences with quieter legacy defaults / 受控消息偏好与更安静的旧配置默认值 | [EN](0036-bounded-message-preferences.md) · [中文](0036-bounded-message-preferences.zh.md) | Partially superseded by 0041 / 部分被 0041 取代 |
 | 0037 | One Feishu application manager with persistent intent and layered health / 统一飞书应用管理、持久连接意图与分层健康状态 | [EN](0037-feishu-application-manager.md) · [中文](0037-feishu-application-manager.zh.md) | Accepted / 已接受 |
 | 0038 | Closing the main window quits / 关闭主窗口即退出 | [EN](0038-close-main-window-quits.md) · [中文](0038-close-main-window-quits.zh.md) | Accepted / 已接受 |
 | 0039 | macOS Feishu credentials without keychain access / macOS 飞书凭据不访问钥匙串 | [EN](0039-macos-file-credentials.md) · [中文](0039-macos-file-credentials.zh.md) | Accepted / 已接受 |
 | 0040 | Terminal host shutdown preempts start / 应用退出抢占未完成启动 | [EN](0040-terminal-shutdown-preempts-start.md) · [中文](0040-terminal-shutdown-preempts-start.zh.md) | Accepted / 已接受 |
+| 0041 | Rich Card 2.0 cards and structured progress as the display defaults / 默认卡片升级为 Card 2.0 富卡片与结构化进度卡片 | [EN](0041-rich-card-defaults.md) · [中文](0041-rich-card-defaults.zh.md) | Accepted / 已接受 |

@@ -95,21 +95,24 @@ Secret，不会把它清掉。界面只显示“Secret 已保存”及存储保�
 | 消息详细度 | 完整（full）/ 精简（compact）/ 静默（quiet） | 精简 |
 | 流式预览 | 开启或关闭 | 开启 |
 | 刷新间隔 | 1.5s / 3s / 5s；已有合法非预设值会原样回显 | 3s（3000ms） |
-| 卡片样式 | 经典（legacy）/ 富卡片（rich，Card 2.0） | 经典 |
-| 进度展示 | 逐条（legacy）/ 单消息更新（compact）/ 结构化卡片（card） | 逐条 |
+| 卡片样式 | 经典（legacy）/ 富卡片（rich，Card 2.0） | 富卡片（rich） |
+| 进度展示 | 逐条（legacy）/ 单消息更新（compact）/ 结构化卡片（card） | 结构化卡片（card） |
 
 精简和静默不逐条发送思考/工具消息；静默将文本追加到同一卡片，仍保留最终答复、必要错误
 与权限交互。进度展示和卡片样式是独立偏好，不承诺所有状态行或卡片按钮都会消失。
 关闭流式预览不会关闭最终答复；间隔控件此时禁用，但保留已选值。
 
 没有新字段的旧 `settings.json` 无需手改：读取时自动采用 compact、开启预览、3000ms、
-legacy 卡片与 legacy 进度。合法整数间隔钳制到 500–30000ms；不接受自由文本 TOML。
+**rich 卡片与 card 进度**（Card 2.0 富卡片 + 结构化进度卡片，见
+[ADR 0041](decisions/0041-rich-card-defaults.zh.md)）。显式保存过 legacy 的用户仍按原样保留，
+不会被默认值改写。合法整数间隔钳制到 500–30000ms；不接受自由文本 TOML。
 配置生成一次全局 `[stream_preview]`、项目的 `[projects.display]`，固定预览增量为 80 字符。
 显式保存过的偏好在旧调用/二维码参数省略这些字段时仍保留。
 
 点击「保存应用／保存连接」后，已运行的启用连接会重新生成 TOML 并重启；未运行、已禁用或 Safe Mode
 下保存不会隐式启动。轮询只更新状态，不覆盖未保存编辑；重开设置页会回显已保存值。
-行为取舍见 [ADR 0036](decisions/0036-bounded-message-preferences.zh.md)。
+行为取舍见 [ADR 0036](decisions/0036-bounded-message-preferences.zh.md)（受控消息偏好）与
+[ADR 0041](decisions/0041-rich-card-defaults.zh.md)（默认卡片升级为 Card 2.0 富卡片）。
 
 「关闭连接」（旧设置页「停止」）会停止 Sidecar 并持久保存禁用；重启应用和退出 Safe Mode
 后仍保持关闭。「启动 Desktop 时自动连接」独立控制下次启动，不能重新开启已关闭的连接；

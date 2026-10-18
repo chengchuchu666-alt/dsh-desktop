@@ -81,12 +81,36 @@ test('legacy settings resolve all new defaults without rewriting the original fi
   } finally { await rm(userData, { recursive: true, force: true }) }
 })
 
+test('new connections default to the Card 2.0 rich card with the structured progress card (ADR 0041)', async () => {
+  const userData = await tempDir()
+  try {
+    // An old settings.json without the display fields resolves to rich/card…
+    await writeConnectSettings(userData, { enabled: true, appId: 'cli_old', workspace: paths.workspace })
+    const legacy = JSON.stringify({ enabled: true, appId: 'cli_old', workspace: paths.workspace })
+    await writeFile(connectSettingsPath(userData), legacy)
+    const resolved = await readConnectSettings(userData)
+    assert.equal(resolved.cardMode, 'rich')
+    assert.equal(resolved.progressStyle, 'card')
+    // …an explicit legacy choice is preserved verbatim…
+    const explicit = normalizeConnectSettings({ cardMode: 'legacy', progressStyle: 'legacy' })
+    assert.equal(explicit.cardMode, 'legacy')
+    assert.equal(explicit.progressStyle, 'legacy')
+    // …and the rendered default config carries both enum values.
+    const toml = renderConnectToml({ settings: { enabled: true, appId: 'cli_old', workspace: paths.workspace }, paths })
+    assert.match(toml, /card_mode = "rich"/)
+    assert.match(toml, /progress_style = "card"/)
+  } finally { await rm(userData, { recursive: true, force: true }) }
+})
+
 test('normalize validates each preference and clamps only finite integer intervals', () => {
   for (const raw of [undefined, null, 'full\n[evil]', 42, {}, false]) {
     const settings = normalizeConnectSettings({ detail: raw, cardMode: raw, progressStyle: raw, showStreamPreview: raw })
     assert.equal(settings.detail, 'compact')
-    assert.equal(settings.cardMode, 'legacy')
-    assert.equal(settings.progressStyle, 'legacy')
+    // Display defaults are the Card 2.0 rich card with the structured progress
+    // card (ADR 0041); an explicit legacy choice is preserved by the value
+    // checks above this fallback.
+    assert.equal(settings.cardMode, 'rich')
+    assert.equal(settings.progressStyle, 'card')
     assert.equal(settings.showStreamPreview, raw === false ? false : true)
   }
   for (const raw of [undefined, null, '3000', NaN, Infinity, -Infinity, 1500.5]) {
@@ -131,7 +155,7 @@ func main() {
     const defaults = renderConnectToml({ settings: { enabled: true, appId: 'cli_old', workspace: paths.workspace }, paths })
     await writeFile(defaultFile, defaults)
     files.push(defaultFile)
-    expected.push({ detail: 'compact', cardMode: 'legacy', progressStyle: 'legacy', enabled: true, interval: 3000 })
+    expected.push({ detail: 'compact', cardMode: 'rich', progressStyle: 'card', enabled: true, interval: 3000 })
     assert.equal((defaults.match(/\[stream_preview\]/g) ?? []).length, 1)
     assert.equal((defaults.match(/\[projects.display\]/g) ?? []).length, 1)
     const { stdout } = await promisify(execFile)('go', ['run', runner, ...files], { cwd: 'third_party/cc-connect', timeout: 60_000, env: { ...process.env, DSH_CC_CONNECT_FEISHU_SECRET: 'fake-parse-secret' } })

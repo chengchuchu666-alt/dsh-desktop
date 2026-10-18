@@ -1025,7 +1025,7 @@ shellTest.describe('cc-connect desktop sidecar', () => {
     })
     const save = (input: unknown) => window.evaluate(input => (window as unknown as { dshDesktop: Bridge }).dshDesktop.saveConnectSettings(input), input)
     const base: ConnectSettingsInput = { enabled: true, appId: 'cli_display_fake', workspace: dshHome, appSecret: 'fake-display-secret' }
-    await expect.poll(state).toMatchObject({ detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'legacy', progressStyle: 'legacy' })
+    await expect.poll(state).toMatchObject({ detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'rich', progressStyle: 'card' })
     expect(await save(base)).toMatchObject({ ok: true, state: { phase: 'stopped', secretConfigured: true } })
     expect(await window.evaluate(() => (window as unknown as { dshDesktop: Bridge }).dshDesktop.startConnect())).toBe(true)
     await expect.poll(state).toMatchObject({ phase: 'ready' })
