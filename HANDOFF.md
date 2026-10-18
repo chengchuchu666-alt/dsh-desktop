@@ -2718,3 +2718,32 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 3. CI 证据留存修复：Playwright 每次运行清空输出目录，市场用例把 packaged `@smoke` 写的桌面 UI 截图冲掉，导致此前工件
    只有市场弹窗。新增 `scripts/collect-visual-evidence.mjs`，在 packaged 运行后立刻拷到 `visual-evidence/packaged`
    （Xvfb 侧 `packaged-headless`）并纳入工件上传；随后 dispatch 的 release run 起三平台扩展面截图随工件发布。
+
+## 90. 发布 v0.2.1-rc.2.shell.0（内核升级 + 三端真机验证入流程，2026-10-19）
+
+1. **内核升级**：`0.2.1-rc.1` → `0.2.1-rc.2`（`version.mjs bump dsh`），32 个 `@deepseek-ai/dsh-*` peer 同步，
+   manifest 锁定文件重生成，发行年龄豁免 315 → 302 条（13 条保留锁定文件解析版本）。两处已复核补丁：
+   账号授权弹窗回退 + onboarding 守卫（`patchedDependencies` 随 bump 指向 rc.2 patch，两处 hunk 在 staged closure 中确认存在）；
+   会话回收站补丁改为 `REVIEWED_KERNELS` 列表 + `test/session-trash-kernel.test.ts`，复核依据是
+   `dsh-api-session-controller/lib/index.js` 与 `dsh-client-ui-workspace/lib/client.js` 在 rc.1/rc.2 之间**逐字节相同**、
+   两个变换仍命中。
+2. **本地门禁**：`pnpm verify` 477 通过；LAN 配对 2/2；市场离线 1/1、真实 2/2；打包 E2E 24 passed；
+   `pnpm run dist:dir` 后 packaged smoke 与 Harness-UI smoke 均 OK（版本 `0.2.1-rc.2.shell.0`）。
+3. **发布**：tag `v0.2.1-rc.2.shell.0` → `d96eb806ffcfa688e26769aedfea15f087e8086c`；run `39145151061`
+   （tag push）verify + 4×build + publish 全绿。四个 runner 的**视觉门禁全部 21/21**：
+   `visual-evidence[macos-14/windows-2022/ubuntu-24.04/ubuntu-24.04-arm]: all 21 extension surfaces rendered`。
+   工件：安装包 macOS 271.6 MB、Windows 246.7 MB、Linux x64 218.1 MB、Linux arm64 212.7 MB；
+   视觉证据 `packaged-visuals-*` 4–224 MB。
+4. **GitHub Release**：10 个资产（dmg/amd64-deb/arm64-deb/exe + 四个 `.sha256` + blockmap + latest.yml），
+   prerelease，attestation 在 CI 中验证通过。
+5. **GitCode 镜像**：新建 release（`--status unset`，预发布配额已满），`--ref d96eb806…`，8/8 资产上传并匿名可下载
+   （`mirror-gitcode-v2 --check-only` → `8/8 assets present`）；arm64 deb 完整下载 222,973,192 字节，
+   SHA-256 `78feb7db…` 与 `.sha256` 及本地一致。
+6. **官网**：`site/data/release.json` 已为 `v0.2.1-rc.2.shell.0`（8 个公开资产、逐资产 `gitcode_ok=true`），
+   线上 `https://dsh-desktop.com/data/release.json` 回读一致。
+7. **流程固化**：视觉门禁 `scripts/verify-visual-evidence.mjs`（21 个打包扩展面）+ 采集器
+   `scripts/collect-visual-evidence.mjs`（Playwright 每次清空输出目录，必须在 packaged 跑完立刻留存）接入 release.yml；
+   发布 job 只下载 `dsh-desktop-*` 安装包工件（视觉工件不得进 release）；运行手册新增
+   「Real-machine verification」章节（CI 自动层 + 维护者 VM 层：Windows 11 ARM64/UTM 与 arm64 Ubuntu 清单），
+   计划文档 §12 记录流程与覆盖口径。本轮踩到的四个流程缺口（跨版本升级选包、ESM 顶层 return、`linux-arm64-unpacked`、
+   反向守卫让 arm runner 跑 GUI smoke）与发布侧两个缺口（视觉工件进了 release 目录、门禁读错证据树）都已修入流程。
