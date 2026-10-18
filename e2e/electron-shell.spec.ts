@@ -1,6 +1,6 @@
 import { test, expect, _electron as electron, chromium, webkit, type ElectronApplication, type Page } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { execFile, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { homedir, tmpdir } from 'node:os'
@@ -976,7 +976,13 @@ shellTest.describe('cc-connect desktop sidecar', () => {
     expect((await state())?.secretConfigured).toBe(true)
     const config = await readFile(join(userData, 'cc-connect', 'config.toml'), 'utf8')
     const initial = (await state())!
-    expect(config).toContain(`data_dir = ${JSON.stringify(join(userData, 'cc-connect', 'applications', initial.applicationId!, 'data'))}`)
+    // The sidecar gets a short alias for its data directory (macOS caps the
+    // control-socket path at 104 bytes), so assert the configured path resolves
+    // to the application's own data directory rather than spelling it out.
+    const configuredDataDir = /^data_dir = "(.+)"$/m.exec(config)?.[1]
+    expect(configuredDataDir).toBeTruthy()
+    expect(await realpath(configuredDataDir!))
+      .toBe(await realpath(join(userData, 'cc-connect', 'applications', initial.applicationId!, 'data')))
     expect(await starts()).toBe(1)
     expect(await action('stopConnect')).toBe(true)
     await reopen()
