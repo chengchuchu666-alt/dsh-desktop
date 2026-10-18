@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-18T10:21:30.255Z",
+  "generated_at": "2026-10-18T10:26:41.658Z",
   "repo": {
     "full_name": "citrusli2026/dsh-desktop",
     "html_url": "https://github.com/citrusli2026/dsh-desktop",
@@ -7,9 +7,9 @@
     "license": "MIT"
   },
   "stats": {
-    "installer_downloads": 6621,
+    "installer_downloads": 6622,
     "mac_downloads": 784,
-    "win_downloads": 5197,
+    "win_downloads": 5198,
     "linux_downloads": 640,
     "releases": 78
   },
