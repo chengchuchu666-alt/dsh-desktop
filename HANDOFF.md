@@ -2684,3 +2684,22 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    **零检出、零拦截**。国内 OEM 杀软无 ARM64 版本，如需覆盖仍需 x86_64 真机或 VirusTotal API key。
 5. **Linux 侧仍是 F-1 缺口**：发布 DEB 仅 amd64，arm64 Ubuntu 上 `dpkg -i` 拒绝；Linux 发布产物的原生视觉证据
    由 CI x86_64 runner 截图提供。建议为 arm64 增加打包 job 或在下载页明确「Linux 仅 x86_64」。
+
+## 88. Linux arm64 产物：打包 job + 在机安装与原生视觉（2026-10-18）
+
+1. **新增 arm64 打包 job**：`release.yml` matrix 增加 `ubuntu-24.04-arm`（GitHub 官方 ARM64 runner），
+   `--linux deb --arm64`；Linux 判定统一为 `startsWith(matrix.os, 'ubuntu-24.04')`（13 处）与
+   `${{ !startsWith(...) }}`（8 处）。产物契约按架构命名（`installerNames(version,'linux',arch)`，
+   资产 8 → 10），App 修复链接跟随运行架构，站点守卫放宽到 2/4/6/8 且中英文文案改为「Linux x64 / arm64」，
+   ADR 0017 追加 Amendment，install-block/README 同步。`pnpm verify` 472 测试全绿。
+2. **CI 在 arm64 上暴露的四处 x64 假设（5 次 dispatch 全部修掉）**：① 上一版只有 amd64 deb →
+   升级 smoke 按架构选包并在缺少本架构时跳过；② 跳过分支误用顶层 `return`（ESM 语法错误）→ 抽出函数；
+   ③ electron-builder 的 `linux-arm64-unpacked/` 不被定位器识别 → 接受可选架构段；④ 反向守卫让 arm runner
+   同时跑需要显示器的 GUI smoke → 改为 `!startsWith(...)`。
+3. **产物与在机验证（arm64 Ubuntu 24.04.5 GNOME）**：run `39121607083` 的 arm job success，工件 212.6 MB；
+   `dsh-desktop-0.2.1-rc.1.shell.1-arm64.deb`（SHA-256 `61b8feff…d1d769`）在 guest 内 `sha256sum -c` OK、
+   `dpkg-deb -I` → `Architecture: arm64`；`apt-get install` 成功（同一 guest 此前拒绝 amd64 包），
+   `dpkg -l` → `ii dsh-desktop 0.2.1~rc.1.shell.1 arm64`；应用在 GNOME 内启动，截图
+   `~/dsh-review/evidence/linux/desktop-with-app.png` 为首启界面原生视觉证据。非阻塞观察：日志有
+   `gtk_widget_add_accelerator` 断言告警（Electron/Gtk 在 24.04 常见）。
+4. 结论：**F-1 关闭**——arm64 Linux 用户现在有可安装、可运行的发布产物；第三方 AV 仍按用户选择未覆盖（§9.5）。
