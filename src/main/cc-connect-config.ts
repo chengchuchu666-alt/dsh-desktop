@@ -38,7 +38,7 @@ export interface ConnectTomlInput {
 }
 
 export const CONNECT_DISPLAY_DEFAULTS = {
-  detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'legacy', progressStyle: 'legacy',
+  detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'rich', progressStyle: 'card',
 } satisfies Pick<ConnectSettings, 'detail' | 'showStreamPreview' | 'streamPreviewIntervalMs' | 'cardMode' | 'progressStyle'>
 const DEFAULT_SETTINGS: ConnectSettings = { enabled: false, appId: '', workspace: '', ...CONNECT_DISPLAY_DEFAULTS }
 

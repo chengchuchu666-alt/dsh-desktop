@@ -1405,7 +1405,7 @@ window.__ModuleLoader__.load({
       const [healthBusy, setHealthBusy] = react.useState(false);
       const [healthNetwork, setHealthNetwork] = react.useState(false);
       const [connectState, setConnectState] = react.useState(null);
-      const [connectForm, setConnectForm] = react.useState({ enabled: false, appId: "", appSecret: "", workspace: "", detail: "compact", showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: "legacy", progressStyle: "legacy" });
+      const [connectForm, setConnectForm] = react.useState({ enabled: false, appId: "", appSecret: "", workspace: "", detail: "compact", showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: "rich", progressStyle: "card" });
       const connectRevision = react.useRef(0);
       const editConnect = (patch) => {
         connectRevision.current++;
@@ -1438,7 +1438,7 @@ window.__ModuleLoader__.load({
           setConnectState(value);
           if (!initialized) {
             initialized = true;
-            if (connectRevision.current === 0) setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
+            if (connectRevision.current === 0) setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "rich", progressStyle: value.progressStyle ?? "card" });
           }
         };
         const poll = () => void refresh().catch(() => { if (mounted) setConnectMessage(copy.connectUnavailable); });
@@ -1463,7 +1463,7 @@ window.__ModuleLoader__.load({
           if (result.ok) {
             const value = result.state;
             if (revision === connectRevision.current) {
-              setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "legacy", progressStyle: value.progressStyle ?? "legacy" });
+              setConnectForm({ enabled: value.enabled === true, appId: value.appId ?? "", appSecret: "", workspace: value.workspace ?? "", detail: value.detail ?? "compact", showStreamPreview: value.showStreamPreview ?? true, streamPreviewIntervalMs: value.streamPreviewIntervalMs ?? 3000, cardMode: value.cardMode ?? "rich", progressStyle: value.progressStyle ?? "card" });
             } else {
               setConnectForm((current) => ({ ...current, appSecret: current.appSecret === submittedSecret ? "" : current.appSecret }));
             }

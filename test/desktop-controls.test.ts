@@ -101,6 +101,10 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   assert.match(client, /select:focus-visible/)
   assert.match(client, /select:disabled/)
   assert.match(client, /disabled: !connectForm\.showStreamPreview/)
+  // ADR 0041: the settings form falls back to the Card 2.0 rich card and the
+  // structured progress card, matching CONNECT_DISPLAY_DEFAULTS.
+  assert.match(client, /cardMode: "rich", progressStyle: "card"/)
+  assert.match(client, /cardMode: value\.cardMode \?\? "rich", progressStyle: value\.progressStyle \?\? "card"/)
   assert.match(client, /\[1500, 3000, 5000\]/)
   assert.match(client, /connectRevision\.current/)
   assert.match(client, /setConnectForm\(\{[\s\S]*appSecret: ""/)

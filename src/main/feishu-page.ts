@@ -87,7 +87,7 @@ const api = window.dshFeishu, copy = JSON.parse(document.getElementById('copy').
 const byId = id => document.getElementById(id), fields = ['name','appId','appSecret','workspace','detail','showStreamPreview','streamPreviewIntervalMs','cardMode','progressStyle'];
 let state, edited, dirty = false, busy = false, reading = false, revision = 0, listKey = '', lastSavedQr;
 const text = (id, value) => { byId(id).textContent = value || '' };
-const defaults = { name: 'Feishu', appId: '', appSecret: '', workspace: '', detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'legacy', progressStyle: 'legacy' };
+const defaults = { name: 'Feishu', appId: '', appSecret: '', workspace: '', detail: 'compact', showStreamPreview: true, streamPreviewIntervalMs: 3000, cardMode: 'rich', progressStyle: 'card' };
 function fill(application) {
   edited = application?.id; dirty = false;
   const value = { ...defaults, workspace: state?.connection.workspace || '', ...application, appSecret: '' };
