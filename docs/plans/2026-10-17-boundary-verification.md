@@ -223,4 +223,43 @@ DisableRealtimeMonitoring : False        ExclusionPath/Extension : 需管理员�
 
 ### 9.6 Linux 侧结论（不变）
 
-发布产物仍只有 amd64（F-1）；arm64 Ubuntu 24.04.5 上 `dpkg -i` 明确拒绝。Linux 原生视觉的**发布产物**证据来自 CI 的 x86_64 runner 截图（§8.4），arm64 Linux 用户当前无产物可用。
+发布产物曾只有 amd64（F-1）；该缺口已在 §10 关闭：新增 arm64 打包 job，产物在 arm64 Ubuntu 24.04.5 上安装并运行，附原生桌面截图。
+
+## 10. F-1 收口：Linux arm64 产物与原生视觉（2026-10-18）
+
+### 10.1 打包 job
+
+`release.yml` 增加 `ubuntu-24.04-arm`（GitHub 官方 ARM64 runner）matrix 项：`--linux deb --arm64`，上传
+`dist/*.deb` + `.sha256`；所有 Linux 步骤的判定从 `matrix.os == 'ubuntu-24.04'` 改为
+`startsWith(matrix.os, 'ubuntu-24.04')`（13 处）与 `${{ !startsWith(...) }}`（8 处，避免 arm runner 同时跑需要真实显示器的 GUI smoke）。
+产物契约（`scripts/release-shape.mjs`）改为按架构命名：`installerNames(version, 'linux', arch)`，
+`expectedAssetNames` 从 8 个资产变为 10 个（两个 deb 各带 `.sha256`）；App 侧的修复链接
+（`src/main/closure-manifest.ts`）也跟随运行架构，arm64 用户不会被指向 amd64 包。站点资产数守卫放宽到 2/4/6/8，
+中英文下载页/安装页/FAQ 改为「Linux x64 / arm64」，ADR 0017 增加 Amendment。
+
+### 10.2 CI 在 arm64 上暴露并修掉的四处 x64 假设（5 次 dispatch）
+
+| # | 失败步骤 | 根因 | 修复 |
+|---|---|---|---|
+| 1 | Cross-version upgrade (Linux) | 上一个 release 只有 amd64 deb，arm runner 装不上 | `installerRunsHere()` 按架构选包；该架构无上一版时打印跳过并成功退出 |
+| 2 | 同上 | 跳过分支用了模块顶层 `return`（ESM 语法错误） | 抽出 `runDpkgUpgrade()` 函数 |
+| 3 | Smoke packaged app | electron-builder 在 arm 上产出 `linux-arm64-unpacked/`，定位器只认 `linux-unpacked/` | 定位器接受可选架构段；补 arm64 目录布局用例 |
+| 4 | Smoke packaged app（GUI 变体） | 反向守卫 `matrix.os != 'ubuntu-24.04'` 对 arm runner 为真，导致无显示器的 GUI smoke 也执行（`The platform failed to initialize`） | 8 处反向守卫改为 `!startsWith(...)` |
+
+### 10.3 产物与在机验证（arm64 Ubuntu 24.04.5）
+
+- 构建：run `39121607083`，job `build (ubuntu-24.04-arm, --linux deb --arm64)` **success**，工件
+  `dsh-desktop-ubuntu-24.04-arm`（212.6 MB）。
+- 产物：`dsh-desktop-0.2.1-rc.1.shell.1-arm64.deb`，本机 SHA-256
+  `61b8feffa6a6ca6b33fddbb24ef03e192a5dd3689a0e8220875e42aaa5d1d769`，在 guest 内 `sha256sum -c` → **OK**；
+  `dpkg-deb -I` → `Architecture: arm64`、`Installed-Size: 900619`。
+- 安装：`sudo apt-get install -y ./dsh-desktop-…-arm64.deb` 成功（此前 amd64 包在同一 guest 上被
+  `package architecture (amd64) does not match system (arm64)` 拒绝）。`dpkg -l` → `ii dsh-desktop
+  0.2.1~rc.1.shell.1 arm64 DeepSeek Harness desktop shell`。
+- 原生视觉：`/usr/bin/dsh-desktop` 在 GNOME 会话内启动，窗口标题 `dsh-desktop — DeepSeek Harness (Community)`；
+  截图 `~/dsh-review/evidence/linux/desktop-with-app.png` 显示完整首启界面（New Session / Plugins / Automation
+  tasks / Default workspace，Into the Unknown，FIRST RUN 四步中 1 Runtime ready ✅、2 Choose a workspace ✅）。
+- 观察（非阻塞）：`app.log` 内有若干 `gtk_widget_add_accelerator: assertion 'GTK_IS_ACCEL_GROUP'` 警告，来自
+  Electron/Gtk 在 Ubuntu 24.04 上的常见告警，应用照常可用。
+
+F-1（发布产物只有 amd64）到此关闭：arm64 Linux 现在有可安装、可运行的发布产物，并有真实桌面的原生视觉证据。
