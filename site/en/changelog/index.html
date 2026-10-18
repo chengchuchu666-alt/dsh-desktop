@@ -42,6 +42,15 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.0 <small>（kernel 0.2.1-rc.2）</small></h2>
+  <ul>
+    <li><strong>Kernel upgrade <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong> with all <code>@deepseek-ai/dsh-*</code> peers, a regenerated manifest lockfile and re-pinned release-age excludes. Both reviewed shell patches are confirmed for the new kernel: the two patched upstream bundles are byte-identical between the two kernels and the transforms still apply, so the patch manifest now records the reviewed-kernel list explicitly.</li>
+    <li><strong>macOS control-socket fix</strong>: the sidecar's per-application data directory pushed <code>run/api.sock</code> past the <code>sun_path</code> limit, so the manager reported a working connection as closed. The sidecar now gets a short <code>$TMPDIR</code> alias (symlink to the real directory, no data migration).</li>
+    <li><strong>Rich Feishu cards by default</strong> for new connections; existing and explicitly-legacy choices are untouched.</li>
+    <li><strong>Linux arm64 packages</strong> built on <code>ubuntu-24.04-arm</code>; the asset contract lists both debs with their checksums.</li>
+    <li><strong>Real-machine visual verification is now a release gate</strong>: every desktop runner must render all 21 extension surfaces of the packaged app, and the screenshots ship as artifacts.</li>
+  </ul>
+
   <h2>v0.2.1-rc.1.shell.1 <small>（kernel 0.2.1-rc.1）</small></h2>
   <ul>
     <li><strong>Plugin crashes now self-heal (#115 family)</strong>: a loader row that imports a package the bundled kernel does not carry used to leave only &quot;startup failed&quot; and a restart loop — Safe Mode could not help because it only collected rows inserted by user bundles, while the failing row usually comes from <code>cordis.patch.yml</code> or a file it includes. This release classifies that failure as <code>missing-package</code>, points the error page at the fix (update the app or disable the plugin), extends Safe Mode over the profile/home patch layers and their includes (user overrides of *official* rows stay enabled), and records non-bundle failing rows in a shell-owned quarantine overlay that skips them on the next start — reversible from the error page, the extensions menu, or by updating or disabling the plugin.</li>
@@ -110,15 +119,6 @@
     <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup. Local unit, ACP, Go/race and candidate packaged gates passed without weakened assertions.</li>
     <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into an isolated mobile browser, including session access, rotation, reload, single-use pairing and logout. This is not physical-camera or separate-device Wi-Fi evidence. Temporary sharing is disabled afterward.</li>
     <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted credentials. Stable distribution signing is a separate follow-up, not a plaintext-credential workaround.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.1 <small>（kernel 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li>Refreshes the sidebar after trash deletion, restoration and unarchiving, while protecting active turns, child sessions, identity conflicts and external writer leases.</li>
-    <li>Adds a unified Feishu application manager with QR cancellation/expiry/retry, local app management and explicit persistent connection controls.</li>
-    <li>Adds quieter compact/3-second preview defaults and bounded card/progress preferences; fixes ACP reasoning leaking into answer text. Existing settings and credentials migrate without loss.</li>
-    <li>Separates service, channel and completed-task health. Secrets remain main-process-only; Safe Mode does not override explicit close.</li>
-    <li>Local unit, Go/race, packaged UI, market and controlled live Feishu gates passed. Release CI validates all three installers and provenance; domestic mirrors require anonymous verification.</li>
   </ul>
   <!-- changelog:auto:end -->
 

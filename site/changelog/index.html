@@ -42,6 +42,16 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.0 <small>（内核 0.2.1-rc.2）</small></h2>
+  <ul>
+    <li><strong>内核升级 <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong>：同步 32 个 <code>@deepseek-ai/dsh-*</code> peer 版本，重生成 manifest 锁定文件， 并把发行年龄豁免重新固定到新内核（315 → 302 条，13 条保留锁定文件中的解析版本）。两处已复核的壳内补丁 （账号授权弹窗回退、会话回收站生命周期）确认继续适用：被补丁的两个上游 bundle 在 rc.1 与 rc.2 之间 <strong>逐字节相同</strong>，两个变换在新源码上仍然命中；补丁清单因此改为显式的「已复核内核」列表。</li>
+    <li><strong>控制套接字路径修复（macOS）</strong>：非 legacy 应用的 sidecar 数据目录很深， <code>…/cc-connect/applications/〈应用 ID〉/data/run/api.sock</code> 超过 macOS <code>sun_path</code> 上限，<code>bind</code> 失败后管理器会把 正常工作的连接显示成「已关闭/离线」。现在给 sidecar 一个 <code>$TMPDIR</code> 下的短别名（软链到真实数据目录，零迁移）， 实测深路径 116 字符绑定失败、别名 93 字符成功，打包后日志为 <code>api server started socket=/var/folders/…</code>。</li>
+    <li><strong>飞书默认改为富卡片</strong>：新连接的卡片样式默认 <code>rich</code>、进度展示默认 <code>card</code>（老配置与显式 <code>legacy</code> 选择保持不变）。</li>
+    <li><strong>Linux arm64 产物</strong>：发布矩阵新增 <code>ubuntu-24.04-arm</code>，与 amd64 同源打包 <code>-arm64.deb</code>；资产契约从 8 个变为 10 个 （两个 deb 各带 <code>.sha256</code> 校验文件），应用内修复链接按运行架构选择，站点文案与 ADR 0017 同步更新。</li>
+    <li><strong>发版流程新增真机视觉验证门禁</strong>：macOS / Windows / Linux x64 / Linux arm64 四个 runner 在打包 <code>@smoke</code> 跑完后 必须证明<strong>渲染出全部 21 个桌面扩展面</strong>（首启与安全模式横幅、浮动飞书快捷控制及其底部菜单、飞书管理五种状态、 消息偏好、六个设置面板、LAN 配对、回收站、恢复、加载、插件市场弹窗）；缺失即失败并列出缺哪些，截图随工件发布 （<code>scripts/verify-visual-evidence.mjs</code>）。</li>
+    <li><strong>边界说明</strong>：所有验证都在本地或 CI 的隔离环境完成；健康检查结果只在本地脱敏展示，不会自动上传。</li>
+  </ul>
+
   <h2>v0.2.1-rc.1.shell.1 <small>（内核 0.2.1-rc.1）</small></h2>
   <ul>
     <li><strong>插件崩溃后能自愈（#115 一类）</strong>：当某个加载行引用了内置内核不提供的包时，以前只有 &quot;启动失败&quot;和一个反复重启的循环——安全模式也救不回来（安全模式只收集用户 bundle 插入的行， 而失败行常常来自 <code>cordis.patch.yml</code> 或它 include 的文件）。本版：失败分类新增&quot;找不到包&quot;， 错误页直接给出&quot;升级到最新版 / 禁用该插件&quot;的方向；安全模式开始覆盖 profile 与 home 两层的 <code>cordis.patch.yml</code> 及其 <code>include</code> 文件（用户对<strong>官方行</strong>的配置覆盖仍保持启用，不会被误禁用）； 自动隔离不再只认 bundle 名，非 bundle 的失败行会被记入壳自有的禁用 overlay，下次启动自动 绕开它，并可在错误页、「桌面工具」菜单或升级/禁用该插件后一键解除。</li>
@@ -109,14 +119,6 @@
     <li><strong>飞书设置布局</strong>：管理应用/扫码创建入口复用桌面设置按钮样式，健康说明独立成块； 窄卡片与中英文界面不再将入口和状态文字混排。不改变 Secret 存储、连接意图或 Safe Mode。</li>
     <li><strong>局域网配对倒计时</strong>：二维码窗口正确逐秒更新剩余时间，不再一直显示 600 秒； 真实到期时间、一次性配对和手动关闭共享规则不变。</li>
     <li><strong>发布回归稳定性</strong>：窗口宽度断言按内容尺寸跨平台验证；cc-connect 测试使用独立 会话事件通道并等待最终回复后清理临时目录，不跳过或降低原行为断言。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.1 <small>（内核 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li><strong>垃圾桶与侧栏同步</strong>：删除、还原和取消归档后无需重启；活动任务、驻留子任务、身份冲突及其他进程持有的会话会被安全拒绝，不强停或覆盖。</li>
-    <li><strong>完整飞书应用管理</strong>：设置和原生菜单打开同一独立窗口；默认扫码创建，支持取消、过期重试、多份本地应用、编辑、开启、持久关闭和确认移除。扫码保存不隐式开启或切换，关闭窗口不关闭连接。</li>
-    <li><strong>消息降噪与卡片</strong>：默认精简 + 3 秒预览；可选完整/精简/静默、流式预览、经典/富卡片和进度样式。修复 ACP 思考被重复映射成正文的问题；旧配置和凭据无损迁移。</li>
-    <li><strong>可靠状态与安全边界</strong>：捆绑 cc-connect 提供真实长连接健康信号，分别显示服务启动、飞书通道在线和 DSH 实际任务成功；缺模型 key 指向 Models。Secret 不回读、不进入 TOML/日志；Safe Mode 暂停和持久关闭保持独立。</li>
   </ul>
   <!-- changelog:auto:end -->
 
