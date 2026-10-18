@@ -121,7 +121,17 @@ dpkg: error processing archive /home/dsh/dsh-desktop-0.2.1-rc.1.shell.0-amd64.de
 
 ### 8.4 补充：让 CI 保留三平台原生视觉证据（已实施）
 
-`release.yml` 此前只上传安装包与 NSIS 计时，packaged `@smoke`（`e2e/desktop-ui-review.spec.ts` 等）在真实 Windows/Linux runner 上写出的截图被丢弃。已新增 `packaged-visuals-<runner>` 工件（`test-results/**/*.png|json|txt`，30 天，失败也上传），提交 `c455d8b`；由于 main 处于用户会话的迭代中（其 rich-card 改动使 verify 红），验证分支 `ci-visual-evidence`（基于绿色 tag `v0.2.1-rc.1.shell.1` + 该提交）触发 run `39092684234` 产出证据。
+`release.yml` 此前只上传安装包与 NSIS 计时，packaged 测试在真实 Windows/Linux runner 上写出的截图被丢弃。已新增
+`packaged-visuals-<runner>` 工件（`test-results/**/*.png|json|txt`，30 天，失败也上传），提交 `c455d8b`；
+由于 main 处于用户会话的迭代中（其 rich-card 改动使 verify 红），验证分支 `ci-visual-evidence`（基于绿色
+tag `v0.2.1-rc.1.shell.1` + 该提交）触发 run `39092684234` 产出证据。
+
+实测工件内容（`39092684234`）：三平台各得 `popover-attempt-0.png`（packaged 应用真实渲染：Windows 1024×728
+显示 `Ctrl + Alt + ,` 快捷键、macOS 1280×860 显示 `⌘,`、Linux 1280×833）+ `nsis-benchmark.json`（Windows）。
+`e2e/desktop-ui-review.spec.ts` 的 `first-run-safe-mode.png`/`feishu-*-narrow.png`/`settings-feishu.png`
+未出现在该工件的 packaged 任务里（这些用例未在该矩阵任务中产出截图），因此该工件目前证明的是
+「应用在真实三平台桌面上可启动并渲染」，**不覆盖**安装器向导、托盘菜单、原生文件对话框与输入法。
+这两部分仍需物理机/可用 VM（见 8.3）。
 
 ### 8.5 C 项：第三方 AV
 
