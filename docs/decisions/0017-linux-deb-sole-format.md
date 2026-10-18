@@ -59,3 +59,14 @@ release validator's contract out of sync with the pipeline.
   second Linux file to the release contract — rejected.
 - Static not-repackaged instructions (`npx`): requires Node/npm on the
   user machine, defeating the shell's zero-setup promise — rejected.
+
+## Amendment (2026-10-18): two architectures
+
+The deb remains the sole Linux *format*, but it is no longer a single
+architecture. An arm64 Ubuntu 24.04.5 guest refused the published amd64 deb
+(`package architecture (amd64) does not match system (arm64)`), so ARM desktop
+users — Raspberry Pi, ARM servers, Asahi, Snapdragon laptops — had no artifact
+at all. The build matrix gained `ubuntu-24.04-arm` (`--linux deb --arm64`), the
+public asset contract now lists `-amd64.deb` and `-arm64.deb` with their
+checksums, and the per-runner checksum step names the deb that runner built.
+Nothing else in this decision changes.

@@ -3,7 +3,7 @@
 
 - macOS: `dsh-desktop-<版本>-arm64-mac.dmg`（Apple Silicon）。首次打开如遇 Gatekeeper 提示，请 **右键点击 → 打开**。
 - Windows: `dsh-desktop-setup-<版本>.exe`。如遇 SmartScreen 提示，点 **更多信息 → 仍要运行**。
-- Linux: `dsh-desktop-<版本>-amd64.deb`（Debian/Ubuntu/UOS/Deepin/麒麟,双击安装）。
+- Linux: `dsh-desktop-<版本>-amd64.deb`（x64）或 `dsh-desktop-<版本>-arm64.deb`（ARM64），适用于 Debian/Ubuntu/UOS/Deepin/麒麟，双击安装。
 - 每个安装包均附带 `.sha256` 校验文件。
 
 **验证安装包来源（可选但推荐）**
