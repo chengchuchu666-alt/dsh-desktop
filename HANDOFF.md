@@ -2623,3 +2623,38 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 | macOS DMG | 285666284 | `3187d04ce50ce74f840d13858b5e4dd8d44de50ecaa8bc641766b3cc4c5af59d` |
 | Windows EXE | 260291984 | `29a0b3c8ab45a0e5bc6da986ce4169ee72beacdecca0a318184e8ceee0b8f0a8` |
 | Linux DEB | 228672000 | `bb59298515ffa91867d9769734323547660c249fd1dd47792eb7c1f847fdda10` |
+
+## 86. 未覆盖边界验证（2026-10-18；A 完成，B/C 部分完成并记录阻塞）
+
+1. **A 真实飞书往返：完成**。按用户授权临时接管其机器人连接（其机器人 09:41 起空闲，接管前先点「关闭连接」
+   并确认 sidecar 退出），把其真实 `applications.json` + `credentials/<uuid>.json` 以 0600 原样复制进
+   **rc.1 打包产物的隔离实例**（`~/dsh-review/rc1/dsh-desktop.app`，`--user-data-dir` + `DSH_HOME` 均隔离，
+   未读取 Secret 内容），在**电脑版飞书**的 `dsh` 机器人会话发送带标记消息。
+   回包为富卡片：正文 `Done` + `E2E-T1`、页脚「用时 3.9 秒 / ~/dsh-desktop」；隔离 DSH_HOME 于 11:29
+   新建会话 `48149902-…`（标题即该消息，`session_projcache` 内可检索到 `E2E-T1`），sidecar 日志
+   `11:24:12 connected to wss://msg-frontier.feishu.cn` + `channel state=online`。
+   完成后已恢复用户连接（日志 `11:36:58 connected`，管理器回到「服务已启动 / 在线」），并还原飞书窗口尺寸；
+   隔离实例与临时副本已清理。步骤、证据与截图清单见 `docs/plans/2026-10-17-boundary-verification.md` §8.6。
+2. **发现 F-2（产品缺陷，macOS，影响当前发布线）**：非 legacy 应用的 sidecar 控制套接字路径过长。
+   `src/main/cc-connect-applications.ts:213` 对非 legacy 应用返回
+   `<userData>/cc-connect/applications/<id>/data`，macOS `sun_path` 上限 104 字节（可用 103），
+   实测隔离 profile 116 字符、真实 profile 同分支 132 字符，sidecar 报
+   `api server unavailable … bind: invalid argument`。后果：飞书通道照常收发，但管理器显示
+   「已关闭 / 离线 / 尚未通过任务验证」，控制面（健康、重启、任务验证）不可用——本轮真实往返期间
+   管理器一直显示离线而消息确实被处理。建议把控制套接字改到短路径（沿用 `cc-connect/data/run/api.sock`
+   或 `$TMPDIR`）并加路径长度断言与 macOS 回归；本轮未改产品代码。
+3. **发现 F-1（覆盖缺口，Linux）**：已发布 DEB 只有 amd64。arm64 Ubuntu 24.04.5 上
+   `dpkg -i` 报 `package architecture (amd64) does not match system (arm64)`（SHA-256 与发布一致）；
+   `electron-builder.yml` 只在 x64 runner 上打 deb。ARM Linux 用户目前无产物可用，建议用
+   `ubuntu-24.04-arm` runner 增加 arm64 deb，或在下载页明确「Linux 仅 x86_64」。
+4. **B/C 的其他进展与阻塞**：本机已装 UTM 5.0.8 与 QEMU 11.1.2；Linux guest（Ubuntu 24.04.5 arm64 +
+   GNOME/Xorg + 自动登录 + VNC/SSH）可随时用于应用本身的原生视觉核对；Windows guest 用 UUP 官方文件
+   合成 Windows 11 24H2 arm64 ISO（3.4 GB，`boot.wim` 两镜像校验通过），Setup 能引导到
+   「Install driver to display hardware」，但 Homebrew 版 QEMU 缺 `virtio-ramfb`（UTM 自带 QEMU 才有），
+   ramfb 与 virtio-gpu 二选一都会在加载显示驱动后让 VNC 失去画面，故未完成安装。
+   第三方 AV 需要可用的 Windows 或用户授权 VirusTotal 上传/提供 API key；arm64 Windows 上
+   360/火绒/腾讯电脑管家 无 ARM64 版本，国内杀软覆盖仍需 x86_64 真机。
+5. **CI 原生视觉证据**：`release.yml` 现在会上传 `packaged-visuals-<runner>`（`test-results/**/*.png|json|txt`，
+   30 天，失败也上传），首个证据构建 run `39092684234`（分支 `ci-visual-evidence`，基于绿色 tag
+   `v0.2.1-rc.1.shell.1` + 该提交）已产出 macOS/Linux 工件的真实平台截图；main 因用户会话迭代
+   （rich-card 默认值）verify 红，故未从 main 派发。
