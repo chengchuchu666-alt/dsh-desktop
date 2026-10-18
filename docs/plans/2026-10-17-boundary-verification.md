@@ -170,3 +170,57 @@ level=WARN msg="api server unavailable" error="listen unix socket: listen unix
 - 分支来自 `src/main/cc-connect-applications.ts:213`：`legacyDataApplicationId === id ? …/cc-connect/data : …/cc-connect/applications/<id>/data`。用户真实 profile 与隔离副本的 `legacyDataApplicationId` 都是空字符串，所以**默认就落到长路径分支**（旧 alpha.3 的扁平路径 `…/cc-connect/data/run/api.sock` 只有 82 字符，正常）。
 - 影响：sidecar 的 Feishu 通道照常工作，但 App 无法通过 API socket 获取健康/任务验证状态，管理器显示为「已关闭/离线/尚未通过任务验证」，用户会误判连接失败；App 对 sidecar 的控制面（重启/停止/健康）同样不可用。
 - 建议修复（未在本轮改代码）：把控制套接字放到短路径（如沿用 `…/cc-connect/data/run/api.sock`、或 `$TMPDIR/dsh-<hash>.sock`），或对 `<id>` 取短哈希；并加一条“socket 路径长度 ≤ 100”的断言与真实 macOS 回归。
+
+## 9. B/C 收尾：UTM 上的 Windows 11 ARM64 原生视觉与 Defender（2026-10-18）
+
+### 9.1 虚拟化路径（手工构造 UTM 虚拟机）
+
+UTM 5.0.8 的 `utmctl` 无 `create`，且 UTM 的「打开现有虚拟机」「选择文件」都是 `com.apple.appkit.xpc.openAndSavePanelService` 面板（不暴露 AX、忽略合成点击），因此按 UTM 的 `config.plist` schema 手工构造 bundle 后 `open -a UTM` 导入：
+
+- `DshWindows.utm/config.plist`（ConfigurationVersion 4，Backend QEMU）关键点：`System {Architecture aarch64, Target virt, MemorySize 8192, CPUCount 6, CPUFlagsAdd/Remove []}`、`QEMU {UEFIBoot, Hypervisor, RTCLocalTime, RNGDevice, **PS2Controller false**, AdditionalArguments []}`、`Display [Hardware **virtio-ramfb**]`、`Drive`（NVMe 系统盘 + USB 驱动盘 + USB OEM CD + USB Windows ISO CD）、`Input {UsbBusSupport 3.0, MaximumUsbShare 0}`、`Network`（后移除以保证首启）、`Sharing/Serial/Sound` 全部齐备。
+- 两个必须踩到的坑：① **必填键缺失会被 UTM 判为「配置无效」**（`CPUFlagsAdd/CPUFlagsRemove/PS2Controller/MaximumUsbShare/PortForward` 都是 `decode` 而非 `decodeIfPresent`）；② `virtio-ramfb` 不接受 `vgamem_mb`（`VgaRamMib` 必须省略），另外 **`PS2Controller=true` 会让 UTM 不生成 `usb-kbd`**（`virt` 机型没有 PS/2），导致键盘完全无输入。
+- 媒体：UUP dump 官方文件合成的 `win11-arm64.iso`（26100.1，3.4 GB）、自建 `autounattend.iso`（LabConfig TPM/SecureBoot/CPU/RAM/Storage 绕过 + 分区 + 本地账号 `dsh`）、UTM guest tools 的 ARM64 驱动盘、以及仅含发布产物的 `installer.iso`（248 MB）。
+
+### 9.2 安装与首启（关键发现：驱动缺失的 virtio 设备会拖死首启）
+
+| 步骤 | 结果 |
+|---|---|
+| 固件引导 | EDK2 未自动选 CD（bootindex 把不可引导的 USB 盘排在前面），用 Boot Manager 选 `UEFI QEMU QEMU USB HARDDRIVE 1-0000:00:03.0-4.3` 启动 Setup |
+| Setup | 自动应答生效：跳过版本/许可/分区，直接 `Installing Windows 11` → `54%` → 重启进 `bootmgfw.efi` |
+| 首次失败 | 带 virtio-net 时首启卡在 Windows logo，QEMU 持续 **512–666% CPU** 十多分钟无画面 |
+| 定位 | 移除 virtio-net（无 ARM64 收件箱驱动）后 **CPU 降到 1% 并直接进 OOBE** → 卡死由驱动缺失的 virtio 网卡引起，与显示无关 |
+| 完成 OOBE | 区域/键盘/第二键盘 → `Getting things ready for you` → 桌面（账号 `dsh`），随后 `virtio-ramfb` 全程正常渲染 |
+
+### 9.3 原生视觉证据（真实 Windows 11 ARM64 + 已发布 NSIS 安装包）
+
+截图保存在 `~/dsh-review/evidence/windows/`：
+
+1. `01-installer-wizard-install-options.png` — dsh-desktop Setup：「Anyone who uses this computer / Only for me (dsh)」，页脚显示 `dsh-desktop 0.2.1-rc.1.shell.0`
+2. `02-installer-wizard-location.png` — 安装目录 `C:\Users\dsh\AppData\Local\Programs\dsh-desktop`，占用 894.9 MB
+3. `03-installer-wizard-installing.png` / `04-installer-wizard-complete.png` — 安装进度与完成页（「Run dsh-desktop」勾选）
+4. `05-app-first-run-msvc-runtime-warning.png` — **发现 F-3**
+5. `06-app-main-ui.png` — 应用主界面（Into the Unknown / FIRST RUN 四步 / 工作区选择）
+6. `09-windows-desktop.png`、`10-oobe-getting-ready.png` — 桌面与 OOBE 现场
+
+### 9.4 发现 F-3（Windows 首次运行缺 MSVC 运行时，且提示文案按 x64 写）
+
+干净 Windows 11 ARM64 上首次启动应用时弹出「Windows runtime library missing」：缺 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll`，提示「install the official VC++ redistributable **(x64)**」。两点问题：① NSIS 安装包未随包分发/引导安装 VC++ 运行时，干净机器首启即降级（应用自身的 health check 能报出来，这点是好的）；② 在 ARM64 机器上文案仍写 x64，正确目标是 `vc_redist.arm64.exe`。建议：安装包内置并按架构选择 redist，或至少在文案里区分架构。
+
+### 9.5 C 项（第三方 AV）：本轮按用户选择跳过
+
+用户明确选择「本轮跳过 AV 扫描」，故**第三方杀软未覆盖**。已在同一台真实 Windows 11 ARM64 上取到内置 Defender 的证据（同为真实机器上的实时防护场景）：
+
+```
+AMServiceEnabled : True          RealTimeProtectionEnabled : True
+AntivirusEnabled : True          AntispywareEnabled        : True
+BehaviorMonitorEnabled : True    AMEngineVersion           : 1.1.23110.2
+AntivirusSignatureVersion : 1.403.7.0   AntivirusSignatureLastUpdated : 12/6/2023
+Get-MpThreatDetection / Get-MpThreat → 无输出（零检出）
+DisableRealtimeMonitoring : False        ExclusionPath/Extension : 需管理员查看
+```
+
+说明：`已发布 EXE` 在实时防护开启的 Windows 11 ARM64（离线、签名为 2023-12 基线）上完成挂载→安装→首启，Defender **零检出、零拦截**；由于无网络，签名未更新，且第三方 OEM 杀软（360/火绒/腾讯电脑管家无 ARM64 版本）仍需 x86_64 真机或用户提供 VirusTotal API key。
+
+### 9.6 Linux 侧结论（不变）
+
+发布产物仍只有 amd64（F-1）；arm64 Ubuntu 24.04.5 上 `dpkg -i` 明确拒绝。Linux 原生视觉的**发布产物**证据来自 CI 的 x86_64 runner 截图（§8.4），arm64 Linux 用户当前无产物可用。
