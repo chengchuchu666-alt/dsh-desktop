@@ -38,6 +38,7 @@ export const REQUIRED_SURFACES = [
   'loading.png',                        // 首屏加载
   'trash-sessions-populated.png',       // 回收站 · 会话
   'trash-resources-populated.png',      // 回收站 · 资源
+  'desktop-tools-info.png',             // 桌面工具面板 · 信息组（关于 + Star 入口）
 ]
 // Market-suite screenshots (popover-attempt-*.png, market-*.png) are not part
 // of this contract: they come from the market suites that run after the

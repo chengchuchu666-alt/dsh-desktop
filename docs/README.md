@@ -13,6 +13,7 @@
 | `HANDOFF.md` | **运维核心**：当前状态、发布流程、速查、版本记录 | 每次发布、镜像或官网调整后 |
 | `docs/ARCHITECTURE.md` | 产品架构、源码职责、验证契约 | 架构或门禁变化时 |
 | `docs/reliable-shell-iteration-plan.md` | 可靠 Electron 壳与开箱即用的后续迭代边界和顺序 | 产品范围或迭代推进时 |
+| [后续迭代与 Agent 执行入口](plans/2026-10-19-agent-iteration/README.md) | 当前项目盘点、22 张有界任务卡、依赖、验收与低性能 Agent 交接提示词 | 后续任务执行与设计审查后 |
 | [双路线执行入口](plans/2026-09-29-dual-track.md) | 主干可靠性维护与官方桌面补丁 Worktree 的分工、执行顺序和模型交接 | 后续路线或执行状态变化时 |
 | [多版本 Dashboard 产品计划](plans/2026-10-08-multi-runtime-dashboard.md) | Edition、Runtime、Environment 的产品边界、竞品借鉴、信任/隔离模型与里程碑 | 多版本管理或社区 Edition 路线变化时 |
 | [人工审查：垃圾桶与飞书管理](plans/2026-10-10-manual-review/README.md) | 垃圾桶状态同步诊断、飞书二维码应用管理、消息降噪/卡片样式与有序验收任务 | 人工反馈复核或对应迭代推进时 |

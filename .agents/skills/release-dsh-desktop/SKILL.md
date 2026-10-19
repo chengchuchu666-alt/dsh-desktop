@@ -461,7 +461,7 @@ node scripts/collect-visual-evidence.mjs test-results visual-evidence/packaged
 node scripts/verify-visual-evidence.mjs visual-evidence/packaged --label <runner>
 ```
 
-`verify-visual-evidence.mjs` names the 21 packaged desktop extension surfaces (first-run/safe-mode banner, floating Feishu quick
+`verify-visual-evidence.mjs` names the 22 packaged desktop extension surfaces (first-run/safe-mode banner, floating Feishu quick
 control and its bottom menu, five Feishu-manager states, message preferences, six settings panes, LAN pairing, trash,
 recovery, loading, market popover) and fails the job listing exactly which are missing. Screenshots ride along in the
 `packaged-visuals-<runner>` artifact. Playwright wipes its output directory per run, which is why the collector runs

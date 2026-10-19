@@ -69,6 +69,15 @@ for (const locale of ['zh', 'en'] as const) for (const theme of ['light', 'dark'
       await expect(emptyQuick.locator('[data-dsh-feishu-hint]')).toContainText(zh ? '不会自动连接' : 'never connects automatically')
       await expect(emptyQuick.locator('[data-dsh-feishu-start]')).toBeDisabled()
       await expect(emptyQuick.locator('[data-dsh-feishu-restart]')).toHaveCount(0)
+      // The INFO group is the panel's only persistent product link surface
+      // (About + the GitHub star row); capture it so the release gate covers it
+      // on every platform rather than trusting that nothing moved.
+      const infoGroup = emptyPanel.locator('section[data-dsh-controls-group="info"]')
+      await infoGroup.scrollIntoViewIfNeeded()
+      const infoRows = infoGroup.locator('[data-dsh-controls-actions] > *')
+      await expect(infoRows).toHaveCount(2)
+      await expect(infoRows.nth(1)).toContainText(zh ? '在 GitHub 上 Star' : 'Star on GitHub')
+      await infoGroup.screenshot({ path: info.outputPath('desktop-tools-info.png') })
       await page.keyboard.press('Escape')
       await expect(emptyPanel).toHaveCount(0)
       await expect(page.locator('[data-dsh-controls-trigger]')).toBeFocused()
