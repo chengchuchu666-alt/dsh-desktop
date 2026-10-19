@@ -59,11 +59,15 @@ async function sha256File(path) {
   return hash.digest('hex')
 }
 
-export async function verifyPreviousInstaller(dir, platform = process.platform) {
+export async function verifyPreviousInstaller(dir, platform = process.platform, arch = process.arch) {
   const suffix = installerSuffix(platform)
   const files = await readdir(dir)
-  const installers = files.filter(name => name.endsWith(suffix) && !name.endsWith(`${suffix}.sha256`))
-  if (installers.length !== 1) throw new Error(`expected one previous ${suffix} installer under ${dir}, found ${installers.length}`)
+  // Linux now publishes one deb per architecture, so the suffix alone is
+  // ambiguous: pick the installer that could actually run here.
+  const installers = files.filter(name => name.endsWith(suffix) && !name.endsWith(`${suffix}.sha256`) && installerRunsHere(name, platform, arch))
+  if (installers.length !== 1) {
+    throw new Error(`expected one previous ${suffix} installer for ${arch} under ${dir}, found ${installers.length} (${files.filter(name => name.endsWith(suffix)).join(', ') || 'none'})`)
+  }
   const installer = resolve(dir, installers[0])
   const checksumFile = `${installer}.sha256`
   const expected = parseChecksum(await readFile(checksumFile, 'utf8'))
@@ -81,7 +85,7 @@ export async function downloadPreviousRelease(dir, platform = process.platform, 
   const args = ['release', 'download', previousTag, '--repo', siteData.repo?.full_name ?? 'citrusli2026/dsh-desktop', '--dir', dir, '--clobber']
   for (const pattern of previousAssetPatterns(platform)) args.push('--pattern', pattern)
   await execFileP('gh', args, { maxBuffer: 8 * 1024 * 1024 })
-  const installer = await verifyPreviousInstaller(dir, platform)
+  const installer = await verifyPreviousInstaller(dir, platform, process.arch)
   console.log(`previous release: ${previousTag} -> ${installer} (SHA-256 verified)`)
   return { previousTag, installer }
 }
