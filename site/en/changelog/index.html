@@ -37,7 +37,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop Changelog","url":"https://dsh-desktop.com/en/changelog","inLanguage":"en","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/en"},{"@type":"ListItem","position":2,"name":"Changelog","item":"https://dsh-desktop.com/en/changelog"}]}</script>
 <!-- changelog:ld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop changelog","inLanguage":"en","dateModified":"2026-10-18","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.0"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop changelog","inLanguage":"en","dateModified":"2026-10-19","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.1"}}</script>
 <!-- changelog:ld:end -->
 </head>
 <body>
@@ -50,6 +50,13 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.1 <small>(kernel 0.2.1-rc.2)</small></h2>
+  <ul>
+    <li><strong>Star entry in the desktop tools panel</strong>: the INFO group gains a &quot;Star on GitHub&quot; row that opens the repository in the default browser with <code>?ref=app-panel</code> attribution, so panel clicks can be told apart from website ones. It is a persistent link only — no popup, no nagging, and it leaves the rest of the panel untouched.</li>
+    <li><strong>The website shipped its own fact-check iteration alongside</strong>: corrected claims (the bundled runtime is Node.js 24, not 22; the retired <code>npx</code> validation command is gone; the unverified plugin count is removed; CI gate wording no longer says &quot;real machine&quot;), the two independent copy sources were reconciled (<code>data-i18n</code> now actually applies), changelog entries were matched bullet for bullet across languages, and SEO gained structured data, a crawlable release snapshot, git-derived sitemap dates and a bilingual 404. All of it deploys with the site, no new installer required.</li>
+    <li><strong>Boundary note</strong>: both star entries only open the repository page and send no telemetry; the kernel stays at <code>0.2.1-rc.2</code> and the signing/notarization boundary is identical to the previous build.</li>
+  </ul>
+
   <h2>v0.2.1-rc.2.shell.0 <small>(kernel 0.2.1-rc.2)</small></h2>
   <ul>
     <li><strong>Kernel upgrade <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong>: 32 <code>@deepseek-ai/dsh-*</code> peers re-synced, the manifest lockfile regenerated, release-age exemptions re-pinned (315 → 302 entries, 13 kept at the version resolved in the lockfile). Both reviewed shell patches are confirmed for the new kernel: the two patched upstream bundles are byte-identical between the kernels and the transforms still match, so the patch manifest now records the reviewed-kernel list explicitly.</li>
@@ -122,15 +129,6 @@
     <li>Regenerates site commits from latest main on push races, handles changelog-only changes, and keeps future drafts out of the published changelog. Isolated regressions and eight website UI scenarios pass.</li>
     <li>Waits for final reply and turn-lock release in the file-attachment CUJ before temporary-directory cleanup; 200 race repetitions pass without changing the production Agent or Feishu behavior.</li>
     <li>Existing sprintf-js and ad-hoc-signing limitations remain documented. SDK updates do not silently migrate or revoke old OAuth credentials; follow issuer/re-authentication guidance where applicable.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.2 <small>(kernel 0.2.1-alpha.2)</small></h2>
-  <ul>
-    <li>Styles the Feishu management entry consistently and separates connection health text from the button, preserving Secret storage, connection intent and Safe Mode behavior.</li>
-    <li>Fixes the localized LAN QR countdown without changing expiry, one-time pairing or sharing permissions.</li>
-    <li>Uses cross-platform content dimensions in UI regression and drains separate mock sessions before cleanup. Local unit, ACP, Go/race and candidate packaged gates passed without weakened assertions.</li>
-    <li>The final installed shell.2 passed visual review, a real Feishu reply, and automatic QR decoding into an isolated mobile browser, including session access, rotation, reload, single-use pairing and logout. This is not physical-camera or separate-device Wi-Fi evidence. Temporary sharing is disabled afterward.</li>
-    <li>macOS remains ad-hoc signed; signature changes can require Keychain authorization despite saved encrypted credentials. Stable distribution signing is a separate follow-up, not a plaintext-credential workaround.</li>
   </ul>
   <!-- changelog:auto:end -->
 

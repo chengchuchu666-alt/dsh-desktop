@@ -37,7 +37,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 更新日志","url":"https://dsh-desktop.com/changelog","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/"},{"@type":"ListItem","position":2,"name":"更新日志","item":"https://dsh-desktop.com/changelog"}]}</script>
 <!-- changelog:ld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-18","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.0"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-19","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.1"}}</script>
 <!-- changelog:ld:end -->
 </head>
 <body>
@@ -50,6 +50,13 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.1 <small>（内核 0.2.1-rc.2）</small></h2>
+  <ul>
+    <li><strong>桌面工具面板新增 Star 入口</strong>：信息分组里多了一行「在 GitHub 上 Star」，点击会用默认浏览器打开仓库并带 <code>?ref=app-panel</code> 归因，方便区分面板点击与官网点击。它只是一个常驻链接：不弹窗、不催促、不影响面板其它操作。</li>
+    <li><strong>官网同步做了事实与文案迭代</strong>：核查并修正了站点上的错误声明（内置运行时是 Node.js 24 而不是 22、去掉已下线的 <code>npx</code> 校验命令、去掉未经核实的插件数量、把 CI 门禁的「真机」措辞改为四端 runner 视觉证据）；修正了中英文各自 独立的文案副本（<code>data-i18n</code> 现在真正生效）；更新日志中英条目逐条对齐；SEO 补齐结构化数据、可抓取的版本快照、 sitemap 日期与双语 404。这些随站点部署，无需更换安装包。</li>
+    <li><strong>边界说明</strong>：Star 入口与官网的 Star 邀请都只打开仓库页面，不发送任何遥测；内核 <code>0.2.1-rc.2</code>、签名与公证边界 与上一版完全一致。</li>
+  </ul>
+
   <h2>v0.2.1-rc.2.shell.0 <small>（内核 0.2.1-rc.2）</small></h2>
   <ul>
     <li><strong>内核升级 <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong>：同步 32 个 <code>@deepseek-ai/dsh-*</code> peer 版本，重生成 manifest 锁定文件， 并把发行年龄豁免重新固定到新内核（315 → 302 条，13 条保留锁定文件中的解析版本）。两处已复核的壳内补丁 （账号授权弹窗回退、会话回收站生命周期）确认继续适用：被补丁的两个上游 bundle 在 rc.1 与 rc.2 之间 <strong>逐字节相同</strong>，两个变换在新源码上仍然命中；补丁清单因此改为显式的「已复核内核」列表。</li>
@@ -122,15 +129,6 @@
     <li><strong>官网同步可靠性</strong>：生成文件 push 冲突时基于最新主干重新生成并限次重试；只变更新日志时 也会提交。官网日志以已发布 tag 为上界，不提前展示未来版本草稿。</li>
     <li><strong>测试收尾可靠性</strong>：cc-connect 文件附件 CUJ 等到最终回复且任务锁释放后才结束， 修复后台持久化与临时目录清理的竞争；不改变 Agent 或飞书生产行为。</li>
     <li><strong>已知限制</strong>：sprintf-js 与 macOS ad-hoc 签名两项限制继续在文档中保留说明；本次 SDK 更新不引入静默行为变化。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.2 <small>（内核 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li><strong>飞书设置布局</strong>：管理应用/扫码创建入口复用桌面设置按钮样式，健康说明独立成块； 窄卡片与中英文界面不再将入口和状态文字混排。不改变 Secret 存储、连接意图或 Safe Mode。</li>
-    <li><strong>局域网配对倒计时</strong>：二维码窗口正确逐秒更新剩余时间，不再一直显示 600 秒； 真实到期时间、一次性配对和手动关闭共享规则不变。</li>
-    <li><strong>发布回归稳定性</strong>：窗口宽度断言按内容尺寸跨平台验证；cc-connect 测试使用独立 会话事件通道并等待最终回复后清理临时目录，不跳过或降低原行为断言。</li>
-    <li><strong>装机验证</strong>：最终安装的 shell.2 通过视觉走查、真实飞书回包与二维码自动解码。</li>
-    <li><strong>签名边界</strong>：macOS 仍为 ad-hoc 签名；即使已保存加密凭据，签名变化仍可能触发钥匙串授权。</li>
   </ul>
   <!-- changelog:auto:end -->
 
