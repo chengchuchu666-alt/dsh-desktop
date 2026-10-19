@@ -2747,3 +2747,35 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
    「Real-machine verification」章节（CI 自动层 + 维护者 VM 层：Windows 11 ARM64/UTM 与 arm64 Ubuntu 清单），
    计划文档 §12 记录流程与覆盖口径。本轮踩到的四个流程缺口（跨版本升级选包、ESM 顶层 return、`linux-arm64-unpacked`、
    反向守卫让 arm runner 跑 GUI smoke）与发布侧两个缺口（视觉工件进了 release 目录、门禁读错证据树）都已修入流程。
+
+## 91. 发布 v0.2.1-rc.2.shell.1（官网事实核查 + Star 迭代，2026-10-19）
+
+1. **两轮只读审计 + 修复（官网）**：事实核查对照仓库源码逐条核对，修掉 8 类错误声明——内置运行时是 **Node.js 24
+   （24.21.0）** 而非 22；删掉已下线的 `npx dsh-validate-release`（该包 private、npm 404，真实用法是
+   `bin/dsh-validate-release.mjs <目录> <tag>`）；发布重点不再声称「真机」门禁（改四端 runner 视觉证据）、
+   表面清单不再含市场弹窗（契约明确排除）、arm64 证据改为虚拟机表述；去掉未独立核实的「数千个社区插件」；
+   「不改写 Harness 行为」收窄为 Agent/模型逻辑 + 两处受版本约束的窄补丁；LAN/凭据/静态站点三处描述按实际实现改写。
+2. **中英文对齐（根因修复）**：`data-i18n` 此前从未在运行时应用，HTML 与字典是两份独立文案（FAQ 已出现两种事实
+   陈述）。app.js 现在应用字典，9 个漂移键全部对齐；英文页补译 5 处中文 aria/链接、法律声明补齐三段式、
+   trust strip 补回 GUARDED、页脚/导航补 5 个目标、下载页补「安装后如何开始」。`check-site-ui.mjs` 新增
+   **文案漂移守卫**（无 JS 渲染下逐键与字典比对）。
+3. **Star 邀请迭代**：常驻 hero/页脚入口（各带 `?ref=` 归因）+ 触发改为真实兴趣（可见 45s **且**滚过半页）、
+   不与下载提示叠加、20s 自动隐藏、Esc 关闭、一生最多 2 次、主动关闭静默 60 天、星数来自
+   `site/data/stars.json`（定时刷新，不向访客浏览器调 GitHub API）且 **<25 不显示**（当前 15）。
+   应用侧在桌面工具面板「信息」组新增常驻 Star 行（`?ref=app-panel`），不弹窗不打扰。
+4. **更新日志**：8 条可见发布中 5 条中英条数不一致（rc.1.shell.0 中文 9 条 vs 英文 6 条），已逐条对齐并在
+   英文缺失事实处补中文条目；生成器改为「缺英文摘要或条数不等即失败」，英文页内核标签改用半角括号；
+   新增的条数守卫经过「删掉英文条目」实测会失败（此前版本是空匹配的假绿）。
+5. **SEO**：英文首页补齐 WebSite/Organization/WebPage/SoftwareApplication 图谱；下载页增加可抓取的版本快照
+   （tag、日期、每个安装包大小与镜像可用性，随刷新生成）；sitemap `lastmod` 改为按页面 git 提交生成；
+   10 个页面的标题/描述收进摘要长度；FAQ 22 组问答改为 H2 大纲；全站补 `og:image:width/height/alt`、
+   `twitter:image`、`og:locale`；下载页补 BreadcrumbList；更新日志页生成 Article 结构化数据（softwareVersion/
+   dateModified）；404 页改为中英双语。已发布的 `v0.2.1-rc.2.shell.0` Release 正文用 `gh release edit` 同步为
+   修正后的说明（tag 未动）。
+6. **发布**：tag `v0.2.1-rc.2.shell.1` → `2a7f973911c8834a0a0115996c0c6dda0e9259c6`，run `39192109618`
+   verify + 4×build + publish 全绿；GitHub Release 10 个文件；GitCode 新建 release（`--status unset`，预发布
+   配额已满）8/8 匿名可下载，arm64 deb 全量下载与本地 SHA-256 一致（`38b7e990…`）；官网回读
+   `v0.2.1-rc.2.shell.1 / 8 assets / gitcode_ok=true`，下载页快照与更新日志均已更新。
+7. **首轮构建暴露并修掉的流程缺陷**：上一版下载器仍假设每个平台只有一个 `.deb`，rc.2 起有 amd64/arm64 两个，
+   于是 `expected one previous .deb installer … found 2` 直接把 Linux 构建打掉（也连带让视觉门禁无证据）。
+   现已按 `installerRunsHere()` 选本机架构的安装包，并补了双架构回归测试。
