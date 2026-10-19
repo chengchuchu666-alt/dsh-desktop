@@ -27,6 +27,9 @@ test('desktop controls package exposes a safe additive client plugin contract', 
   assert.match(client, /openLogs/)
   assert.match(client, /exportDiagnostics/)
   assert.match(client, /showAbout/)
+  // Passive star entry in the INFO group: a link, never a prompt.
+  assert.match(client, /openStar/)
+  assert.match(client, /Star on GitHub/)
   // Manual market entry: settings row + main-process install.
   assert.match(client, /getBundledPlugins/)
   assert.match(client, /lastInstall/)

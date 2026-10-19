@@ -58,7 +58,7 @@ import { SessionTrashClient } from './trash-client.ts'
 import { buildPresetPackage, importPresetPackage, listUserPresets, parsePresetPackage, removeUserPreset } from './presets.ts'
 import { ShellLocaleController, shellText, type ShellLocale } from './locale.ts'
 import type { LanMenuActions, LanMenuState, MenuActions } from './menu-template.ts'
-import { DEEPSEEK_PLATFORM_RECHARGE_URL } from './links.ts'
+import { DEEPSEEK_PLATFORM_RECHARGE_URL, PROJECT_REPO_URL } from './links.ts'
 import { isPrivateLanIPv4, lanPairingUrlCandidates, pairingUrlKind, LanService, listPrivateLanIPv4, loadOrCreateLanMasterToken, qrSvgFromText } from './lan.ts'
 import { closeLanPairingWindow, isLanPairingWindow, showLanPairingWindow } from './lan-window.ts'
 import { isMainWindowHarnessSender, isMainWindowSender, isShellOwnedFrame, ShellApp } from './shell-app.ts'
@@ -977,6 +977,10 @@ ipcMain.handle('desktop:action', async (event, action: unknown) => {
   }
   if (action === 'exportDiagnostics') {
     void exportDiagnosticReport(shellApp.state, currentLocale, safeModeActive(), lastMarketInstallResult, lanService.diagnosticState, windowContext.rendererErrors)
+    return true
+  }
+  if (action === 'openStar') {
+    void shell.openExternal(`${PROJECT_REPO_URL}?ref=app-panel`)
     return true
   }
   if (action === 'showAbout') {
