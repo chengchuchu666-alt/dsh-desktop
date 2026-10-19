@@ -283,10 +283,10 @@
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">Harness rc.1：内核升级与更稳的构建</h3>
-          <p data-i18n="latest.lead">内置 Harness 升到上游 rc.1 预发布：297 个内核包按 registry 元数据核对仅版本字符串变化，插件框架 cordis 转稳定版；闭包安装固定使用仓库锁定的 pnpm，构建结果不再受外层环境影响。</p>
+          <h3 id="latest-title" data-i18n="latest.title">Harness rc.2：内核升级、Linux arm64 与真机视觉门禁</h3>
+          <p data-i18n="latest.lead">内置 Harness 升到上游 0.2.1-rc.2：32 个内核包 peer 同步、锁定文件重生成、发行年龄豁免重新固定；同时发布 Linux arm64 包，并修复 macOS 上控制套接字路径过长导致正常连接被误报为离线的问题。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>内核兼容：</b>账户登录补丁与垃圾桶版本保护随内核迁移；会话控制器与工作区 bundle 与上一版逐字节一致。</li><li><b>飞书浮窗：</b>继续分开显示应用、进程、通道与任务状态，显式开启/关闭/重连，打开浮窗不连接、不发消息、不调用模型。</li><li><b>本地门禁：</b>438 单测＋ACP、两项 smoke、24 项打包回归、飞书五轮、市场与局域网用例全部通过。<a href="/changelog">查看完整更新日志 →</a></li></ul>
+        <ul data-i18n="latest.items"><li><b>内核兼容：</b>账号授权弹窗与 onboarding 守卫补丁随内核迁移，两处被补丁的上游 bundle 与上一版逐字节一致；会话回收站补丁改为「已复核内核」清单，未复核的新内核直接拒绝构建。</li><li><b>Linux arm64：</b>新增 ubuntu-24.04-arm 打包，<code>-arm64.deb</code> 与 amd64 同源发布，资产由 8 个增至 10 个；已在 arm64 Ubuntu 24.04 实机安装并运行。</li><li><b>真机视觉门禁：</b>macOS、Windows、Linux x64/arm64 四个 runner 必须渲染出 21 个桌面扩展面（首启与安全模式、浮动飞书快捷控制、飞书管理五态、六个设置面板、LAN 配对、回收站、恢复、市场弹窗），缺一即失败，截图随工件发布。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>
