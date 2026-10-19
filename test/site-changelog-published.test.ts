@@ -30,12 +30,21 @@ test('website changelog excludes committed but unpublished release notes', async
 
 test('the rendered changelog gives both languages the same facts', async () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-  const entries = (html: string) => [...html.matchAll(/<h2>([^<]+)<\/h2>\s*<ul>([\s\S]*?)<\/ul>/g)]
-    .map(match => [(match[1] ?? '').trim(), ((match[2] ?? '').match(/<li>/g) ?? []).length] as const)
+  // The generator embeds a <small>(kernel …)</small> label inside the h2, so the
+  // tag text has to be stripped rather than matched away — the first version of
+  // this test matched nothing at all and passed vacuously.
+  const entries = (html: string) => [...html.matchAll(/<h2>([\s\S]*?)<\/h2>\s*<ul>([\s\S]*?)<\/ul>/g)]
+    .map(match => [stripTags(match[1] ?? '').trim(), ((match[2] ?? '').match(/<li>/g) ?? []).length] as const)
+  const stripTags = (value: string) => value.replace(/<[^>]+>/g, '')
+
   const zh = entries(await readFile(join(root, 'site/changelog/index.html'), 'utf8'))
   const en = entries(await readFile(join(root, 'site/en/changelog/index.html'), 'utf8'))
+  assert.ok(zh.length >= 8, `expected at least 8 rendered releases, parsed ${zh.length}`)
   assert.equal(zh.length, en.length, 'both pages must list the same number of releases')
-  assert.deepEqual(zh.map(([tag]) => tag), en.map(([tag]) => tag), 'both pages must list the same tags')
+  // The heading also carries the kernel label in each language's own wording, so
+  // compare the tag prefix only.
+  const tagOf = (heading: string) => heading.split(/\s+/)[0]
+  assert.deepEqual(zh.map(([heading]) => tagOf(heading)), en.map(([heading]) => tagOf(heading)), 'both pages must list the same tags')
   for (const [index, [tag, count]] of zh.entries()) {
     const english = en[index]!
     assert.ok(count > 0, `${tag} has no Chinese bullets`)
