@@ -288,6 +288,17 @@ function tunePrimaryCta(data) {
     : 'Download for ' + OS_LABEL.en[os][0]) + ' · ' + fmtSize(hit.size)
 }
 
+/* data-i18n 的运行时应用:字典是文案的唯一来源,HTML 里的文字只是无 JS 时的
+   兜底。此前没有应用器,同一句文案在 HTML 与字典里各自漂移(FAQ 甚至出现过
+   两种不同的事实陈述)。新增文案只改字典;guard 会逐键校验两边一致。 */
+function applyI18n() {
+  $all('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n')
+    var value = I18N[lang] && I18N[lang][key]
+    if (typeof value === 'string') el.innerHTML = value
+  })
+}
+
 /* FAQ 命令示例里的 {ver} 占位符按当前版本填充(与 release.json 同一来源,
    避免命令示例与实际文件名失同步)。 */
 function fillFaqVersion() {
@@ -488,6 +499,8 @@ if (isHomePage) {
   applyTheme()
 }
 bindCopy(document)
+
+applyI18n()
 
 loadData()
   .then(function (data) {

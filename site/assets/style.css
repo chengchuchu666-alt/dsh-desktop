@@ -1,6 +1,7 @@
 /* dsh-desktop 官网 v4 — 明暗双主题(跟随系统),实拍截图替代模拟示意 */
 
 :root {
+  --star-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 .5 10 5.4l5.2.4-4 3.4 1.2 5L8 11.2 3.6 14.2l1.2-5-4-3.4L6 5.4 8 .5Z'/%3E%3C/svg%3E");
   color-scheme: light;
   --bg: #f9f8f8;
   --panel: rgba(255, 255, 255, 0.74);
@@ -572,6 +573,31 @@ a { color: inherit; }
   vertical-align: 1px;
 }
 
+/* ══ 下载页静态快照(无 JS 与爬虫也能看到版本与文件名) ══ */
+.download-snapshot { margin: 0 0 10px; color: var(--text); }
+.download-snapshot__list {
+  margin: 0 0 18px; padding-left: 18px;
+  display: grid; gap: 4px;
+  font-family: var(--mono); font-size: 12px; color: var(--text-bluish);
+}
+.download-snapshot__list code { font-size: 12px; }
+
+/* ══ Star 入口(常驻、零打扰；弹窗策略见 star-rules.js) ══ */
+.btn--star { gap: 8px; }
+.btn--star::before {
+  content: "";
+  display: inline-block; width: 13px; height: 13px; flex: 0 0 13px;
+  background: currentColor;
+  -webkit-mask: var(--star-mask) center / contain no-repeat;
+  mask: var(--star-mask) center / contain no-repeat;
+}
+.btn--star .star-count {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--border); color: var(--text-bluish);
+}
+.btn--star .star-count[hidden] { display: none; }
+
 /* ══ 下载后提示(如何运行 + Star 邀请) ══ */
 .download-toast {
   position: fixed; right: 20px; bottom: 20px; z-index: 999;
@@ -600,6 +626,12 @@ a { color: inherit; }
   transition: filter 0.15s ease;
 }
 .download-toast__star:hover { text-decoration: none; filter: brightness(1.08); }
+/* 邀请出现时轻微上浮；系统开启「减少动态效果」时不加这个类 */
+.download-toast--in { animation: toast-in 0.22s ease-out both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .download-toast--in { animation: none; }
+}
 
 /* ══ 下载矩阵 ══ */
 .platform-group + .platform-group { border-top: 1px solid var(--border); }

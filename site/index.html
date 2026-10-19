@@ -61,6 +61,14 @@
       "sameAs": ["https://github.com/citrusli2026/dsh-desktop"]
     },
     {
+      "@type": "WebPage",
+      "@id": "https://dsh-desktop.com/#webpage",
+      "url": "https://dsh-desktop.com/",
+      "name": "DSH Desktop — DeepSeek Harness 桌面版",
+      "inLanguage": "zh-CN",
+      "isPartOf": {"@id": "https://dsh-desktop.com/#website"}
+    },
+    {
       "@type": "SoftwareApplication",
       "@id": "https://dsh-desktop.com/#software",
       "name": "DSH Desktop",
@@ -128,17 +136,18 @@
     <div class="wrap hero__inner">
       <div class="hero__copy" data-reveal>
         <h1 class="headline" data-i18n="hero.h1">DeepSeek Harness<br />桌面版，可靠的 <em>本地桌面应用</em>。</h1>
-        <p class="subhead" data-i18n="hero.sub">社区维护的 DeepSeek Harness 桌面版：开箱即用。自带运行时、独立数据目录、桌面入口和恢复路径；只增强桌面体验，不改写 Harness 行为。</p>
+        <p class="subhead" data-i18n="hero.sub">社区维护的 DeepSeek Harness 桌面版：开箱即用。自带运行时、独立数据目录、桌面入口和恢复路径；只增强桌面体验，不改写 Agent 与模型逻辑；对内核仅有两处受版本约束的窄补丁（会话回收站、登录弹窗兜底），见更新日志。</p>
         <div class="cta-row">
           <a class="btn btn--primary btn--glow" id="cta-primary" href="#download" data-i18n="hero.cta">下载桌面版</a>
           <a class="btn btn--ghost" id="cta-secondary" href="#workflow" data-i18n="hero.secondary">它和命令行有什么不同 →</a>
+          <a class="btn btn--ghost btn--star" id="cta-star" href="https://github.com/citrusli2026/dsh-desktop?ref=hero-star" target="_blank" rel="noopener" data-star-link><span data-i18n="star.hero">在 GitHub 上 Star</span><span class="star-count" data-star-count hidden></span></a>
         </div>
         <p class="hero__social" id="hero-social" hidden></p>
-        <p class="hero__meta" id="hero-meta">… · macOS / Windows · <span data-i18n="hero.meta">无需 Node.js</span></p>
+        <p class="hero__meta" id="hero-meta">… · macOS / Windows / Linux · <span data-i18n="hero.meta">无需 Node.js</span></p>
         <div class="hero__highlights" data-reveal style="--i:2" aria-label="产品亮点">
           <div class="hero__highlight hero__highlight--plugin">
             <span class="hero__highlight-label" data-i18n="hero.highlightPlugin.label">插件市场</span>
-            <strong class="hero__highlight-value" data-i18n="hero.highlightPlugin.value">数千插件，按需安装</strong>
+            <strong class="hero__highlight-value" data-i18n="hero.highlightPlugin.value">社区插件，按需安装</strong>
             <span class="hero__highlight-note" data-i18n="hero.highlightPlugin.note">不进安装包，先装市场再由你选择。</span>
           </div>
           <div class="hero__highlight hero__highlight--balance">
@@ -186,7 +195,7 @@
       <p class="sec-lead" data-reveal style="--i:2" data-i18n="wf.lead">桌面壳负责安装、启动、恢复和入口；Agent、会话、工具、模型仍由官方 Harness 负责。</p>
       <div class="workflow-grid" data-reveal style="--i:3">
         <article><span>01</span><h3 data-i18n="wf.s1.title">开箱即用</h3><p data-i18n="wf.s1.body">内置 Node.js 与依赖，安装后直接启动。</p></article>
-        <article><span>02</span><h3 data-i18n="wf.s2.title">本地且隔离</h3><p data-i18n="wf.s2.body">只在本机通信，不暴露到局域网；数据默认放在独立的 ~/.dsh-desktop。</p></article>
+        <article><span>02</span><h3 data-i18n="wf.s2.title">本地且隔离</h3><p data-i18n="wf.s2.body">默认只在本机通信；只有你主动开启局域网代理时才会监听局域网；数据默认放在独立的 ~/.dsh-desktop。</p></article>
         <article><span>03</span><h3 data-i18n="wf.s3.title">出错可恢复</h3><p data-i18n="wf.s3.body">安全模式隔离坏插件；错误页可一键升级或禁用可疑插件。</p></article>
       </div>
       <div class="boundary-grid" data-reveal style="--i:4">
@@ -228,7 +237,7 @@
   <section class="section" id="market">
     <div class="wrap">
       <p class="sec-marker" data-reveal>03 / <span data-i18n="mk.marker">社区插件</span></p>
-      <h2 class="sec-title" data-reveal style="--i:1" data-i18n="mk.title">数千个社区插件，全部由你选择</h2>
+      <h2 class="sec-title" data-reveal style="--i:1" data-i18n="mk.title">社区插件市场，全部由你选择</h2>
       <p class="sec-lead" data-reveal style="--i:2" data-i18n="mk.lead">dsh-desktop 只提供清晰入口和故障恢复支持；社区插件不属于安装包，也不会在首次启动时自动出现。</p>
 
       <article class="access-card" data-reveal style="--i:3">
@@ -277,16 +286,16 @@
           <code>npx @deepseek-ai/dsh web</code>
           <button class="copybtn" data-copy="npx @deepseek-ai/dsh web" type="button" data-i18n="copy">复制</button>
         </div>
-        <p class="note" data-i18n="dl.note">命令行方式同样可用；桌面壳功能与其完全一致，但使用独立数据目录 <code>~/.dsh-desktop</code>，互不干扰。</p>
+        <p class="note" data-i18n="dl.note">命令行方式同样可用；桌面壳的 Agent 行为与命令行一致，但使用独立数据目录 <code>~/.dsh-desktop</code>，互不干扰。</p>
       </div>
 
       <article class="latest-card" data-reveal style="--i:5" aria-labelledby="latest-title">
         <div class="latest-card__copy">
           <p class="sec-marker" data-i18n="latest.marker">当前版本重点</p>
-          <h3 id="latest-title" data-i18n="latest.title">Harness rc.2：内核升级、Linux arm64 与真机视觉门禁</h3>
+          <h3 id="latest-title" data-i18n="latest.title">Harness rc.2：内核升级、Linux arm64 与四端视觉证据门禁</h3>
           <p data-i18n="latest.lead">内置 Harness 升到上游 0.2.1-rc.2：32 个内核包 peer 同步、锁定文件重生成、发行年龄豁免重新固定；同时发布 Linux arm64 包，并修复 macOS 上控制套接字路径过长导致正常连接被误报为离线的问题。</p>
         </div>
-        <ul data-i18n="latest.items"><li><b>内核兼容：</b>账号授权弹窗与 onboarding 守卫补丁随内核迁移，两处被补丁的上游 bundle 与上一版逐字节一致；会话回收站补丁改为「已复核内核」清单，未复核的新内核直接拒绝构建。</li><li><b>Linux arm64：</b>新增 ubuntu-24.04-arm 打包，<code>-arm64.deb</code> 与 amd64 同源发布，资产由 8 个增至 10 个；已在 arm64 Ubuntu 24.04 实机安装并运行。</li><li><b>真机视觉门禁：</b>macOS、Windows、Linux x64/arm64 四个 runner 必须渲染出 21 个桌面扩展面（首启与安全模式、浮动飞书快捷控制、飞书管理五态、六个设置面板、LAN 配对、回收站、恢复、市场弹窗），缺一即失败，截图随工件发布。<a href="/changelog">查看完整更新日志 →</a></li></ul>
+        <ul data-i18n="latest.items"><li><b>内核兼容：</b>账号授权弹窗与 onboarding 守卫补丁随内核迁移，两处被补丁的上游 bundle 与上一版逐字节一致；会话回收站补丁改为「已复核内核」清单，未复核的新内核直接拒绝构建。</li><li><b>Linux arm64：</b>新增 ubuntu-24.04-arm 打包，<code>-arm64.deb</code> 与 amd64 同源发布（GitHub Release 共 10 个文件，其中 8 个是用户可见的安装包与校验文件）；arm64 包已在 arm64 Ubuntu 24.04 虚拟机中安装并运行。</li><li><b>四端视觉证据门禁：</b>macOS、Windows、Linux x64/arm64 四个 runner 必须渲染出 21 个打包扩展面（首启与安全模式、浮动飞书快捷控制、飞书管理五态、六个设置面板、LAN 配对、回收站、恢复与加载），缺一即失败，截图随工件发布；维护者另在真机/虚拟机上补做安装与桌面验收。<a href="/changelog">查看完整更新日志 →</a></li></ul>
       </article>
     </div>
   </section>
@@ -355,11 +364,11 @@
         </details>
         <details>
           <summary data-i18n="faq.q2">Windows SmartScreen 拦截怎么办？</summary>
-          <p data-i18n="faq.a2">安装包未购买代码签名证书。点击 <b>“更多信息” → “仍要运行”</b> 即可。安装包由 GitHub Actions 从公开源码构建，可全程审计；也可用以下命令验证来源：<br /><code class="faq-command">gh attestation verify /path/to/dsh-desktop-setup-{ver}.exe -R citrusli2026/dsh-desktop</code></p>
+          <p data-i18n="faq.a2">当前 Windows 安装包尚未做代码签名。点击 <b>“更多信息” → “仍要运行”</b> 即可。安装包由 GitHub Actions 从公开源码构建，可全程审计；也可用以下命令验证来源：<br /><code class="faq-command">gh attestation verify /path/to/dsh-desktop-setup-{ver}.exe -R citrusli2026/dsh-desktop</code></p>
         </details>
         <details>
           <summary data-i18n="faq.q3">这和 DeepSeek 官方是什么关系？</summary>
-          <p data-i18n="faq.a3">社区维护的桌面封装：不改写 Harness 行为，数据与配置保持独立。项目与 DeepSeek AI 无隶属、授权或合作关系；DeepSeek Harness 是 DeepSeek 的商标，本项目仅在 MIT 许可下再打包 <a href="https://www.npmjs.com/package/@deepseek-ai/dsh" target="_blank" rel="noopener">@deepseek-ai/dsh</a>，不改变其任何行为。</p>
+          <p data-i18n="faq.a3">社区维护的桌面封装：不改写 Agent 与模型逻辑，数据与配置保持独立；随包内核带两处受版本约束的窄补丁（会话回收站、登录弹窗兜底），其余与上游逐字节一致。项目与 DeepSeek AI 无隶属、授权或合作关系；DeepSeek Harness 是 DeepSeek 的商标，本项目仅在 MIT 许可下再打包 <a href="https://www.npmjs.com/package/@deepseek-ai/dsh" target="_blank" rel="noopener">@deepseek-ai/dsh</a>。</p>
         </details>
         <details>
           <summary data-i18n="faq.q4">我在用 npx @deepseek-ai/dsh web，配置会带过来吗？</summary>
@@ -367,11 +376,11 @@
         </details>
         <details>
           <summary data-i18n="faq.q6">桌面版会申请摄像头、定位或文件系统权限吗？</summary>
-          <p data-i18n="faq.a6">不会。桌面版默认拒绝摄像头、定位、网页通知、屏幕采集和文件系统这类请求；桌面通知是可关闭的本地功能，不读取屏幕，也不上传数据。</p>
+          <p data-i18n="faq.a6">不会。当前功能不需要这些 Electron Web 权限，桌面版默认拒绝摄像头、定位、网页通知、屏幕采集和文件系统这类请求；桌面通知是可关闭的本地功能，不读取屏幕，也不上传数据。</p>
         </details>
         <details>
           <summary data-i18n="faq.q8">如何校验下载文件的完整性？</summary>
-          <p class="faq-answer" data-i18n="faq.a8">每个安装包都附带同名的 <code>.sha256</code> 校验文件。下载后可用以下命令验证：<br /><code class="faq-command">shasum -a 256 -c dsh-desktop-{ver}-arm64-mac.dmg.sha256</code><br />Windows 用户可用：<br /><code class="faq-command">CertUtil -hashfile dsh-desktop-setup-{ver}.exe SHA256</code><br />校验值应与 <code>.sha256</code> 文件内容一致。也可使用 <code>npx dsh-validate-release</code> 自动校验整个 Release 目录。</p>
+          <p class="faq-answer" data-i18n="faq.a8">每个安装包都附带同名的 <code>.sha256</code> 校验文件。下载后可用以下命令验证：<br /><code class="faq-command">shasum -a 256 -c dsh-desktop-{ver}-arm64-mac.dmg.sha256</code><br />Windows 用户可用：<br /><code class="faq-command">CertUtil -hashfile dsh-desktop-setup-{ver}.exe SHA256</code><br />Linux 用户可用：<br /><code class="faq-command">sha256sum -c dsh-desktop-{ver}-amd64.deb.sha256</code>（arm64 机器把 <code>amd64</code> 换成 <code>arm64</code>）<br />校验值应与 <code>.sha256</code> 文件内容一致。需要批量校验时，仓库里提供了 <code>bin/dsh-validate-release.mjs &lt;目录&gt; &lt;tag&gt;</code>（需 clone 仓库运行）。</p>
         </details>
         <details>
           <summary data-i18n="faq.q10">客户端带插件吗？怎么装更多插件？</summary>
@@ -426,13 +435,14 @@
       <a href="#faq" data-i18n="nav.faq">帮助支持</a>
       <a href="#version" data-i18n="nav.version">版本信息</a>
       <a href="https://www.deepseek.com/" target="_blank" rel="noopener" data-i18n="footer.official">DeepSeek官网</a>
+      <a href="https://github.com/citrusli2026/dsh-desktop?ref=footer-star" target="_blank" rel="noopener" data-star-link data-i18n="star.footer">在 GitHub 上 Star ⭐</a>
       <a href="https://github.com/citrusli2026/dsh-desktop" target="_blank" rel="noopener">GitHub</a>
       <a href="https://gitcode.com/citrusli2026/dsh-desktop" target="_blank" rel="noopener" data-i18n="footer.mirror">GitCode 镜像</a>
       <a href="https://github.com/citrusli2026/dsh-desktop/releases" target="_blank" rel="noopener" data-i18n="footer.releases">全部版本</a>
       <a href="https://github.com/citrusli2026/dsh-desktop/issues" target="_blank" rel="noopener" data-i18n="footer.issues">问题反馈</a>
       <a href="/en" data-i18n="footer.english">English</a>
     </nav>
-    <p class="footer__sync"><span data-i18n="footer.sync">纯静态站点 · 部署于 Vercel<br />版本数据由 GitHub Actions 自动同步</span><br /><span id="sync-time"></span></p>
+    <p class="footer__sync"><span data-i18n="footer.sync">静态页面 + 只读下载统计 API · 部署于 Vercel<br />版本数据由 GitHub Actions 自动同步</span><br /><span id="sync-time"></span></p>
   </div>
 </footer>
 
@@ -442,7 +452,7 @@
 <div class="download-toast" id="download-toast" role="status" aria-live="polite" hidden></div>
 
 <!-- 停留 30 秒后的 Star 邀请(关掉不再弹),由 star-prompt.js 填充 -->
-<script src="/assets/star-prompt.js?v=1" defer></script>
+<script type="module" src="/assets/star-prompt.js?v=2"></script>
 <div class="download-toast" id="star-toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

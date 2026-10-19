@@ -81,5 +81,48 @@ try {
       cases++
     } finally { await context.close() }
   }
-  console.log(`site-ui: ${cases} passed (release focus, Feishu, changelog, downloads; zh/en × mobile/desktop × light/dark); screenshots: ${output}`)
+  // Star invite guard: the count slot must stay hidden while the repository is
+  // below the disclosure threshold (star-rules.js countThreshold), and both
+  // homepages must expose their persistent star link.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    try {
+      const stars = JSON.parse(await readFile(new URL('../site/data/stars.json', import.meta.url), 'utf8')).stars
+      const page = await context.newPage()
+      for (const [home, expected] of [['/', /在 GitHub 上 Star/], ['/en/', /Star on GitHub/]]) {
+        await page.goto(origin + home, { waitUntil: 'domcontentloaded' })
+        await expect(page.locator('a[data-star-link]').first()).toBeVisible()
+        await expect(page.locator('a[data-star-link]').first()).toContainText(expected)
+      }
+      await expect(page.locator('#cta-star .star-count')).toBeHidden()
+      if (stars >= 25) await expect(page.locator('#cta-star .star-count')).toBeVisible()
+      cases++
+    } finally { await context.close() }
+  }
+
+  // Copy drift guard: the Chinese homepage is the only page with data-i18n
+  // keys. With JavaScript disabled the DOM *is* the shipped HTML, so comparing
+  // it against the dictionary catches the two copies diverging — the failure
+  // mode that previously let two different FAQ answers coexist.
+  {
+    const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1280, height: 900 } })
+    try {
+      const page = await context.newPage()
+      await page.goto(origin + '/', { waitUntil: 'domcontentloaded' })
+      const drift = await page.evaluate(dict => {
+        const normalize = value => value.replace(/\s+/g, ' ').replace(/> </g, '><').replace(/<br\s*\/?>/g, '<br>').trim()
+        const out = []
+        for (const element of document.querySelectorAll('[data-i18n]')) {
+          const key = element.getAttribute('data-i18n')
+          if (dict[key] === undefined) { out.push(`${key}: missing from the dictionary`); continue }
+          if (normalize(element.innerHTML) !== normalize(String(dict[key]))) out.push(`${key}: HTML fallback differs from the dictionary`)
+        }
+        return out
+      }, I18N.zh)
+      assert.deepEqual(drift, [], 'data-i18n copy drifted between the shipped HTML and the dictionary')
+      cases++
+    } finally { await context.close() }
+  }
+
+  console.log(`site-ui: ${cases} passed (release focus, Feishu, changelog, downloads, star invite, copy parity; zh/en × mobile/desktop × light/dark); screenshots: ${output}`)
 } finally { await browser.close() }

@@ -306,7 +306,7 @@ node scripts/verify-visual-evidence.mjs visual-evidence --label <runner>  # 21 �
 
 `scripts/verify-visual-evidence.mjs` 覆盖：首启/安全模式横幅、浮动飞书快捷控制及其底部菜单、飞书管理五态
 （空/错误/已保存/受限文件凭据/中英）、消息偏好、六个设置面板（宽/最小/飞书/高级运行时/恢复/回收站）、LAN 配对、
-回收站两类资源、恢复、加载、插件市场弹窗。证据随 `packaged-visuals-<runner>` 工件发布，任何人可离线复核：
+回收站两类资源、恢复、加载。市场用例的截图不在门禁清单内，随 `test-results/**` 上传。证据随 `packaged-visuals-<runner>` 工件发布，任何人可离线复核：
 
 ```sh
 gh run download <run-id> -n packaged-visuals-windows-2022 -D /tmp/win-vis

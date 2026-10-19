@@ -44,7 +44,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Regenerate site/data/release.json and the changelog pages
+      - name: Regenerate site data, changelog pages, and the star count
         id: gen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,6 +56,12 @@ jobs:
           # Changelog pages render from docs/release-notes (same source as the
           # GitHub Release body); idempotent — no diff when notes are unchanged.
           node scripts/gen-site-changelog.mjs
+          # Star count shown by the homepage above a threshold (star-rules.js).
+          node scripts/gen-site-stars.mjs
+          # Crawlable release snapshot on the download pages (the live matrix is
+          # client-rendered) and git-derived sitemap dates.
+          node scripts/gen-site-download-index.mjs
+          node scripts/gen-site-sitemap.mjs
 
       - name: Re-probe GitCode until the mirror settles
         # A Release-triggered run frequently finishes before the GitCode
