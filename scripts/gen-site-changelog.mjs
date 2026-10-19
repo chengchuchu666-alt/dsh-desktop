@@ -18,6 +18,8 @@ const PAGES = [
 ]
 const START = '<!-- changelog:auto:start -->'
 const END = '<!-- changelog:auto:end -->'
+const LD_START = '<!-- changelog:ld:start -->'
+const LD_END = '<!-- changelog:ld:end -->'
 const MAX_RELEASES = 8
 
 function compareTagsDesc(left, right) {
@@ -79,9 +81,34 @@ async function main() {
     const text = await readFile(path.join(NOTES, `${tag}.md`), 'utf8')
     const entry = parseNotes(tag, text, 'zh')
     const entryEn = parseNotes(tag, text, 'en')
-    if (entry !== null) entries.push({ zh: entry, en: entryEn ?? entry })
+    if (entry === null) continue
+    if (entryEn === null) throw new Error(`${tag} has no "## English Summary"; the English changelog would silently show Chinese`)
+    // Both languages must carry the same number of facts: an abridged English
+    // summary previously dropped the boundary note and the asset counts.
+    if (entryEn.bullets.length !== entry.bullets.length) {
+      throw new Error(`${tag} has ${entry.bullets.length} Chinese bullets but ${entryEn.bullets.length} English ones`)
+    }
+    entries.push({ zh: entry, en: entryEn })
   }
   if (entries.length === 0) throw new Error('no parsable release notes found')
+
+  const release = JSON.parse(await readFile(path.join(ROOT, 'site', 'data', 'release.json'), 'utf8')).release
+  const articleLd = page => {
+    const published = typeof release.published_at === 'string' ? release.published_at.slice(0, 10) : ''
+    return `${LD_START}\n<script type="application/ld+json">${JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: page.lang === 'zh' ? 'DSH Desktop 更新日志' : 'DSH Desktop changelog',
+      inLanguage: page.lang === 'zh' ? 'zh-CN' : 'en',
+      ...(published === '' ? {} : { dateModified: published }),
+      about: {
+        '@type': 'SoftwareApplication',
+        name: 'DSH Desktop',
+        applicationCategory: 'DeveloperApplication',
+        softwareVersion: release.tag.replace(/^v/, ''),
+      },
+    })}</script>\n${LD_END}`
+  }
 
   for (const page of PAGES) {
     const html = await readFile(page.file, 'utf8')
@@ -92,11 +119,19 @@ async function main() {
     }
     const sections = entries.map(({ zh, en }) => {
       const entry = page.lang === 'zh' ? zh : en
-      const kernel = entry.kernel === undefined ? '' : ` <small>（${page.lang === 'zh' ? '内核' : 'kernel'} ${escapeHtml(entry.kernel)}）</small>`
+      const kernel = entry.kernel === undefined ? ''
+        : page.lang === 'zh'
+          ? ` <small>（内核 ${escapeHtml(entry.kernel)}）</small>`
+          : ` <small>(kernel ${escapeHtml(entry.kernel)})</small>`
       return `  <h2>${escapeHtml(entry.tag)}${kernel}</h2>\n  <ul>\n${entry.bullets.map(bullet => `    <li>${inlineMarkdown(bullet)}</li>`).join('\n')}\n  </ul>`
     })
     const replacement = `${START}\n${sections.join('\n\n')}\n  ${END}`
-    const updated = html.slice(0, start) + replacement + html.slice(end + END.length)
+    let updated = html.slice(0, start) + replacement + html.slice(end + END.length)
+    const ldStart = updated.indexOf(LD_START)
+    const ldEnd = updated.indexOf(LD_END)
+    if (ldStart !== -1 && ldEnd > ldStart) {
+      updated = updated.slice(0, ldStart) + articleLd(page) + updated.slice(ldEnd + LD_END.length)
+    }
     if (updated !== html) await writeFile(page.file, updated, 'utf8')
     console.log(`site-changelog: ${path.relative(ROOT, page.file)} (${entries.length} releases, ${page.lang})`)
   }

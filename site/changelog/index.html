@@ -3,17 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DSH Desktop 更新日志｜DeepSeek Harness 桌面版发布记录</title>
-<meta name="description" content="DSH Desktop 更新日志：DeepSeek Harness 社区桌面版的版本发布记录，包含内核升级、首次成功引导、一键体检、插件市场加固与跨版本升级验证。" />
+<title>DSH Desktop 更新日志｜Harness 桌面版</title>
+<meta name="description" content="DeepSeek Harness 社区桌面版发布记录：内核升级、飞书连接、桌面恢复、Linux 双架构与跨版本升级验证。" />
 <meta property="og:site_name" content="DSH Desktop" />
 <meta property="og:title" content="DSH Desktop 更新日志" />
 <meta property="og:description" content="DeepSeek Harness 社区桌面版的版本发布记录与更新要点。" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://dsh-desktop.com/changelog" />
-<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png"
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="DSH Desktop 更新日志" /> />
 <meta property="og:locale" content="zh_CN" />
 <meta property="og:locale:alternate" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta name="twitter:image:alt" content="DSH Desktop 更新日志" />
 <meta name="theme-color" content="#f9f8f8" />
 <meta name="color-scheme" content="light dark" />
 <link rel="canonical" href="https://dsh-desktop.com/changelog" />
@@ -29,8 +34,11 @@
     document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   } catch (e) {}
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 更新日志","url":"https://dsh-desktop.com/changelog","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 更新日志","url":"https://dsh-desktop.com/changelog","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/"},{"@type":"ListItem","position":2,"name":"更新日志","item":"https://dsh-desktop.com/changelog"}]}</script>
+<!-- changelog:ld:start -->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-18","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.0"}}</script>
+<!-- changelog:ld:end -->
 </head>
 <body>
 <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -83,6 +91,7 @@
     <li><strong>垃圾桶兼容</strong>：alpha.3 → alpha.5 的上游会话控制器与工作区客户端逐字节一致， 补丁锚点已重新核对，版本保护更新为 alpha.5；运行中、排队中、跨客户端所有权、 维护中及子会话仍拒绝删除。</li>
     <li><strong>飞书凭据边界</strong>：ACP 组合仍加载 Models 已保存的模型凭据， headless 专用的凭据覆盖不会套用到机器人连接；飞书 App Secret 与模型 API Key 保持分离。</li>
     <li><strong>飞书快捷控制</strong>：桌面工具浮窗的「连接」分组新增当前应用、桌面进程、飞书通道与 DSH 任务 四行只读状态，并提供显式开启、关闭、重连。打开浮窗或读取状态不会隐式连接、发消息或调用模型； 没有应用、旧凭据需重录、Safe Mode 时按钮禁用并说明原因，关闭连接仍持久保存禁用。</li>
+    <li><strong>本地门禁</strong>：438 项单测 + ACP、两项打包 smoke、24 项打包 E2E、25 次重复飞书用例全部通过后才发布。</li>
   </ul>
 
   <h2>v0.2.1-alpha.3.shell.0 <small>（内核 0.2.1-alpha.3）</small></h2>
@@ -112,6 +121,7 @@
     <li><strong>官网与飞书指南</strong>：中英首页新增独立飞书连接流程，说明工作区、精简消息、卡片、连接意图、 安全模式与组织权限。FAQ 区分机器人 Secret、模型 Key 和 CLI OAuth，补充 Keychain 与 Windows profile 写入权限排查；不把最初白屏问题冒称为已修复。</li>
     <li><strong>官网同步可靠性</strong>：生成文件 push 冲突时基于最新主干重新生成并限次重试；只变更新日志时 也会提交。官网日志以已发布 tag 为上界，不提前展示未来版本草稿。</li>
     <li><strong>测试收尾可靠性</strong>：cc-connect 文件附件 CUJ 等到最终回复且任务锁释放后才结束， 修复后台持久化与临时目录清理的竞争；不改变 Agent 或飞书生产行为。</li>
+    <li><strong>已知限制</strong>：sprintf-js 与 macOS ad-hoc 签名两项限制继续在文档中保留说明；本次 SDK 更新不引入静默行为变化。</li>
   </ul>
 
   <h2>v0.2.1-alpha.2.shell.2 <small>（内核 0.2.1-alpha.2）</small></h2>
@@ -119,6 +129,8 @@
     <li><strong>飞书设置布局</strong>：管理应用/扫码创建入口复用桌面设置按钮样式，健康说明独立成块； 窄卡片与中英文界面不再将入口和状态文字混排。不改变 Secret 存储、连接意图或 Safe Mode。</li>
     <li><strong>局域网配对倒计时</strong>：二维码窗口正确逐秒更新剩余时间，不再一直显示 600 秒； 真实到期时间、一次性配对和手动关闭共享规则不变。</li>
     <li><strong>发布回归稳定性</strong>：窗口宽度断言按内容尺寸跨平台验证；cc-connect 测试使用独立 会话事件通道并等待最终回复后清理临时目录，不跳过或降低原行为断言。</li>
+    <li><strong>装机验证</strong>：最终安装的 shell.2 通过视觉走查、真实飞书回包与二维码自动解码。</li>
+    <li><strong>签名边界</strong>：macOS 仍为 ad-hoc 签名；即使已保存加密凭据，签名变化仍可能触发钥匙串授权。</li>
   </ul>
   <!-- changelog:auto:end -->
 

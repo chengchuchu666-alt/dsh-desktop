@@ -573,6 +573,9 @@ a { color: inherit; }
   vertical-align: 1px;
 }
 
+.error-page__en { display: block; font-weight: 500; }
+.error-page__en.seo-lead { margin-top: 6px; }
+
 /* ══ 下载页静态快照(无 JS 与爬虫也能看到版本与文件名) ══ */
 .download-snapshot { margin: 0 0 10px; color: var(--text); }
 .download-snapshot__list {

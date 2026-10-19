@@ -3,17 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DSH Desktop 常见问题｜DeepSeek Harness 桌面版 FAQ</title>
+<title>DSH Desktop 常见问题｜Harness 桌面版 FAQ</title>
 <meta name="description" content="DSH Desktop 常见问题：安装步骤、数据目录、插件市场、安全模式恢复、首次启动和安装包校验。" />
 <meta property="og:site_name" content="DSH Desktop" />
 <meta property="og:title" content="DSH Desktop 常见问题｜DeepSeek Harness 桌面版 FAQ" />
 <meta property="og:description" content="关于 DSH Desktop 安装、配置、平台支持和安全校验的常见问题。" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://dsh-desktop.com/docs/faq" />
-<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png"
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="DSH Desktop 常见问题｜DeepSeek Harness 桌面版 FAQ" /> />
 <meta property="og:locale" content="zh_CN" />
 <meta property="og:locale:alternate" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta name="twitter:image:alt" content="DSH Desktop 常见问题｜DeepSeek Harness 桌面版 FAQ" />
 <meta name="theme-color" content="#f9f8f8" />
 <meta name="color-scheme" content="light dark" />
 <link rel="canonical" href="https://dsh-desktop.com/docs/faq" />
@@ -29,7 +34,7 @@
     document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   } catch (e) {}
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 常见问题","url":"https://dsh-desktop.com/docs/faq","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 常见问题","url":"https://dsh-desktop.com/docs/faq","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/"},{"@type":"ListItem","position":2,"name":"常见问题","item":"https://dsh-desktop.com/docs/faq"}]}</script>
 </head>
 <body>
@@ -41,28 +46,28 @@
   <h1>DSH Desktop 常见问题</h1>
   <p class="seo-lead">这里集中回答 DeepSeek Harness 桌面版的安装、平台支持、配置目录和首次启动问题。</p>
 
-  <details open><summary>DeepSeek Harness 有桌面版或 GUI 客户端吗？</summary><p>官方提供的是命令行 WebUI（<code>npx @deepseek-ai/dsh web</code>）。<a href="/docs/why-desktop">DSH Desktop</a> 是社区维护的桌面客户端形态：同一个 WebUI，加上免装 Node.js、托盘常驻、崩溃自愈、快捷键唤起和自动更新，下载安装即用。</p></details>
-  <details open><summary>DSH Desktop 是 DeepSeek 官方产品吗？</summary><p>不是。它是社区维护的桌面封装项目，与 DeepSeek AI 没有隶属、授权或合作关系。DeepSeek Harness 及其依赖遵循各自的上游许可和商标政策。</p></details>
-  <details open><summary>需要安装 Node.js 或运行命令行吗？</summary><p>发布版内置锁定的 Node.js 运行时和 Harness 依赖，普通用户不需要另行安装 Node.js，也不需要先运行 <code>npx @deepseek-ai/dsh web</code>。</p></details>
-  <details><summary>桌面版会读取命令行的配置吗？</summary><p>默认不会。桌面版使用 <code>~/.dsh-desktop</code>，命令行通常使用 <code>~/.dsh</code>。如果需要共享，可以设置 <code>DSH_HOME=~/.dsh</code>，建议先备份。</p></details>
-  <details><summary>macOS 提示无法验证开发者怎么办？</summary><p>当前 macOS 构建可能未经过 Apple 公证。确认安装包来自公开 Release 后，在 Finder 中右键应用选择“打开”。不要从不明来源下载或执行来路不明的终端命令。</p></details>
-  <details><summary>Windows SmartScreen 拦截怎么办？</summary><p>当前 Windows 安装包尚未做代码签名。确认来源和校验值后，点击“更多信息 → 仍要运行”。如果不确定文件来源，请停止安装并在 GitHub 仓库提交问题。</p></details>
-  <details><summary>插件会随安装包一起安装吗？</summary><p>不会。插件市场和社区插件都不打进发布包，必须由你在设置中手动安装；安装前请确认第三方仓库来源，因为安装过程可能下载并运行社区代码及安装脚本。</p></details>
-  <details><summary>插件市场安装失败怎么办？</summary><p>「设置 → 桌面设置」会展示准备、下载、验证和重启阶段，并区分网络、代理、超时、数据目录、安装脚本和随包工具故障。可展开脱敏技术详情或导出诊断，修复对应问题后直接重试；失败不会被误标为已安装，成功后会显示实际版本。</p></details>
-  <details><summary>怎样检查当前运行环境是否正常？</summary><p>打开「设置 → 桌面设置 → 运行体检」。默认只读检查随包运行时、数据目录和磁盘、Harness loopback、Profile、插件和版本，不联网、不上传、不自动修复。需要判断代理、registry 或更新源时，再单独勾选联网检查；每项会显示正常、警告或失败及对应动作。</p></details>
-  <details><summary>启动失败或插件装坏了怎么办？</summary><p>错误页提供「再次启动」「以安全模式启动」「打开日志目录」「导出诊断报告」；检测到可疑插件时还会逐个列出，可直接「升级」到最新版或「禁用」后重启——禁用只从启动列表移除，不删除文件，可随时在「设置 → 插件」恢复。安全模式只保留官方与内置扩展，并隔离用户插件，作为兜底恢复路径。</p></details>
-  <details><summary>Linux 支持哪些系统？</summary><p>当前提供 amd64 与 arm64 Debian 包，面向 Debian、Ubuntu、UOS、Deepin 和麒麟等系统。不同发行版的系统依赖可能不同，建议优先使用系统软件中心安装。</p></details>
-  <details><summary>如何校验安装包没有被篡改？</summary><p>每个安装包都附带同名 <code>.sha256</code> 文件。macOS/Linux 使用 <code>shasum -a 256 -c 文件名.sha256</code>，Windows 使用 <code>CertUtil -hashfile 文件名 SHA256</code>，再与 Release 中的校验文件比较。</p></details>
-  <details><summary>GitHub 下载慢怎么办？</summary><p>可以打开<a href="/download">下载页</a>中的 GitCode 镜像入口。镜像状态会随发布同步变化；如果镜像没有对应文件，请回到 GitHub Release 页面。</p></details>
-  <details id="feishu"><summary>飞书扫码后，还需要设置什么？</summary><p>手机提示“应用成功”只说明授权完成，请等待 Desktop 收到凭据并保存应用，再选工作区并显式开启连接。先在 Harness 模型设置保存模型 API Key；飞书 App Secret 不是模型 Key。机器人使用长连接，无需开启局域网共享或公网服务。组织权限、可用范围和应用发布状态仍在飞书后台管理。</p><p>默认精简消息和 3 秒预览；可调整详细度、卡片及进度样式。关闭管理窗口或最小化不影响连接；关闭主窗口会退出并停止服务。也可在管理窗口关闭连接，安全模式会暂停；自动连接选择保留。详见 <a href="https://github.com/citrusli2026/dsh-desktop/blob/main/docs/cc-connect.md" target="_blank" rel="noopener">飞书连接指南</a>。</p></details>
-  <details><summary>飞书 CLI 登录和机器人连接是同一套凭据吗？</summary><p>不是。Desktop 的二维码管理配置机器人 App ID / Secret；官方 Lark CLI 的 OAuth 是以用户身份调用飞书 API 的另一条路径。无需安装或登录 CLI 就能使用机器人连接，CLI 登录也不会自动补齐机器人 Secret 或模型 Key。</p></details>
-  <details><summary>macOS 飞书 Secret 还会请求钥匙串授权吗？</summary><p>从 shell.4 起，飞书凭据不再访问 macOS 钥匙串；Secret 存于权限 0600 的本机受限明文文件。旧加密 Secret 保留但不后台解密，按设置页提示重新填写一次，保存成功后才替换。无需把系统密码发到聊天，也不要删除系统钥匙串。</p><p>文件权限不是加密，同用户程序、管理员或可读取备份者仍可能访问。Windows 保留原 DPAPI 策略，Linux 策略不变；macOS 仍为 ad-hoc 签名，签名/公证是独立的分发事项。</p></details>
-  <details id="profile-permission"><summary>Windows 安全模式也启动失败，日志显示 cordis.yml 的 EPERM？</summary><p>这表示 Harness 无法写入数据目录下 <code>profiles/web/cordis.yml</code>，不等同于插件已损坏。完全退出 Desktop 后，检查该文件是否只读、当前用户是否有写入权限，以及 Windows 安全中心是否记录了受控文件夹访问阻止。只检查日志所指的文件；不要删除整个数据目录、递归放开权限或关闭安全软件。</p><p>保留现场并从恢复页导出诊断，先检查脱敏再附到 <a href="https://github.com/citrusli2026/dsh-desktop/issues/100" target="_blank" rel="noopener">白屏问题 #100</a>。同时说明“返回提问”的具体操作、插件版本、空白时菜单能否响应，以及当前版本能否复现。最初白屏与后续文件权限错误需要分别定位。</p></details>
-  <details><summary>如何获取 API Key？</summary><p>在 <a href="https://platform.deepseek.com" target="_blank" rel="noopener">DeepSeek 开放平台</a>注册并进入 API Keys 页面创建密钥，然后在 dsh-desktop 的模型设置中粘贴。API 使用按量计费，请先确认账户余额。</p></details>
-  <details><summary>窗口收进托盘后如何快速打开？</summary><p>在任意应用中按 <code>Ctrl/Cmd + Shift + Space</code>（Windows/Linux 用 Ctrl，macOS 用 ⌘），dsh-desktop 会显示并获得焦点。若快捷键被占用，可使用系统托盘或窗口右键菜单；快捷键冲突不会影响 Harness 启动。</p></details>
-  <details><summary>可以修改唤起快捷键或设置开机启动吗？</summary><p>可以。在 dsh-desktop 的「设置 → 桌面设置」中点击「重新设置」，按下包含修饰键的组合键，例如 <code>Ctrl + Alt + K</code>。如果组合键被占用，会提示换一个。开机启动默认关闭；Windows/macOS 还可以选择启动后隐藏到托盘，Linux 当前不提供该开关。</p></details>
-  <details><summary>桌面通知会读取屏幕或上传数据吗？</summary><p>不会。通知只使用 Harness 已公开的会话运行态和后台任务状态，不读取截图、不做视觉识别，也不会上传数据。窗口未聚焦时，通知会提示完成、失败或需要确认，并可在「设置 → 桌面设置」关闭。</p></details>
-  <details><summary>误删的会话或文件还能找回吗？</summary><p>可以。桌面版自带垃圾桶：删除的会话、预设都会先进入垃圾桶，在 Harness「设置 → 垃圾桶」中随时还原。Agent 执行的删除类命令也会被拦截：目标先移入垃圾桶，可疑的删除会被直接拦截并说明原因。垃圾桶保留 30 天，过期自动清理。</p></details>
+  <details open><summary><h2>DeepSeek Harness 有桌面版或 GUI 客户端吗？</h2></summary><p>官方提供的是命令行 WebUI（<code>npx @deepseek-ai/dsh web</code>）。<a href="/docs/why-desktop">DSH Desktop</a> 是社区维护的桌面客户端形态：同一个 WebUI，加上免装 Node.js、托盘常驻、崩溃自愈、快捷键唤起和自动更新，下载安装即用。</p></details>
+  <details open><summary><h2>DSH Desktop 是 DeepSeek 官方产品吗？</h2></summary><p>不是。它是社区维护的桌面封装项目，与 DeepSeek AI 没有隶属、授权或合作关系。DeepSeek Harness 及其依赖遵循各自的上游许可和商标政策。</p></details>
+  <details open><summary><h2>需要安装 Node.js 或运行命令行吗？</h2></summary><p>发布版内置锁定的 Node.js 运行时和 Harness 依赖，普通用户不需要另行安装 Node.js，也不需要先运行 <code>npx @deepseek-ai/dsh web</code>。</p></details>
+  <details><summary><h2>桌面版会读取命令行的配置吗？</h2></summary><p>默认不会。桌面版使用 <code>~/.dsh-desktop</code>，命令行通常使用 <code>~/.dsh</code>。如果需要共享，可以设置 <code>DSH_HOME=~/.dsh</code>，建议先备份。</p></details>
+  <details><summary><h2>macOS 提示无法验证开发者怎么办？</h2></summary><p>当前 macOS 构建可能未经过 Apple 公证。确认安装包来自公开 Release 后，在 Finder 中右键应用选择“打开”。不要从不明来源下载或执行来路不明的终端命令。</p></details>
+  <details><summary><h2>Windows SmartScreen 拦截怎么办？</h2></summary><p>当前 Windows 安装包尚未做代码签名。确认来源和校验值后，点击“更多信息 → 仍要运行”。如果不确定文件来源，请停止安装并在 GitHub 仓库提交问题。</p></details>
+  <details><summary><h2>插件会随安装包一起安装吗？</h2></summary><p>不会。插件市场和社区插件都不打进发布包，必须由你在设置中手动安装；安装前请确认第三方仓库来源，因为安装过程可能下载并运行社区代码及安装脚本。</p></details>
+  <details><summary><h2>插件市场安装失败怎么办？</h2></summary><p>「设置 → 桌面设置」会展示准备、下载、验证和重启阶段，并区分网络、代理、超时、数据目录、安装脚本和随包工具故障。可展开脱敏技术详情或导出诊断，修复对应问题后直接重试；失败不会被误标为已安装，成功后会显示实际版本。</p></details>
+  <details><summary><h2>怎样检查当前运行环境是否正常？</h2></summary><p>打开「设置 → 桌面设置 → 运行体检」。默认只读检查随包运行时、数据目录和磁盘、Harness loopback、Profile、插件和版本，不联网、不上传、不自动修复。需要判断代理、registry 或更新源时，再单独勾选联网检查；每项会显示正常、警告或失败及对应动作。</p></details>
+  <details><summary><h2>启动失败或插件装坏了怎么办？</h2></summary><p>错误页提供「再次启动」「以安全模式启动」「打开日志目录」「导出诊断报告」；检测到可疑插件时还会逐个列出，可直接「升级」到最新版或「禁用」后重启——禁用只从启动列表移除，不删除文件，可随时在「设置 → 插件」恢复。安全模式只保留官方与内置扩展，并隔离用户插件，作为兜底恢复路径。</p></details>
+  <details><summary><h2>Linux 支持哪些系统？</h2></summary><p>当前提供 amd64 与 arm64 Debian 包，面向 Debian、Ubuntu、UOS、Deepin 和麒麟等系统。不同发行版的系统依赖可能不同，建议优先使用系统软件中心安装。</p></details>
+  <details><summary><h2>如何校验安装包没有被篡改？</h2></summary><p>每个安装包都附带同名 <code>.sha256</code> 文件。macOS/Linux 使用 <code>shasum -a 256 -c 文件名.sha256</code>，Windows 使用 <code>CertUtil -hashfile 文件名 SHA256</code>，再与 Release 中的校验文件比较。</p></details>
+  <details><summary><h2>GitHub 下载慢怎么办？</h2></summary><p>可以打开<a href="/download">下载页</a>中的 GitCode 镜像入口。镜像状态会随发布同步变化；如果镜像没有对应文件，请回到 GitHub Release 页面。</p></details>
+  <details id="feishu"><summary><h2>飞书扫码后，还需要设置什么？</h2></summary><p>手机提示“应用成功”只说明授权完成，请等待 Desktop 收到凭据并保存应用，再选工作区并显式开启连接。先在 Harness 模型设置保存模型 API Key；飞书 App Secret 不是模型 Key。机器人使用长连接，无需开启局域网共享或公网服务。组织权限、可用范围和应用发布状态仍在飞书后台管理。</p><p>默认精简消息和 3 秒预览；可调整详细度、卡片及进度样式。关闭管理窗口或最小化不影响连接；关闭主窗口会退出并停止服务。也可在管理窗口关闭连接，安全模式会暂停；自动连接选择保留。详见 <a href="https://github.com/citrusli2026/dsh-desktop/blob/main/docs/cc-connect.md" target="_blank" rel="noopener">飞书连接指南</a>。</p></details>
+  <details><summary><h2>飞书 CLI 登录和机器人连接是同一套凭据吗？</h2></summary><p>不是。Desktop 的二维码管理配置机器人 App ID / Secret；官方 Lark CLI 的 OAuth 是以用户身份调用飞书 API 的另一条路径。无需安装或登录 CLI 就能使用机器人连接，CLI 登录也不会自动补齐机器人 Secret 或模型 Key。</p></details>
+  <details><summary><h2>macOS 飞书 Secret 还会请求钥匙串授权吗？</h2></summary><p>从 shell.4 起，飞书凭据不再访问 macOS 钥匙串；Secret 存于权限 0600 的本机受限明文文件。旧加密 Secret 保留但不后台解密，按设置页提示重新填写一次，保存成功后才替换。无需把系统密码发到聊天，也不要删除系统钥匙串。</p><p>文件权限不是加密，同用户程序、管理员或可读取备份者仍可能访问。Windows 保留原 DPAPI 策略，Linux 策略不变；macOS 仍为 ad-hoc 签名，签名/公证是独立的分发事项。</p></details>
+  <details id="profile-permission"><summary><h2>Windows 安全模式也启动失败，日志显示 cordis.yml 的 EPERM？</h2></summary><p>这表示 Harness 无法写入数据目录下 <code>profiles/web/cordis.yml</code>，不等同于插件已损坏。完全退出 Desktop 后，检查该文件是否只读、当前用户是否有写入权限，以及 Windows 安全中心是否记录了受控文件夹访问阻止。只检查日志所指的文件；不要删除整个数据目录、递归放开权限或关闭安全软件。</p><p>保留现场并从恢复页导出诊断，先检查脱敏再附到 <a href="https://github.com/citrusli2026/dsh-desktop/issues/100" target="_blank" rel="noopener">白屏问题 #100</a>。同时说明“返回提问”的具体操作、插件版本、空白时菜单能否响应，以及当前版本能否复现。最初白屏与后续文件权限错误需要分别定位。</p></details>
+  <details><summary><h2>如何获取 API Key？</h2></summary><p>在 <a href="https://platform.deepseek.com" target="_blank" rel="noopener">DeepSeek 开放平台</a>注册并进入 API Keys 页面创建密钥，然后在 dsh-desktop 的模型设置中粘贴。API 使用按量计费，请先确认账户余额。</p></details>
+  <details><summary><h2>窗口收进托盘后如何快速打开？</h2></summary><p>在任意应用中按 <code>Ctrl/Cmd + Shift + Space</code>（Windows/Linux 用 Ctrl，macOS 用 ⌘），dsh-desktop 会显示并获得焦点。若快捷键被占用，可使用系统托盘或窗口右键菜单；快捷键冲突不会影响 Harness 启动。</p></details>
+  <details><summary><h2>可以修改唤起快捷键或设置开机启动吗？</h2></summary><p>可以。在 dsh-desktop 的「设置 → 桌面设置」中点击「重新设置」，按下包含修饰键的组合键，例如 <code>Ctrl + Alt + K</code>。如果组合键被占用，会提示换一个。开机启动默认关闭；Windows/macOS 还可以选择启动后隐藏到托盘，Linux 当前不提供该开关。</p></details>
+  <details><summary><h2>桌面通知会读取屏幕或上传数据吗？</h2></summary><p>不会。通知只使用 Harness 已公开的会话运行态和后台任务状态，不读取截图、不做视觉识别，也不会上传数据。窗口未聚焦时，通知会提示完成、失败或需要确认，并可在「设置 → 桌面设置」关闭。</p></details>
+  <details><summary><h2>误删的会话或文件还能找回吗？</h2></summary><p>可以。桌面版自带垃圾桶：删除的会话、预设都会先进入垃圾桶，在 Harness「设置 → 垃圾桶」中随时还原。Agent 执行的删除类命令也会被拦截：目标先移入垃圾桶，可疑的删除会被直接拦截并说明原因。垃圾桶保留 30 天，过期自动清理。</p></details>
 
   <div class="seo-next-links"><a href="/docs/why-desktop">为什么选择桌面版 →</a><a href="/changelog">更新日志 →</a><a href="/download">下载 DSH Desktop →</a><a href="/docs/install">查看安装指南 →</a><a href="/en/docs/faq">Read in English →</a></div>
 </div></main>

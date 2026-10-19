@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 test('website changelog excludes committed but unpublished release notes', async t => {
@@ -26,4 +26,26 @@ test('website changelog excludes committed but unpublished release notes', async
     assert.ok(html.indexOf('shell.2') < html.indexOf('shell.1'))
     assert.match(html, /^before .* after$/s, 'hand-maintained page scaffold stays intact')
   }
+})
+
+test('the rendered changelog gives both languages the same facts', async () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const entries = (html: string) => [...html.matchAll(/<h2>([^<]+)<\/h2>\s*<ul>([\s\S]*?)<\/ul>/g)]
+    .map(match => [(match[1] ?? '').trim(), ((match[2] ?? '').match(/<li>/g) ?? []).length] as const)
+  const zh = entries(await readFile(join(root, 'site/changelog/index.html'), 'utf8'))
+  const en = entries(await readFile(join(root, 'site/en/changelog/index.html'), 'utf8'))
+  assert.equal(zh.length, en.length, 'both pages must list the same number of releases')
+  assert.deepEqual(zh.map(([tag]) => tag), en.map(([tag]) => tag), 'both pages must list the same tags')
+  for (const [index, [tag, count]] of zh.entries()) {
+    const english = en[index]!
+    assert.ok(count > 0, `${tag} has no Chinese bullets`)
+    assert.equal(english[1], count, `${tag}: ${count} Chinese bullets but ${english[1]} English ones`)
+  }
+})
+
+test('English changelog uses ASCII punctuation around the kernel version', async () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const en = await readFile(join(root, 'site/en/changelog/index.html'), 'utf8')
+  assert.match(en, /\(kernel [\d\w.-]+\)/)
+  assert.doesNotMatch(en, /（kernel/)
 })

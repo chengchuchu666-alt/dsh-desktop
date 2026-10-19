@@ -4,16 +4,21 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DSH Desktop Changelog｜DeepSeek Harness desktop release notes</title>
-<meta name="description" content="DSH Desktop changelog: release notes for the community desktop shell for DeepSeek Harness — kernel bumps, first-success guide, one-click health check, plugin market hardening and verified upgrades." />
+<meta name="description" content="Release notes for the community desktop shell for DeepSeek Harness: kernel bumps, Feishu connections, desktop recovery, Linux arm64 and verified upgrades." />
 <meta property="og:site_name" content="DSH Desktop" />
 <meta property="og:title" content="DSH Desktop Changelog" />
 <meta property="og:description" content="Release notes for the community desktop shell for DeepSeek Harness." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://dsh-desktop.com/en/changelog" />
-<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta property="og:image" content="https://dsh-desktop.com/assets/og-image.png"
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="DSH Desktop Changelog" /> />
 <meta property="og:locale" content="en_US" />
 <meta property="og:locale:alternate" content="zh_CN" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://dsh-desktop.com/assets/og-image.png" />
+<meta name="twitter:image:alt" content="DSH Desktop Changelog" />
 <meta name="theme-color" content="#f9f8f8" />
 <meta name="color-scheme" content="light dark" />
 <link rel="canonical" href="https://dsh-desktop.com/en/changelog" />
@@ -29,8 +34,11 @@
     document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
   } catch (e) {}
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop Changelog","url":"https://dsh-desktop.com/en/changelog","inLanguage":"en","isPartOf":{"@id":"https://dsh-desktop.com/#website"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop Changelog","url":"https://dsh-desktop.com/en/changelog","inLanguage":"en","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/en"},{"@type":"ListItem","position":2,"name":"Changelog","item":"https://dsh-desktop.com/en/changelog"}]}</script>
+<!-- changelog:ld:start -->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop changelog","inLanguage":"en","dateModified":"2026-10-18","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.0"}}</script>
+<!-- changelog:ld:end -->
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -42,16 +50,17 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
-  <h2>v0.2.1-rc.2.shell.0 <small>（kernel 0.2.1-rc.2）</small></h2>
+  <h2>v0.2.1-rc.2.shell.0 <small>(kernel 0.2.1-rc.2)</small></h2>
   <ul>
-    <li><strong>Kernel upgrade <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong> with all <code>@deepseek-ai/dsh-*</code> peers, a regenerated manifest lockfile and re-pinned release-age excludes. Both reviewed shell patches are confirmed for the new kernel: the two patched upstream bundles are byte-identical between the two kernels and the transforms still apply, so the patch manifest now records the reviewed-kernel list explicitly.</li>
-    <li><strong>macOS control-socket fix</strong>: the sidecar's per-application data directory pushed <code>run/api.sock</code> past the <code>sun_path</code> limit, so the manager reported a working connection as closed. The sidecar now gets a short <code>$TMPDIR</code> alias (symlink to the real directory, no data migration).</li>
-    <li><strong>Rich Feishu cards by default</strong> for new connections; existing and explicitly-legacy choices are untouched.</li>
-    <li><strong>Linux arm64 packages</strong> built on <code>ubuntu-24.04-arm</code>; the asset contract lists both debs with their checksums.</li>
-    <li><strong>Real-machine visual verification is now a release gate</strong>: every desktop runner must render all 21 extension surfaces of the packaged app, and the screenshots ship as artifacts.</li>
+    <li><strong>Kernel upgrade <code>0.2.1-rc.1</code> → <code>0.2.1-rc.2</code></strong>: 32 <code>@deepseek-ai/dsh-*</code> peers re-synced, the manifest lockfile regenerated, release-age exemptions re-pinned (315 → 302 entries, 13 kept at the version resolved in the lockfile). Both reviewed shell patches are confirmed for the new kernel: the two patched upstream bundles are byte-identical between the kernels and the transforms still match, so the patch manifest now records the reviewed-kernel list explicitly.</li>
+    <li><strong>macOS control-socket fix</strong>: the sidecar's per-application data directory pushed <code>run/api.sock</code> past the <code>sun_path</code> limit, so the manager reported a working connection as closed. The sidecar now gets a short <code>$TMPDIR</code> alias (a symlink to the real directory, no data migration): the 116-character path fails to bind where the 93-character alias succeeds, and a packaged run logs <code>api server started socket=/var/folders/…</code>.</li>
+    <li><strong>Rich Feishu cards by default</strong> for new connections (card style <code>rich</code>, progress display <code>card</code>); existing configurations and explicit <code>legacy</code> choices are untouched.</li>
+    <li><strong>Linux arm64 packages</strong>: <code>ubuntu-24.04-arm</code> joined the release matrix and builds <code>-arm64.deb</code> from the same sources as amd64 (ten files in the GitHub Release, eight of them user-visible installers and checksums), and the in-app repair link follows the architecture it runs on.</li>
+    <li><strong>Four-runner visual gate in the release flow</strong>: the macOS, Windows, Linux x64 and Linux arm64 runners must each render all 21 packaged extension surfaces (first-run and safe mode, the floating Feishu quick control, five Feishu manager states, six settings panes, LAN pairing, trash, recovery and loading) before a release publishes, and the screenshots ship as artifacts. Installation and desktop acceptance on real hardware or a VM stays a maintainer step (<code>scripts/verify-visual-evidence.mjs</code>).</li>
+    <li><strong>Boundary note</strong>: all verification ran in isolated local or CI environments; health-check results are rendered locally in sanitized form and are never uploaded automatically.</li>
   </ul>
 
-  <h2>v0.2.1-rc.1.shell.1 <small>（kernel 0.2.1-rc.1）</small></h2>
+  <h2>v0.2.1-rc.1.shell.1 <small>(kernel 0.2.1-rc.1)</small></h2>
   <ul>
     <li><strong>Plugin crashes now self-heal (#115 family)</strong>: a loader row that imports a package the bundled kernel does not carry used to leave only &quot;startup failed&quot; and a restart loop — Safe Mode could not help because it only collected rows inserted by user bundles, while the failing row usually comes from <code>cordis.patch.yml</code> or a file it includes. This release classifies that failure as <code>missing-package</code>, points the error page at the fix (update the app or disable the plugin), extends Safe Mode over the profile/home patch layers and their includes (user overrides of *official* rows stay enabled), and records non-bundle failing rows in a shell-owned quarantine overlay that skips them on the next start — reversible from the error page, the extensions menu, or by updating or disabling the plugin.</li>
     <li><strong>An unwritable profile no longer loops (#100/#116)</strong>: the kernel rewrites <code>profiles/web/cordis.yml</code> on every start, so a read-only file (or an ACL/Controlled Folder Access block) used to look like &quot;blank screen, then it never starts again&quot; while the health check still reported the data folder as writable. The shell now probes the profile *files* before spawning, refuses to spin on a doomed boot, and shows a page with the concrete path and a one-click &quot;repair file permissions and restart&quot; action; the storage health check uses the same probe and the diagnostic report gained a <code>profile_write=</code> line.</li>
@@ -61,17 +70,20 @@
     <li>Everything stays local-first: the diagnostic report is still generated on-device and never uploaded automatically, and the repair only clears the read-only attribute — it does not touch ACLs, security-software settings, or user data.</li>
   </ul>
 
-  <h2>v0.2.1-rc.1.shell.0 <small>（kernel 0.2.1-rc.1）</small></h2>
+  <h2>v0.2.1-rc.1.shell.0 <small>(kernel 0.2.1-rc.1)</small></h2>
   <ul>
-    <li>Upgrades the bundled Harness from alpha.5 to <code>0.2.1-rc.1</code> (the <code>next</code> channel); upstream published its <a href="https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1" target="_blank" rel="noopener">release notes</a> afterwards.</li>
-    <li>Those notes summarize the whole 0.2.1 line since <code>v0.2.0-rc.2</code>, most of which already reached this shell through alpha.1–alpha.5; for the alpha.5 → rc.1 step, registry metadata shows all 297 kernel packages differ only by small version-string reductions. Two of the three packages the shell patches or depends on are byte-identical, the account bundle changes only in two version literals, and the ACP/headless compositions are unchanged.</li>
-    <li>Audited the interfaces rc.1 removed or changed (runtime invariant plugin and <code>./invariant</code> exports, the <code>both</code> tool-presentation mode, the composer <code>stats</code> row, <code>--from-default-profile</code> now replacing a profile, Agent Team direct Inbox delivery): this shell uses none of them, and its ACP/credential boundaries match the stated precedence change (Web/Desktop prefer saved credentials, headless uses env/.env).</li>
-    <li>The cordis framework the kernel declares moved from <code>-alpha.2</code> builds to stable releases in the same window (before rc.1), which is the kernel's own range resolution rather than shell-added churn.</li>
-    <li>Carries the reviewed account patch and the session-trash version guard to rc.1 unchanged in behaviour, and makes the closure install reproducible: the pinned pnpm 10.33.2 writes/validates the lockfile and the hoisted layout is requested explicitly instead of inherited from the caller's environment.</li>
-    <li>Verified by 28 kernel assertions, both packaged smokes, the packaged E2E set, repeated Feishu cases, market offline/real, packaged LAN pairing, <code>codesign --deep --strict</code>, 440 unit tests plus ACP and audit; the gated tag pipeline produced the eight assets and verified attestations.</li>
+    <li><strong>Kernel upgrade</strong>: the bundled Harness moves from alpha.5 to <code>0.2.1-rc.1</code> (upstream <code>next</code> channel) with 32 kernel-family direct dependencies, the lockfile and <code>minimumReleaseAgeExclude</code> re-synced; upstream published its <a href="https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-rc.1" target="_blank" rel="noopener">preview notes</a> at 2026-10-17T05:22Z.</li>
+    <li><strong>Scope of those notes</strong>: they summarize the whole 0.2.1 line since <code>v0.2.0-rc.2</code>, most of which already reached this shell in alpha.1–alpha.5. For the alpha.5 → rc.1 step, per-package registry metadata shows 297 kernel packages changed only in version strings, and the surfaces this shell actually uses (session controller, workspace client, account patch, ACP composition) are unchanged in rc.1.</li>
+    <li><strong>Closure diff</strong>: all 297 kernel packages shrink by 100–500 bytes each from the <code>0.2.1-alpha.5</code> → <code>0.2.1-rc.1</code> substitution with no dependency added or removed; of the three packages this shell patches or depends on by contract, <code>dsh-api-session-controller</code> and <code>dsh-client-ui-workspace</code> are byte-identical, <code>dsh-client-ui-settings-account</code> differs only in two version strings, and the ACP/headless <code>cordis.patch.yml</code> composition is unchanged.</li>
+    <li><strong>Removed or changed upstream interfaces audited</strong>: rc.1 drops the runtime invariant plugin and each package's <code>./invariant</code> export, the <code>both</code> tool-display mode and the input-area <code>stats</code> row, turns <code>--from-default-profile</code> into a replace-style rebuild, and delivers Agent Team messages straight to the Inbox. A repository-wide search confirms this shell uses none of them (no <code>from-default-profile</code> call, no invariant reference, no <code>stats</code> row, no <code>both</code> mode), and its ACP and credential boundaries still match the existing assertions.</li>
+    <li><strong>Plugin framework promoted</strong>: the cordis family the kernel declares moved from <code>-alpha.2</code> prereleases to stable releases in the same batch (<code>@deepseek-ai/cordis</code> 4.0.5, <code>cordis-plugin-include</code> 1.0.10, <code>cordis-plugin-loader</code> 1.0.6, <code>cordis-plugin-timer</code> 1.1.7, plus same-line <code>cosmokit</code>/<code>schemastery</code> updates); those stable releases predate rc.1, so this is the kernel's own resolution rather than a dependency this shell added.</li>
+    <li><strong>Account-login compatibility</strong>: the account patch moved to rc.1 unchanged and still uses the embedded login only when the official desktop bridge exposes <code>dshOnboarding.hasApiKey</code>; when Electron refuses a pre-opened blank window it hands the real authorization URL to the system browser once, without opening up navigation, Node privileges or external protocols.</li>
+    <li><strong>Trash compatibility</strong>: the session controller and workspace client are byte-identical to alpha.5 and the version guard now targets rc.1 after re-checking the anchors; running, queued, cross-client-owned, maintenance and child sessions still refuse deletion.</li>
+    <li><strong>Reproducible builds</strong>: <code>pnpm run bootstrap</code> now always generates and validates the lockfile with the repository-pinned pnpm 10.33.2 and explicitly requests the hoisted layout instead of inheriting the caller's pnpm environment; the compact <code>patchedDependencies</code> form written by pnpm 11 is rejected by 10.33.2 as a configuration mismatch and used to abort bootstrap with <code>ERR_PNPM_LOCKFILE_CONFIG_MISMATCH</code>.</li>
+    <li><strong>Feishu quick control</strong>: the floating panel's Connect group keeps application, desktop process, Feishu channel and DSH-task states separate with explicit start, stop and reconnect; opening or polling it is read-only and never connects, sends a message or calls a model.</li>
   </ul>
 
-  <h2>v0.2.1-alpha.5.shell.0 <small>（kernel 0.2.1-alpha.5）</small></h2>
+  <h2>v0.2.1-alpha.5.shell.0 <small>(kernel 0.2.1-alpha.5)</small></h2>
   <ul>
     <li>Upgrades the bundled Harness to the published 0.2.1-alpha.5 preview and resyncs the exact closure lockfile.</li>
     <li>Extends the release-age exemptions from the real lockfile resolution, with a pure regression test that keeps peer-suffixed keys from becoming bogus package pins.</li>
@@ -82,7 +94,7 @@
     <li>Verified with 438 unit tests plus ACP, both packaged smokes, 24 packaged E2E cases, 25 repeated Feishu cases, market offline/real and packaged LAN pairing. The gated tag pipeline still owns the three-platform build/upgrade/provenance checks; live phone Feishu round trips and manual Windows/Linux native review are outside local evidence.</li>
   </ul>
 
-  <h2>v0.2.1-alpha.3.shell.0 <small>（kernel 0.2.1-alpha.3）</small></h2>
+  <h2>v0.2.1-alpha.3.shell.0 <small>(kernel 0.2.1-alpha.3)</small></h2>
   <ul>
     <li>Upgrades to Harness 0.2.1-alpha.3, with version-bound Desktop login and session-trash compatibility.</li>
     <li>Keeps system-browser authorization, busy-session and ownership protections, and the ACP saved-credential composition.</li>
@@ -93,7 +105,7 @@
     <li>Published installers must also pass the gated tag pipeline. Live Feishu delivery and manual native-control review on Windows/Linux are outside this validation.</li>
   </ul>
 
-  <h2>v0.2.1-alpha.2.shell.4 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <h2>v0.2.1-alpha.2.shell.4 <small>(kernel 0.2.1-alpha.2)</small></h2>
   <ul>
     <li>Closing the main window now exits the application and stops its owned services. Minimize/start-hidden activation remains supported; closing the Feishu manager alone does not close a saved connection.</li>
     <li>Terminal shutdown preempts pending connection startup and attempts every independent service stop; repeated quit requests cannot bypass cleanup. Saved connection intent is preserved.</li>
@@ -102,7 +114,7 @@
     <li>Keeps Harness 0.2.1-alpha.2 and the cc-connect pin unchanged. Fresh versioned packages and all release gates are required, with isolated credentials, verified mirrors and published-only website changelogs.</li>
   </ul>
 
-  <h2>v0.2.1-alpha.2.shell.3 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <h2>v0.2.1-alpha.2.shell.3 <small>(kernel 0.2.1-alpha.2)</small></h2>
   <ul>
     <li>Updates Electron to 44.7.0 and YAML to 2.9.1; applies reviewed proxy-addr, compression and MCP SDK repairs while keeping Harness 0.2.1-alpha.2 and preserving the optional SDK functionality.</li>
     <li>Updates electron-builder to 26.17.0 without downgrading the reviewed plist/xmldom resolutions. Node declarations remain on 24, aligned with runtime rather than accepting a Node 26 major bump.</li>
@@ -112,7 +124,7 @@
     <li>Existing sprintf-js and ad-hoc-signing limitations remain documented. SDK updates do not silently migrate or revoke old OAuth credentials; follow issuer/re-authentication guidance where applicable.</li>
   </ul>
 
-  <h2>v0.2.1-alpha.2.shell.2 <small>（kernel 0.2.1-alpha.2）</small></h2>
+  <h2>v0.2.1-alpha.2.shell.2 <small>(kernel 0.2.1-alpha.2)</small></h2>
   <ul>
     <li>Styles the Feishu management entry consistently and separates connection health text from the button, preserving Secret storage, connection intent and Safe Mode behavior.</li>
     <li>Fixes the localized LAN QR countdown without changing expiry, one-time pairing or sharing permissions.</li>
