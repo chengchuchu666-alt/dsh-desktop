@@ -8,13 +8,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    version-update-semver-scope: minor
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    version-update-semver-scope: minor
     ignore:
       - dependency-name: electron
         update-types:
