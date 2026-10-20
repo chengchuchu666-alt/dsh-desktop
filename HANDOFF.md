@@ -2800,3 +2800,22 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 6. **并发处理**：期间站点机器人多次推送 `site: sync release data`，`main` 推送被拒；按运行手册「合并 + 在最新
    main 上重新生成」处理（`release.json` 冲突用重新生成覆盖，保留机器人计数），未强推、未移动任何已发布 tag。
    最终四个引用（origin/gitcode × main/分支）对齐 `f6e63d7`，tag 保持 `3329a83`。
+
+## 93. 发布 v0.2.1-rc.2.shell.3（Electron 44.9.1 + Playwright 1.64.1，2026-10-20）
+
+1. **本版内容**：把 dependabot 的 #119/#121 直接落地——Electron 运行时 `44.7.0 → 44.9.1`（打包实测
+   `chrome 152.0.7977.167`、主进程 `node 24.22.0`），测试工具链 `@playwright/test 1.64.1`；内核仍为
+   `0.2.1-rc.2`，壳行为与界面不变，安装包可覆盖升级。同时随 main 带入 #120 的 `@types/node 24.19.2`
+   （24 线 minor）与 dependabot 配置修正（`b53c96e` 移除与 ignore 冲突的 `version-update-semver-scope`）。
+2. **本地门禁**：`pnpm verify` 494 通过；LAN 配对 2/2；市场离线 1/1、真实 2/2；打包 E2E 24 项；
+   desktop-ui E2E 6 项；`dist:dir` 后 packaged smoke 与 Harness-UI smoke 均 OK。
+3. **发布**：tag `v0.2.1-rc.2.shell.3` → `d076916240714a0f5088bdab184b8311c59c9e9f`；run `39434796841`
+   verify + 4×build + publish 全绿；四端视觉门禁 **all 22 extension surfaces rendered**
+   （macos-14 / windows-2022 / ubuntu-24.04 / ubuntu-24.04-arm）。GitHub Release 10 个文件。
+4. **GitCode 镜像**：新建 release（`--status unset`），`--ref d076916…`，8/8 匿名可下载；arm64 dmg 全量下载
+   与本地 SHA-256 一致（`49754dde…`）。
+5. **官网**：`release.json`（8 资产、逐资产 `gitcode_ok=true`）、更新日志、下载快照均已更新，线上回读
+   `v0.2.1-rc.2.shell.3`；site-refresh `39442146351`。
+6. **收尾的 issue/PR 处理**：同期关掉了仓库全部 4 个 issue 与 6 个 PR（详见各 issue/PR 评论）：
+   #118 过时告警；#116/#115 修复已发布（逐 tag 核对）；#100 确认部分已修复、白屏缺证据；
+   #110/#112/#120 合并；#111 关闭并修掉 dependabot ignore 被覆盖的根因；#119/#121 直接落地后关闭。
