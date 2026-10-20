@@ -37,7 +37,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 更新日志","url":"https://dsh-desktop.com/changelog","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/"},{"@type":"ListItem","position":2,"name":"更新日志","item":"https://dsh-desktop.com/changelog"}]}</script>
 <!-- changelog:ld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-19","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.1"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-20","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.2"}}</script>
 <!-- changelog:ld:end -->
 </head>
 <body>
@@ -50,6 +50,13 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.2 <small>（内核 0.2.1-rc.2）</small></h2>
+  <ul>
+    <li><strong>面板信息组进入四端视觉门禁</strong>：桌面工具面板的「信息」组（关于 + 在 GitHub 上 Star）现在由 macOS、Windows、Linux x64、Linux arm64 四个 runner 各产出一张截图，并由门禁强制校验；扩展面契约 从 21 增至 22，任一平台缺少该画面即失败。这样面板里唯一的常驻产品入口不会再被静默改坏。</li>
+    <li><strong>应用行为无变化</strong>：内核仍是 <code>0.2.1-rc.2</code>，本版只推进壳修订号；Star 入口自 <code>.shell.1</code> 起已在面板中， 本版不新增功能，安装包行为与上一版一致。</li>
+    <li><strong>边界说明</strong>：Star 入口只打开仓库页面（带 <code>?ref=app-panel</code> 归因），不发送任何遥测；签名与公证边界不变。</li>
+  </ul>
+
   <h2>v0.2.1-rc.2.shell.1 <small>（内核 0.2.1-rc.2）</small></h2>
   <ul>
     <li><strong>桌面工具面板新增 Star 入口</strong>：信息分组里多了一行「在 GitHub 上 Star」，点击会用默认浏览器打开仓库并带 <code>?ref=app-panel</code> 归因，方便区分面板点击与官网点击。它只是一个常驻链接：不弹窗、不催促、不影响面板其它操作。</li>
@@ -119,16 +126,6 @@
     <li><strong>macOS 飞书不再访问钥匙串</strong>：新 Secret 保存到主进程管理的本机受限文件（权限 <code>0600</code>）， 保存、读取及自动连接都不调用系统安全存储。旧加密 Secret 保留但不后台解密， 设置页提示重新填写一次，保存成功后才替换；不再每次更新反复请求钥匙串访问。</li>
     <li><strong>Windows 安装精简与计时</strong>：补删不参与运行的 <code>.d.mts</code> / <code>.d.cts</code> 声明文件，维护候选本地闭包 减少1464个文件（约7.7 MB）；保留可执行文件、原生模块、资源及许可证。 同一 Windows runner 三轮安装中位数165.7→157.6秒，改善约4.9%；这是发布前维护候选的 对照结果，不承诺所有电脑同样提速，也不把累计安装阶段冒称纯解压时间。</li>
     <li><strong>安全边界</strong>：macOS 受限文件是明文，不是加密保险箱；同用户程序、管理员和可读取备份者 仍可能访问。Windows 保留原 DPAPI 策略，Linux 保留原存储策略。不改系统钥匙串、Cookie 或签名策略，不加入 <code>use-mock-keychain</code>。macOS 分发仍为 ad-hoc 签名。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.2.shell.3 <small>（内核 0.2.1-alpha.2）</small></h2>
-  <ul>
-    <li><strong>运行时与安全维护</strong>：Electron 44.7.0、YAML 2.9.1；捆绑闭包更新 proxy-addr 2.0.8、 compression 1.8.2 与 MCP SDK 1.31.0。显式保留原有可选 SDK 功能，不用移除包来消除告警， 不升级 Harness 内核或无关 Web 栈。</li>
-    <li><strong>打包依赖审查</strong>：electron-builder 26.17.0，保留既有 macOS 工具的 plist 3.1.1 / xmldom 0.9.12，避免依赖 PR 的额外降级；Node 类型继续与 Node 24 运行时一致，不采用 Node 26 类型。</li>
-    <li><strong>官网与飞书指南</strong>：中英首页新增独立飞书连接流程，说明工作区、精简消息、卡片、连接意图、 安全模式与组织权限。FAQ 区分机器人 Secret、模型 Key 和 CLI OAuth，补充 Keychain 与 Windows profile 写入权限排查；不把最初白屏问题冒称为已修复。</li>
-    <li><strong>官网同步可靠性</strong>：生成文件 push 冲突时基于最新主干重新生成并限次重试；只变更新日志时 也会提交。官网日志以已发布 tag 为上界，不提前展示未来版本草稿。</li>
-    <li><strong>测试收尾可靠性</strong>：cc-connect 文件附件 CUJ 等到最终回复且任务锁释放后才结束， 修复后台持久化与临时目录清理的竞争；不改变 Agent 或飞书生产行为。</li>
-    <li><strong>已知限制</strong>：sprintf-js 与 macOS ad-hoc 签名两项限制继续在文档中保留说明；本次 SDK 更新不引入静默行为变化。</li>
   </ul>
   <!-- changelog:auto:end -->
 
