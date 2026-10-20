@@ -2779,3 +2779,24 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 7. **首轮构建暴露并修掉的流程缺陷**：上一版下载器仍假设每个平台只有一个 `.deb`，rc.2 起有 amd64/arm64 两个，
    于是 `expected one previous .deb installer … found 2` 直接把 Linux 构建打掉（也连带让视觉门禁无证据）。
    现已按 `installerRunsHere()` 选本机架构的安装包，并补了双架构回归测试。
+
+## 92. 发布 v0.2.1-rc.2.shell.2（视觉门禁覆盖面板信息组，2026-10-20）
+
+1. **本版内容（仅验证迭代，应用行为不变）**：`desktop-ui-review` 现在断言桌面工具面板「信息」组恰好两行
+   （第二行必须是 Star 入口）并产出 `desktop-tools-info.png`；`verify-visual-evidence.mjs` 把它列为必需面，
+   契约 21 → **22**，四个 runner 任一缺少该画面即失败。顺手删除了从未渲染的 `star.prompt.tip` 死文案。
+   内核仍为 `0.2.1-rc.2`，本版不新增功能，发布说明里明确写「行为与上一版一致」。
+2. **本地门禁**：`pnpm verify` 494 通过；LAN 配对 2/2；市场离线 1/1、真实 2/2；打包 E2E 24 项；
+   `dist:dir` 后两项 packaged smoke 均 OK。
+3. **发布**：tag `v0.2.1-rc.2.shell.2` → `3329a8334269527b718848806daa510ba396aa7a`；run `39354437502`
+   verify + 4×build + publish 全绿；四个 runner 的视觉门禁全部
+   `all 22 extension surfaces rendered`（macos-14 / windows-2022 / ubuntu-24.04 / ubuntu-24.04-arm）。
+   GitHub Release 10 个文件（dmg、exe、blockmap、latest.yml、amd64/arm64 deb + 四个 `.sha256`）。
+4. **GitCode 镜像**：新建 release（`--status unset`，预发布配额已满），`--ref 3329a83…`，8/8 资产上传并匿名可下载；
+   arm64 deb 全量下载与本地 SHA-256 一致（`7ebd6d10…`）。上传首次全量失败是浏览器会话休眠所致，
+   导航到 releases 页唤醒后逐个带重试成功（8/8）。
+5. **官网**：`release.json`（8 资产、逐资产 `gitcode_ok=true`）、更新日志与下载快照均已更新，线上回读
+   `v0.2.1-rc.2.shell.2`；site-refresh `39358880723` success。
+6. **并发处理**：期间站点机器人多次推送 `site: sync release data`，`main` 推送被拒；按运行手册「合并 + 在最新
+   main 上重新生成」处理（`release.json` 冲突用重新生成覆盖，保留机器人计数），未强推、未移动任何已发布 tag。
+   最终四个引用（origin/gitcode × main/分支）对齐 `f6e63d7`，tag 保持 `3329a83`。
