@@ -251,7 +251,10 @@ Watch the run: `gh run list --workflow=release.yml --limit 1`, then
 `gh run watch <id> --exit-status`. Jobs: verify → build (macos-14 +
 windows-2022 + ubuntu-24.04 + ubuntu-24.04-arm) → publish. Success means: 10 assets
 (dmg/exe/deb + three `.sha256` + blockmap + latest.yml; AppImage is
-not built), attestations verified, release created.
+not built), attestations verified, release created on the **normal channel**
+(`prerelease: false`, and `/releases/latest` resolves to the new tag). Since
+2026-10-21 the publish job passes `--prerelease=false`; only publish a
+prerelease when the user explicitly asks for a preview.
 
 ### 6. GitCode mirror (v2 pipeline)
 
@@ -539,7 +542,7 @@ When a release touches Feishu display settings, the tray, or the automation view
 
 ## Exit criteria
 
-- GitHub release has the 10 assets; attestations verified in CI.
+- GitHub release has the 10 assets on the normal channel (`prerelease: false`, `releases/latest` points at it); attestations verified in CI.
 - GitCode serves all six user-facing assets (dmg, exe, deb, 3× sha256;
   AppImage is not mirrored).
 - `site/data/release.json` committed with `gitcode_ok=true` and live
