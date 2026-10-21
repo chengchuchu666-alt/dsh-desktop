@@ -37,3 +37,19 @@ test('Feishu setup page renders a safe failure state without process details', (
   assert.match(page, /Feishu bot setup failed/)
   assert.doesNotMatch(page, /exit|secret|app_id/i)
 })
+
+test('manager explains an empty workspace at the field instead of silently ignoring the click (#124/#126)', () => {
+  for (const locale of ['zh', 'en'] as const) {
+    const page = feishuManagerPageMarkup(locale)
+    // Required field + a dedicated alert next to the workspace input.
+    assert.match(page, /id="workspace"[^>]*aria-required="true"/)
+    assert.match(page, /id="workspace-error"[^>]*role="alert"[^>]*hidden/)
+    // Both create and save refuse to call IPC with an empty workspace.
+    assert.match(page, /const requireWorkspace = \(\) => \{/)
+    assert.match(page, /setWorkspaceError\(copy\['error\.invalid-workspace'\]\)/)
+    assert.match(page, /if \(!requireWorkspace\(\)\) return;/)
+    // The picker result is discriminated: cancel is silent, invalid explains.
+    assert.match(page, /picked\?\.canceled === true/)
+    assert.match(page, /picked\.workspace !== ''/)
+  }
+})

@@ -15,7 +15,7 @@ import type { RuntimeEnvironment, RuntimeManagerState } from '../main/runtime-ma
 import type { EditionManifest } from '../main/edition-catalog.ts'
 import type { MarketInstallProgress, MarketInstallResult } from '../main/market-install.ts'
 import type { DesktopHealthReport } from '../main/health-check.ts'
-import type { ConnectSaveResult, ConnectSettingsInput, ConnectState } from '../main/cc-connect-types.ts'
+import type { ConnectSaveResult, ConnectSettingsInput, ConnectState, WorkspacePickResult } from '../main/cc-connect-types.ts'
 
 export interface DesktopTrashSession {
   projectKey: string
@@ -158,7 +158,7 @@ contextBridge.exposeInMainWorld('dshDesktop', {
   saveConnectSettings: (input: ConnectSettingsInput): Promise<ConnectSaveResult | null> =>
     ipcRenderer.invoke('desktop:connect:save-settings', input),
   /** Let the main process choose and validate an absolute workspace directory. */
-  pickConnectWorkspace: (): Promise<string | null> => ipcRenderer.invoke('desktop:connect:pick-workspace'),
+  pickConnectWorkspace: (): Promise<WorkspacePickResult> => ipcRenderer.invoke('desktop:connect:pick-workspace'),
   /** Start the configured cc-connect sidecar after Harness readiness. */
   startConnect: (): Promise<boolean> => ipcRenderer.invoke('desktop:connect:start'),
   /** Explicitly close and persist disabled intent, including across restarts. */

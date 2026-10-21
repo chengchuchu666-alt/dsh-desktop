@@ -1027,6 +1027,9 @@ window.__ModuleLoader__.load({
         restartHarness: "重启 Harness",
         restartDetail: "保留设置并重新启动内核",
         unavailable: "请右键窗口或点击系统托盘图标使用桌面工具。",
+        actionFailed: "操作未完成",
+        actionFailedSeparator: "：",
+        actionBridgeUnavailable: "桌面桥不可用；请从系统托盘重试或重新打开桌面设置。",
         settingsTitle: "桌面设置", settingsCopy: "连接设备、调整桌面习惯；需要时可从这里体检、恢复或维护 Harness。",
         guideEyebrow: "第一次使用", guideTitle: "从这里开始", guideClose: "关闭首次使用引导", guideIntro: "无需先安装插件，完成下面四步即可开始。",
         guideRuntime: "运行环境就绪", guideWorkspace: "选择工作区", guideModel: "配置模型", guideTask: "完成第一条任务", guideDone: "完成", guidePending: "待完成", guideMarketOptional: "插件市场是可选项，不影响你先完成第一条任务。",
@@ -1101,6 +1104,9 @@ window.__ModuleLoader__.load({
         restartHarness: "Restart Harness",
         restartDetail: "Keep settings and restart the kernel",
         unavailable: "Right-click the window or use the system tray for desktop tools.",
+        actionFailed: "Action did not complete",
+        actionFailedSeparator: ": ",
+        actionBridgeUnavailable: "The desktop bridge is unavailable; retry from the system tray or reopen Desktop settings.",
         settingsTitle: "Desktop settings", settingsCopy: "Connect devices and tune desktop habits; inspect, recover, or maintain Harness when needed.",
         guideEyebrow: "FIRST RUN", guideTitle: "Start here", guideClose: "Dismiss first-run guide", guideIntro: "No plugin is required. Complete these four steps to get started.",
         guideRuntime: "Runtime ready", guideWorkspace: "Choose a workspace", guideModel: "Configure a model", guideTask: "Complete your first task", guideDone: "Done", guidePending: "To do", guideMarketOptional: "The plugin market is optional and never blocks your first task.",
@@ -1491,8 +1497,15 @@ window.__ModuleLoader__.load({
         }
         setConnectBusy("workspace");
         try {
-          const workspace = await bridge.pickConnectWorkspace();
-          if (workspace !== null) editConnect({ workspace });
+          const picked = await bridge.pickConnectWorkspace();
+          // Cancel is silent; an unusable directory must explain itself (#126).
+          if (picked?.canceled === true) return;
+          if (typeof picked?.workspace === "string" && picked.workspace !== "") {
+            editConnect({ workspace: picked.workspace });
+            setConnectMessage("");
+            return;
+          }
+          setConnectMessage(copy.connectInvalidWorkspace);
         } catch {
           setConnectMessage(copy.connectStorage);
         } finally {
@@ -1977,10 +1990,15 @@ window.__ModuleLoader__.load({
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectWorkspace }),
                   react_jsx_runtime.jsxs("span", { "data-dsh-connect-workspace": true, children: [
-                    react_jsx_runtime.jsx("input", { type: "text", value: connectForm.workspace, readOnly: true, placeholder: "/", "aria-label": copy.connectWorkspace }),
+                    react_jsx_runtime.jsx("input", { type: "text", value: connectForm.workspace, readOnly: true, placeholder: "/", "aria-label": copy.connectWorkspace, "aria-required": true, "aria-invalid": connectMessage === copy.connectInvalidWorkspace ? "true" : "false" }),
                     react_jsx_runtime.jsx("button", { type: "button", "data-dsh-desktop-lan-target": true, disabled: connectBusy !== "", onClick: () => void chooseConnectWorkspace(), children: copy.connectChoose }),
                   ] }),
                 ] }),
+                // Field-level mirror of the workspace error (#124); the status
+                // line below stays as the single shared result surface.
+                connectMessage === copy.connectInvalidWorkspace
+                  ? react_jsx_runtime.jsx("small", { "data-dsh-connect-workspace-error": true, role: "alert", children: copy.connectInvalidWorkspace })
+                  : null,
                 react_jsx_runtime.jsxs("label", { "data-dsh-connect-field": true, children: [
                   react_jsx_runtime.jsx("span", { children: copy.connectDetailTitle }),
                   react_jsx_runtime.jsxs("select", { value: connectForm.detail, onChange: (event) => editConnect({ detail: event.target.value }), children: [
@@ -2343,6 +2361,9 @@ window.__ModuleLoader__.load({
       const triggerRef = react.useRef(null);
       const floatingRef = react.useRef(null);
       const [floatingStyle, setFloatingStyle] = react.useState(undefined);
+      // One status line for every extension action in the panel (#125/#128):
+      // failures must be visible where the action was taken, never silent.
+      const [actionError, setActionError] = react.useState("");
       const suppressClickRef = react.useRef(false);
       const [startup, setStartup] = react.useState(null);
       const sessionState = useSessions((state) => state);
@@ -2441,26 +2462,64 @@ window.__ModuleLoader__.load({
         const onKeyDown = (event) => {
           if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
         };
+        // Click-outside dismiss (#123). Pointerdown (capture) so an inner
+        // button's click is never unmounted before it runs; the trigger and
+        // the floating panel keep their own semantics (toggle / no-op).
+        const onPointerDown = (event) => {
+          const target = event.target;
+          if (typeof Node === "undefined" || !(target instanceof Node)) return;
+          if (floatingRef.current?.contains(target) === true) return;
+          if (triggerRef.current?.contains(target) === true) return;
+          setOpen(false);
+        };
         document.addEventListener("keydown", onKeyDown);
-        return () => document.removeEventListener("keydown", onKeyDown);
+        document.addEventListener("pointerdown", onPointerDown, true);
+        return () => {
+          document.removeEventListener("keydown", onKeyDown);
+          document.removeEventListener("pointerdown", onPointerDown, true);
+        };
       }, [open]);
 
+      const actionLabel = (action) => ({
+        startLanPairing: copy.lanStart, showLanPairing: copy.lanShowQr, stopLanPairing: copy.lanStop,
+        enterSafeMode: copy.safeModeStart, exitSafeMode: copy.safeModeExit, restartHarness: copy.restartHarness,
+        checkForUpdates: copy.checkUpdates, openLogs: copy.openLogs, exportDiagnostics: copy.exportDiagnostics,
+        showAbout: copy.about, openStar: copy.star,
+      })[action] ?? action;
+
       const invoke = async (action) => {
-        if (typeof bridge?.desktopAction !== "function") return;
+        if (typeof bridge?.desktopAction !== "function") {
+          setActionError(copy.actionBridgeUnavailable);
+          return false;
+        }
         setBusy(action);
+        setActionError("");
         try {
-          // A false result (e.g. a failed preferences write for Safe Mode)
-          // keeps the panel open; closing it would pretend success.
-          if (await bridge.desktopAction(action) === true) setOpen(false);
+          // Every non-true result and every rejection is surfaced; a false
+          // result must never look like a successful no-op (#125).
+          if (await bridge.desktopAction(action) === true) { setOpen(false); return true; }
+          setActionError(`${copy.actionFailed}${copy.actionFailedSeparator}${actionLabel(action)}`);
+          return false;
+        } catch {
+          setActionError(`${copy.actionFailed}${copy.actionFailedSeparator}${actionLabel(action)}`);
+          return false;
         } finally {
           setBusy("");
         }
       };
 
       const openConnectManager = async () => {
+        if (typeof bridge?.openConnectManager !== "function") {
+          setActionError(copy.actionBridgeUnavailable);
+          return;
+        }
         setBusy("connectManager");
+        setActionError("");
         try {
-          if (await bridge.openConnectManager() === true) setOpen(false);
+          if (await bridge.openConnectManager() === true) { setOpen(false); return; }
+          setActionError(`${copy.actionFailed}${copy.actionFailedSeparator}${copy.feishuEntry}`);
+        } catch {
+          setActionError(`${copy.actionFailed}${copy.actionFailedSeparator}${copy.feishuEntry}`);
         } finally { setBusy(""); }
       };
 
@@ -2541,6 +2600,7 @@ window.__ModuleLoader__.load({
           suppressClickRef.current = false;
           return;
         }
+        setActionError("");
         setOpen((current) => !current);
       };
 
@@ -2650,6 +2710,7 @@ window.__ModuleLoader__.load({
                 react_jsx_runtime.jsx("div", { "data-dsh-controls-actions": true, children: [react_jsx_runtime.jsx(PanelAction, { mark: "i", label: copy.about, detail: copy.aboutDetail, disabled: busy !== "", onClick: () => void invoke("showAbout") }), react_jsx_runtime.jsx(PanelAction, { mark: "★", label: copy.star, detail: copy.starDetail, disabled: busy !== "", onClick: () => void invoke("openStar") }),] }),
               ] }),
             ] }) : react_jsx_runtime.jsx("p", { "data-dsh-controls-hint": true, children: copy.unavailable }),
+            actionError === "" ? null : react_jsx_runtime.jsx("p", { "data-dsh-controls-error": true, role: "alert", children: actionError }),
           ] }) : null,
         ],
       }),

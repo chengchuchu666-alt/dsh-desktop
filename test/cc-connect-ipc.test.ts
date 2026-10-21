@@ -17,6 +17,14 @@ import type { ConnectSaveResult, ConnectSettingsInput } from '../src/main/cc-con
 const preload = readFileSync('src/preload/index.ts', 'utf8')
 const main = readFileSync('src/main/index.ts', 'utf8')
 
+test('native workspace picker distinguishes cancel from an unusable directory (#126)', () => {
+  // Both the settings window and the manager window return the same shape.
+  assert.match(main, /reason: 'invalid-workspace'/)
+  assert.match(main, /\{ canceled: true \}/)
+  assert.match(preload, /pickConnectWorkspace: \(\): Promise<WorkspacePickResult>/)
+  assert.match(preload, /WorkspacePickResult/)
+})
+
 test('preload exposes only the narrow cc-connect bridge', () => {
   for (const [method, channel] of [
     ['getConnectState', 'desktop:connect:get-state'],

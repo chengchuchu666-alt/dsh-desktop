@@ -90,3 +90,13 @@ export interface FeishuManagerState extends ConnectManagerState {
 
 export type FeishuManagerResult = { ok: true; state: FeishuManagerState }
   | { ok: false; reason: 'invalid-input' | 'invalid-workspace' | 'storage' | 'stop-failed' | 'not-found' | 'duplicate-app-id' | 'active-application' | 'not-started' | 'setup'; state?: FeishuManagerState }
+
+/**
+ * Native workspace picker outcome. Cancelling stays silent; a directory that
+ * fails validation is a distinct result so the caller can explain it instead
+ * of treating it like "user changed their mind" (#126).
+ */
+export type WorkspacePickResult =
+  | { canceled: true }
+  | { canceled: false; workspace: string }
+  | { canceled: false; reason: 'invalid-workspace' }

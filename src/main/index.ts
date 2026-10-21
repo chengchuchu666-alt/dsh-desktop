@@ -56,7 +56,7 @@ import { listTrash, moveToTrash, purgeExpiredTrash, purgeFromTrash, restoreFromT
 import { writeTrashHookFiles } from './trash-hook.ts'
 import { SessionTrashClient } from './trash-client.ts'
 import { buildPresetPackage, importPresetPackage, listUserPresets, parsePresetPackage, removeUserPreset } from './presets.ts'
-import { ShellLocaleController, shellText, type ShellLocale } from './locale.ts'
+import { ShellLocaleController, shellText, type CopyKey, type ShellLocale } from './locale.ts'
 import type { LanMenuActions, LanMenuState, MenuActions } from './menu-template.ts'
 import { DEEPSEEK_PLATFORM_RECHARGE_URL, PROJECT_REPO_URL } from './links.ts'
 import { isPrivateLanIPv4, lanPairingUrlCandidates, pairingUrlKind, LanService, listPrivateLanIPv4, loadOrCreateLanMasterToken, qrSvgFromText } from './lan.ts'
@@ -73,7 +73,7 @@ import { prepareSidecarDataDirectory } from './cc-connect-data-dir.ts'
 import { ConnectController, ConnectOperationError } from './cc-connect-controller.ts'
 import type { ConnectStartReason } from './cc-connect-policy.ts'
 import { ConnectSupervisor, type ConnectSupervisorEvents } from './cc-connect-supervisor.ts'
-import type { ConnectApplication, ConnectSaveResult, ConnectSettingsInput, ConnectState } from './cc-connect-types.ts'
+import type { ConnectApplication, ConnectSaveResult, ConnectSettingsInput, ConnectState, WorkspacePickResult } from './cc-connect-types.ts'
 import { FeishuSetupRun } from './feishu-setup.ts'
 import { FeishuManager } from './feishu-manager.ts'
 import { closeFeishuSetupWindow, showFeishuSetupWindow, type FeishuSetupWindowController } from './feishu-window.ts'
@@ -856,8 +856,43 @@ function aboutMaintenance(): AboutMaintenanceActions {
   }
 }
 
+/**
+ * Menu/tray actions run without a window, so a rejected promise or a `false`
+ * result used to vanish into the console. Surface every failure once through
+ * a channel the user can actually see (#127).
+ */
+function reportShellActionFailure(action: CopyKey, error?: unknown): void {
+  const detail = error instanceof Error ? error.message : error === undefined ? '' : String(error)
+  const label = shellText(currentLocale, action)
+  console.warn(`dsh-desktop: extension action failed: ${label}${detail === '' ? '' : `: ${detail}`}`)
+  const title = shellText(currentLocale, 'action.failedTitle')
+  const body = shellText(currentLocale, 'action.failedBody', { action: label })
+  if (Notification.isSupported()) {
+    new Notification({ title, body }).show()
+    return
+  }
+  void dialog.showMessageBox({ type: 'error', title, message: body, detail }).catch(() => {})
+}
+
+/** Run an extension action and report both throws and failed boolean results. */
+function guardShellAction<T>(action: CopyKey, run: () => Promise<T> | T, isSuccess?: (value: T) => boolean): void {
+  const fail = (error?: unknown) => { reportShellActionFailure(action, error) }
+  try {
+    const value = run()
+    if (typeof (value as { then?: unknown } | undefined)?.then === 'function') {
+      void (value as Promise<T>).then(result => {
+        if (isSuccess !== undefined && !isSuccess(result)) fail()
+      }).catch(fail)
+      return
+    }
+    if (isSuccess !== undefined && !isSuccess(value as T)) fail()
+  } catch (error) {
+    fail(error)
+  }
+}
+
 function toggleSafeMode(): void {
-  void applySafeMode(!safeModeActive())
+  guardShellAction(safeModeActive() ? 'menu.safeModeExit' : 'menu.safeModeStart', () => applySafeMode(!safeModeActive()))
 }
 
 const menuActions: MenuActions = {
@@ -865,16 +900,16 @@ const menuActions: MenuActions = {
   closeWindow: () => windowContext.mainWindow?.close(),
   quit: () => app.quit(),
   toggleMaximize,
-  restartHarness: () => { void shellApp.requestRestart() },
+  restartHarness: () => guardShellAction('menu.restartHarness', () => shellApp.requestRestart()),
   toggleSafeMode,
-  releasePluginQuarantine: () => { void releasePluginQuarantine() },
-  checkForUpdates: () => { void checkForUpdatesInteractively(currentLocale) },
-  showAbout: () => { void showAboutDialog(currentLocale, aboutMaintenance()) },
-  openExternal: url => { void shell.openExternal(url) },
-  showFeishuSetup: () => { void showFeishuSetup() },
-  startLanLink: () => { void startLanLink() },
-  showLanQr: () => { void showLanQr() },
-  stopLanLink,
+  releasePluginQuarantine: () => guardShellAction('menu.releaseQuarantine', () => releasePluginQuarantine()),
+  checkForUpdates: () => guardShellAction('app.checkUpdates', () => checkForUpdatesInteractively(currentLocale)),
+  showAbout: () => guardShellAction('app.about', () => showAboutDialog(currentLocale, aboutMaintenance())),
+  openExternal: url => guardShellAction('context.openLink', () => shell.openExternal(url)),
+  showFeishuSetup: () => guardShellAction('menu.feishuSetup', () => showFeishuSetup()),
+  startLanLink: () => guardShellAction('menu.startLanLink', () => startLanLink(), ok => ok === true),
+  showLanQr: () => guardShellAction('menu.showLanQr', () => showLanQr(), ok => ok === true),
+  stopLanLink: () => guardShellAction('menu.stopLanLink', () => stopLanLink()),
 }
 
 const trayActions: TrayActions = {
@@ -889,19 +924,19 @@ const trayActions: TrayActions = {
   isWindowVisible: (): boolean => windowContext.mainWindow?.isVisible() === true,
   showWindow: showMainWindow,
   toggleWindow: toggleMainWindow,
-  restartHarness: (): void => { void shellApp.requestRestart() },
+  restartHarness: (): void => guardShellAction('menu.restartHarness', () => shellApp.requestRestart()),
   isSafeMode: (): boolean => safeModeActive(),
   toggleSafeMode: (): void => { toggleSafeMode() },
   getBalance: (): string | undefined => lastBalanceText,
-  checkForUpdates: (): void => { void checkForUpdatesInteractively(currentLocale) },
+  checkForUpdates: (): void => guardShellAction('app.checkUpdates', () => checkForUpdatesInteractively(currentLocale)),
   quit: (): void => app.quit(),
-  showAbout: (): void => { void showAboutDialog(currentLocale, aboutMaintenance()) },
-  openExternal: url => { void shell.openExternal(url) },
+  showAbout: (): void => guardShellAction('app.about', () => showAboutDialog(currentLocale, aboutMaintenance())),
+  openExternal: url => guardShellAction('context.openLink', () => shell.openExternal(url)),
   getLanState: (): LanMenuState => ({ lanRunning: lanService.isRunning, lanBusy: lanService.isBusy }),
   getLanActions: (): LanMenuActions => ({
-    startLanLink: () => { void startLanLink() },
-    showLanQr: () => { void showLanQr() },
-    stopLanLink,
+    startLanLink: () => guardShellAction('menu.startLanLink', () => startLanLink(), ok => ok === true),
+    showLanQr: () => guardShellAction('menu.showLanQr', () => showLanQr(), ok => ok === true),
+    stopLanLink: () => guardShellAction('menu.stopLanLink', () => stopLanLink()),
   }),
 }
 
@@ -1051,13 +1086,16 @@ ipcMain.handle('desktop:connect:manager', async (event, action: unknown, input: 
   return getFeishuManager().execute(action, input)
 })
 
-ipcMain.handle('desktop:connect:manager:pick-workspace', async (event) => {
-  if (feishuSetupWindow?.accepts(event) !== true) return null
+ipcMain.handle('desktop:connect:manager:pick-workspace', async (event): Promise<WorkspacePickResult> => {
+  if (feishuSetupWindow?.accepts(event) !== true) return { canceled: true }
   const owner = BrowserWindow.fromWebContents(event.sender)
-  if (owner === null) return null
+  if (owner === null) return { canceled: true }
   const result = await dialog.showOpenDialog(owner, { properties: ['openDirectory', 'createDirectory'] })
   const workspace = result.filePaths[0]
-  return result.canceled || workspace === undefined || !await validConnectWorkspace(workspace) ? null : workspace
+  if (result.canceled || workspace === undefined) return { canceled: true }
+  return await validConnectWorkspace(workspace)
+    ? { canceled: false, workspace }
+    : { canceled: false, reason: 'invalid-workspace' }
 })
 
 ipcMain.handle('desktop:connect:manager:open-platform', async (event) => {
@@ -1071,13 +1109,18 @@ ipcMain.handle('desktop:connect:save-settings', async (event, raw: unknown) => {
   return saveConnectSettings(raw)
 })
 
-ipcMain.handle('desktop:connect:pick-workspace', async (event) => {
-  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return null
+ipcMain.handle('desktop:connect:pick-workspace', async (event): Promise<WorkspacePickResult> => {
+  if (!isMainWindowHarnessSender(windowContext.mainWindow, event.sender, event.senderFrame?.url, windowContext.allowedOrigin)) return { canceled: true }
   const window = windowContext.mainWindow
-  if (window === undefined || window.isDestroyed()) return null
+  if (window === undefined || window.isDestroyed()) return { canceled: true }
   const result = await dialog.showOpenDialog(window, { properties: ['openDirectory', 'createDirectory'] })
   const workspace = result.filePaths[0]
-  return result.canceled || workspace === undefined || !(await validConnectWorkspace(workspace)) ? null : workspace
+  if (result.canceled || workspace === undefined) return { canceled: true }
+  // Cancelling and an unusable directory are different outcomes: the caller
+  // must be able to explain the latter (#126).
+  return await validConnectWorkspace(workspace)
+    ? { canceled: false, workspace }
+    : { canceled: false, reason: 'invalid-workspace' }
 })
 
 ipcMain.handle('desktop:connect:start', async (event) => {

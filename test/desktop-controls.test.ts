@@ -358,3 +358,21 @@ test('trash section uses the settings design system with guarded destructive act
   // into the trash instead of leaking the version directory on disk.
   assert.match(main, /retireKernelOverlay\(kernelDir\(\), previous, moveToTrash/)
 })
+
+test('desktop tools dismiss on outside pointerdown and surface failed actions (#123/#125)', async () => {
+  const client = await readFile(join(pluginRoot, 'lib/client.js'), 'utf8')
+  // Outside click closes the floating panel but never the trigger or the
+  // panel itself; the listener is capture-phase so inner clicks still run.
+  assert.match(client, /document\.addEventListener\("pointerdown", onPointerDown, true\)/)
+  assert.match(client, /floatingRef\.current\?\.contains\(target\) === true/)
+  assert.match(client, /triggerRef\.current\?\.contains\(target\) === true/)
+  // Every failed/rejected extension action lands in one visible status line.
+  assert.match(client, /"data-dsh-controls-error": true, role: "alert"/)
+  assert.match(client, /catch \{\s*setActionError\(/)
+  assert.match(client, /actionBridgeUnavailable/)
+  assert.match(client, /\$\{copy\.actionFailed\}\$\{copy\.actionFailedSeparator\}/)
+  // The workspace picker result is discriminated instead of a nullable path.
+  assert.match(client, /picked\?\.canceled === true/)
+  assert.match(client, /"data-dsh-connect-workspace-error": true, role: "alert"/)
+  assert.match(client, /"aria-invalid": connectMessage === copy\.connectInvalidWorkspace/)
+})
