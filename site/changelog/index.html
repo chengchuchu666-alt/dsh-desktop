@@ -37,7 +37,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop 更新日志","url":"https://dsh-desktop.com/changelog","inLanguage":"zh-CN","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/"},{"@type":"ListItem","position":2,"name":"更新日志","item":"https://dsh-desktop.com/changelog"}]}</script>
 <!-- changelog:ld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-20","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.3"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop 更新日志","inLanguage":"zh-CN","dateModified":"2026-10-21","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.4"}}</script>
 <!-- changelog:ld:end -->
 </head>
 <body>
@@ -50,6 +50,16 @@
   <p class="seo-lead">版本号是复合形式 <code>&lt;dsh 内核版本&gt;.shell.&lt;壳修订&gt;</code>：内核随官方 <code>@deepseek-ai/dsh</code> 升级，壳修订只包含桌面壳自身的修复与功能。以下节选近期版本要点，完整说明见各版本 Release 页。</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.4 <small>（内核 0.2.1-rc.2）</small></h2>
+  <ul>
+    <li><strong>桌面工具面板点空白关闭</strong>：面板打开后点击面板外任意位置即收起；触发按钮的开关与拖动语义不变（#123）。</li>
+    <li><strong>扩展动作失败不再静默</strong>：局域网配对、安全模式、重启 Harness、打开日志、导出诊断、检查更新等操作失败时，面板底部给出「操作未完成：动作名」提示，抛出的异常同样会被捕获（#125）。</li>
+    <li><strong>飞书未选工作区有字段级提示</strong>：扫码创建或保存时，空工作区直接在输入框下方报错、<code>aria-invalid</code> 生效并聚焦到该字段，不再只写页面底部；设置页的工作区行同步显示同一错误（#124）。</li>
+    <li><strong>工作区选择结果可判别</strong>：「取消」保持静默，「目录不可用」明确提示，不再都表现为没反应（#126）。</li>
+    <li><strong>托盘/菜单失败有系统通知</strong>：重启 Harness、局域网配对、打开链接等失败时弹出系统通知并写日志，不再只留在控制台（#127）。</li>
+    <li><strong>统一失败反馈约定</strong>：每个扩展界面各有一条可见的失败通道，渲染在触发动作附近，见 ADR 0042（#128）。</li>
+  </ul>
+
   <h2>v0.2.1-rc.2.shell.3 <small>（内核 0.2.1-rc.2）</small></h2>
   <ul>
     <li><strong>Electron 运行时升级到 44.9.1</strong>：主进程随之到 <strong>Chromium 152.0.7977.167 / Node 24.22.0</strong>（与内置 Harness 的 Node 24.21.0 同一条 24 线），用于收上游的安全与稳定性修复。壳的功能、界面与数据目录不变，安装包可直接覆盖升级。</li>
@@ -113,17 +123,6 @@
     <li><strong>飞书凭据边界</strong>：ACP 组合仍加载 Models 已保存的模型凭据， headless 专用的凭据覆盖不会套用到机器人连接；飞书 App Secret 与模型 API Key 保持分离。</li>
     <li><strong>飞书快捷控制</strong>：桌面工具浮窗的「连接」分组新增当前应用、桌面进程、飞书通道与 DSH 任务 四行只读状态，并提供显式开启、关闭、重连。打开浮窗或读取状态不会隐式连接、发消息或调用模型； 没有应用、旧凭据需重录、Safe Mode 时按钮禁用并说明原因，关闭连接仍持久保存禁用。</li>
     <li><strong>本地门禁</strong>：438 项单测 + ACP、两项打包 smoke、24 项打包 E2E、25 次重复飞书用例全部通过后才发布。</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.3.shell.0 <small>（内核 0.2.1-alpha.3）</small></h2>
-  <ul>
-    <li><strong>内核升级</strong>：升级到官方已发布的 alpha.3，同步依赖闭包与兼容补丁；历史 shell.4 tag 保持不可变。</li>
-    <li><strong>桌面登录兼容</strong>：适配新版登录预开窗口流程，继续把实际授权页面交给系统浏览器， 避免壳的同名桥被误判为官方桌面组合；不放开桌面窗口的导航、Node 权限或外链协议限制。</li>
-    <li><strong>垃圾桶兼容</strong>：适配新内核会话创建/串行化入口，保留运行中、排队中、跨客户端所有权与子会话保护。</li>
-    <li><strong>飞书凭据边界</strong>：核对 ACP 仍加载 Models 已保存的模型凭据，不将 headless 专用凭据策略套到机器人连接。 飞书 App Secret 与模型 API Key 仍分离，不新增凭据导出或系统钥匙串访问。</li>
-    <li><strong>飞书更容易找到</strong>：设置主列表、桌面工具展开菜单新增入口；原有入口保留并复用同一个管理窗口。</li>
-    <li><strong>消息样式独立入口</strong>：降噪与卡片选项不再藏在手动凭据区；保存按钮常显，长应用名不会撑出窗口。</li>
-    <li><strong>界面边缘修正</strong>：浮窗菜单按可用空间展开并滚动，缩窗保持入口可达，Escape 返回焦点； 独立窗口主按钮改善亮暗主题文字对比度。</li>
   </ul>
   <!-- changelog:auto:end -->
 

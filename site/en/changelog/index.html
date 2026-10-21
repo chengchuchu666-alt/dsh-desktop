@@ -37,7 +37,7 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@context":"https://schema.org","@type":"WebPage","name":"DSH Desktop Changelog","url":"https://dsh-desktop.com/en/changelog","inLanguage":"en","isPartOf":{"@id":"https://dsh-desktop.com/#website"}},{"@type":"WebSite","@id":"https://dsh-desktop.com/#website","url":"https://dsh-desktop.com/","name":"DSH Desktop"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"DSH Desktop","item":"https://dsh-desktop.com/en"},{"@type":"ListItem","position":2,"name":"Changelog","item":"https://dsh-desktop.com/en/changelog"}]}</script>
 <!-- changelog:ld:start -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop changelog","inLanguage":"en","dateModified":"2026-10-20","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.3"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"DSH Desktop changelog","inLanguage":"en","dateModified":"2026-10-21","about":{"@type":"SoftwareApplication","name":"DSH Desktop","applicationCategory":"DeveloperApplication","softwareVersion":"0.2.1-rc.2.shell.4"}}</script>
 <!-- changelog:ld:end -->
 </head>
 <body>
@@ -50,6 +50,16 @@
   <p class="seo-lead">Versions are composite: <code>&lt;dsh kernel&gt;.shell.&lt;shell rev&gt;</code>. The kernel tracks the official <code>@deepseek-ai/dsh</code> package; shell revisions carry desktop-shell fixes and features only. Highlights below; full notes live on each GitHub release page.</p>
 
   <!-- changelog:auto:start -->
+  <h2>v0.2.1-rc.2.shell.4 <small>(kernel 0.2.1-rc.2)</small></h2>
+  <ul>
+    <li>The desktop-tools panel now closes on an outside pointerdown; the trigger toggle and drag behaviour are unchanged (#123).</li>
+    <li>Every panel action reports failures — non-true results and thrown errors — in a single alert status line (#125).</li>
+    <li>The Feishu manager refuses an empty workspace before IPC, with a field-level error, <code>aria-invalid</code> and focus; the settings form mirrors the same error (#124).</li>
+    <li>The native workspace picker returns a discriminated result: cancel stays silent, an unusable directory is explained (#126).</li>
+    <li>Menu/tray failures raise a native notification plus a log line instead of dying in the console (#127).</li>
+    <li>ADR 0042 records the per-surface failure contract (#128).</li>
+  </ul>
+
   <h2>v0.2.1-rc.2.shell.3 <small>(kernel 0.2.1-rc.2)</small></h2>
   <ul>
     <li><strong>Electron runtime upgraded to 44.9.1</strong>: the main process now runs <strong>Chromium 152.0.7977.167 / Node 24.22.0</strong> (the same Node 24 line as the bundled Harness at 24.21.0), taking upstream security and stability fixes. Shell features, UI and data directory are unchanged, so the installer upgrades in place.</li>
@@ -113,17 +123,6 @@
     <li>Keeps the ACP saved-credential composition and the separation between Feishu secrets and model API keys.</li>
     <li>Adds a floating Feishu quick control that shows the selected application, desktop process, Feishu channel and DSH verification separately, with explicit start/stop/reconnect; opening it never connects, sends a message or calls a model, and missing applications, legacy credentials or Safe Mode disable the actions.</li>
     <li>Verified with 438 unit tests plus ACP, both packaged smokes, 24 packaged E2E cases, 25 repeated Feishu cases, market offline/real and packaged LAN pairing. The gated tag pipeline still owns the three-platform build/upgrade/provenance checks; live phone Feishu round trips and manual Windows/Linux native review are outside local evidence.</li>
-  </ul>
-
-  <h2>v0.2.1-alpha.3.shell.0 <small>(kernel 0.2.1-alpha.3)</small></h2>
-  <ul>
-    <li>Upgrades to Harness 0.2.1-alpha.3, with version-bound Desktop login and session-trash compatibility.</li>
-    <li>Keeps system-browser authorization, busy-session and ownership protections, and the ACP saved-credential composition.</li>
-    <li>Adds Feishu entries to the main settings list and floating Desktop tools menu, separates message styles from manual credentials, and fixes edge-positioned menus, long application names and standalone button contrast.</li>
-    <li>UI review, both local packaged smokes, all 24 packaged cases and 25 repeated Feishu checks passed.</li>
-    <li>macOS, Windows and Linux build/install/upgrade gates passed, with 24 packaged cases on each platform.</li>
-    <li>The existing Linux worker teardown warning remains; Windows installation timing was 7.94% slower than the fixed older baseline.</li>
-    <li>Published installers must also pass the gated tag pipeline. Live Feishu delivery and manual native-control review on Windows/Linux are outside this validation.</li>
   </ul>
   <!-- changelog:auto:end -->
 
