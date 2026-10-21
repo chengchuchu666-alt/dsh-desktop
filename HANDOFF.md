@@ -9,13 +9,13 @@
 |---|---|
 | 官网 | ✅ <https://dsh-desktop.com>（国内解析已钉健康 Vercel 段 64.29.17.x；打不开时直接用 [GitHub Releases](https://github.com/citrusli2026/dsh-desktop/releases) / [GitCode Releases](https://gitcode.com/citrusli2026/dsh-desktop/releases)；`*.vercel.app` 备用域名在国内不可达已弃用引导，2026-09-21 实测） |
 | 产品定位 | ✅ 可靠的 Electron 壳 + 开箱即用支持；不做 Agent 工作台；签名/公证待使用量与反馈后评估（ADR 0030） |
-| 最新代码基线 | `0.2.1-rc.1.shell.1`（壳修复：插件崩溃自愈、profile 可写性预检、渲染进程错误捕获），GitHub 与 GitCode 均已交付（tag `d087ebd`），见 §86 |
-| 已发布 | ✅ GitHub预览版 `0.2.1-rc.1.shell.1`（8资产）＋ GitCode release `58909`（六资产 6/6，完整回读一致）；`v0.2.1-rc.1.shell.0` 为其上一版 |
-| 本地门禁 | ✅ verify466 + ACP1、audit、bootstrap/peer、新 dist:dir、四项 packaged smoke（plain/UI/故障注入/Safe Mode S2.5）、打包 LAN pairing 2、市场 offline1/real2 均 exit0（§86） |
-| 核心发布 | ✅ Release `39038167498` / tag `d087ebd`，verify + 三平台build + publish success，八文件与来源证明通过（§86） |
-| 官网数据 | ✅ 镜像后 Refresh `39046968057` success，bot `65f6e5e` 已合并；线上 JSON 为 `v0.2.1-rc.1.shell.1`、六资产 `gitcode_ok=true`（§86） |
-| 国内镜像 | ✅ GitCode release `58909` / tag `d087ebdd`；六资产匿名 206 校验（总字节+首字节+非 HTML）与 DEB 完整回读 SHA 三方一致；创建时预发布配额被拒，按故障表以 `--status unset` 正常发布（§86） |
-| 实时下载统计 | GitHub 安装快照 6486（mac 779 / Windows 5072 / Linux 635），78 版本（2026-10-17T15:53Z bot 生成）；两种统计不混用 |
+| 最新代码基线 | `0.2.1-rc.2.shell.4`（扩展失败可感知、面板点外关闭，内核不变），GitHub 与 GitCode 均已交付（tag `3961d6f`），见 §94 |
+| 已发布 | ✅ GitHub 正式版 `0.2.1-rc.2.shell.4`（10 资产，`prerelease=false`）＋ GitCode release `60557`（八资产 8/8，arm64 dmg 全量回读一致）；`v0.2.1-rc.2.shell.3` 为其上一版 |
+| 本地门禁 | ✅ verify 498 通过；新 `dist:dir` 后 packaged smoke、Harness-UI smoke 均 OK；打包 E2E 24 项全绿；本机沙箱需放宽才能启动 Electron，见 §94 |
+| 核心发布 | ✅ Release `39620441606` / tag `3961d6f`，verify + 四平台 build + publish success，十文件与来源证明通过；首次 run 因内网 npm 镜像缺 `electron-publish@26.18.0` 在 publish 失败，已改为 npmjs 解析后重跑（§94） |
+| 官网数据 | ✅ site-refresh 已自动同步（bot `a0bd97d`，生成于 2026-10-21T15:57Z）：`v0.2.1-rc.2.shell.4`、八资产 `gitcode_ok=true`（§94） |
+| 国内镜像 | ✅ GitCode release `60557` / tag `3961d6f`；八资产匿名可下载（8/8 present），arm64 dmg 全量下载 SHA-256 与本地一致 `29f087da…`；`--status unset` 创建（预发布配额规避）（§94） |
+| 实时下载统计 | GitHub 安装快照 7388（mac 840 / Windows 5806 / Linux 742），83 版本（2026-10-21T15:57Z bot 生成）；两种统计不混用 |
 
 ## 二、官网浅色体系与声明精简（2026-08-15 已提交部署，无新 tag）
 
@@ -2819,3 +2819,31 @@ QA提交9fb0ff17798225287589d22b88540e9ba01be006新增全部可用镜像按钮�
 6. **收尾的 issue/PR 处理**：同期关掉了仓库全部 4 个 issue 与 6 个 PR（详见各 issue/PR 评论）：
    #118 过时告警；#116/#115 修复已发布（逐 tag 核对）；#100 确认部分已修复、白屏缺证据；
    #110/#112/#120 合并；#111 关闭并修掉 dependabot ignore 被覆盖的根因；#119/#121 直接落地后关闭。
+
+## 94. 发布 v0.2.1-rc.2.shell.4（扩展失败可感知 + 面板点外关闭，2026-10-21）
+
+1. **本版内容**：关闭 #123–#128。桌面工具面板支持点空白关闭（#123）；面板内局域网/安全模式/重启/日志/
+   诊断等操作失败时给出「操作未完成：动作名」状态行，异常同样被捕获（#125）；飞书管理窗口的空工作区改为
+   字段级报错（`aria-invalid` + 聚焦）并在 IPC 前拦截，设置页同步镜像（#124）；原生工作区选择器返回可判别
+   结果，取消静默、目录不可用可解释（#126）；托盘/菜单动作统一经 `guardShellAction`，抛出与显式 `false`
+   都转成系统通知 + 日志（#127）；统一约定见 ADR 0042（#128）。内核仍为 `0.2.1-rc.2`，壳修订 3 → 4。
+2. **本地门禁**：`pnpm verify` 498 通过（typecheck + 覆盖率 + 站点守卫 + 构建）；`dist:dir` 后 packaged
+   smoke 与 Harness-UI smoke 均 OK；打包 E2E **24/24**。desktop-ui 4 项最初仍断言旧行为（错误写在
+   `#message`），已改为断言 `#workspace-error` 与 `aria-invalid`。本机 DSH 文件沙箱会阻止 Chromium
+   自带 sandbox 初始化，打包门禁需以更宽的文件权限运行；这是本机执行环境限制，不是产品回归。
+3. **发布**：tag `v0.2.1-rc.2.shell.4` → `3961d6fbd421fa95a7e278d7b2fe2c264f6f7842`；run `39620441606`
+   verify + 4×build（macos-14 / windows-2022 / ubuntu-24.04 / ubuntu-24.04-arm）+ publish 全绿；
+   GitHub Release **10 文件**，`prerelease=false`（正常通道）。首次 run `39614619616` 在 publish 阶段失败：
+   仓库 `.npmrc` 指向的国内镜像已同步 `electron-builder@26.18.0` 却缺 `electron-publish@26.18.0`
+   （上游 npmjs 两者都有），校验器依赖安装报 ETARGET。修复：该步骤显式 `--registry=https://registry.npmjs.org`
+   （CI 在海外）；tag 未发布任何资产，确认后被安全重指到 `3961d6f` 并以 workflow_dispatch 重跑。
+4. **GitCode 镜像**：release `60557`（`--status unset`，tag 对齐 `3961d6f`），8 个资产上传并链接；
+   `mirror-v2 --check-only` → **8/8 present**；arm64 dmg 全量下载 SHA-256 与本地一致
+   `29f087da4f3760081099989a4a6f963b1b600e210b4a200c594fbf9279837830`。首次上传 401 是因为借用的
+   浏览器会话还没有落在已登录的 gitcode.com 标签页；导航并确认 origin/登录后重试成功。链接 404 说明
+   release 对象尚不存在，用 publisher 脚本 `create` 建对象后再校验。
+5. **官网**：site-refresh 自动同步（bot `a0bd97d`、`c04d565`），`site/data/release.json` 已是
+   `v0.2.1-rc.2.shell.4`、8 资产 `gitcode_ok=true`（生成于 2026-10-21T15:57Z）；统计 7388 安装
+   （mac 840 / win 5806 / linux 742）、83 版本。
+6. **已知未覆盖**：面板点外关闭与系统通知没有进入打包截图门禁（仅单元/静态断言 + 人工验收）；
+   四端视觉门禁的 22 个 surface 未新增“失败态”画面。真实飞书收发与托盘通知观感仍需人工确认。
