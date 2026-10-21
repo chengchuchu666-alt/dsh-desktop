@@ -370,7 +370,12 @@ jobs:
           path: artifacts
           merge-multiple: true
       - name: Install release validator dependency
-        run: npm install --no-save --no-package-lock --ignore-scripts --omit=dev
+        # The repo .npmrc points at a domestic mirror, which can lag a fresh
+        # electron-builder publish (observed 2026-10-21: electron-builder
+        # 26.18.0 mirrored while electron-publish 26.18.0 was missing, so
+        # npm failed with ETARGET). CI is overseas; resolve against the
+        # canonical registry so the validator tree is always consistent.
+        run: npm install --no-save --no-package-lock --ignore-scripts --omit=dev --registry=https://registry.npmjs.org
       - name: Validate two installers, hashes, and Windows updater metadata
         run: node scripts/check-release-assets.mjs artifacts "${{ github.ref_name }}"
       - name: Verify installer build provenance (attestations)
