@@ -111,7 +111,10 @@ for (const locale of ['zh', 'en'] as const) for (const theme of ['light', 'dark'
       await expect(manager.locator('#save')).toBeVisible()
       await expect(manager.locator('#save-open')).toBeVisible()
       await manager.locator('#save').click()
-      await expect(manager.locator('#message')).not.toBeEmpty()
+      // An empty workspace is refused before IPC and explained at the field
+      // (#124); the shared #message node stays empty for this path.
+      await expect(manager.locator('#workspace-error')).not.toBeEmpty()
+      await expect(manager.locator('#workspace')).toHaveAttribute('aria-invalid', 'true')
       await manager.screenshot({ path: info.outputPath('feishu-error-narrow.png'), fullPage: true })
       const managerId = await managerWindow.evaluate(win => win.id)
       await app.evaluate(({ Menu }) => {
